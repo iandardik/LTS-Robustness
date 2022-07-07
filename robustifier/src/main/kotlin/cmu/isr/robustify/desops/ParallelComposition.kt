@@ -9,7 +9,7 @@ import net.automatalib.words.Alphabet
 import net.automatalib.words.impl.Alphabets
 
 
-private class DFAParallelComposition<S1, S2, I, A1, A2>(
+class DFAParallelComposition<S1, S2, I, A1, A2>(
   private val dfa1: A1,
   private val inputs1: Alphabet<I>,
   private val dfa2: A2,

@@ -7,6 +7,7 @@ import cmu.isr.robustify.desops.parallelComposition
 import cmu.isr.robustify.desops.reachableSet
 import net.automatalib.util.automata.Automata
 import net.automatalib.util.automata.builders.AutomatonBuilders
+import net.automatalib.words.Word
 import net.automatalib.words.impl.Alphabets
 import org.junit.jupiter.api.Test
 import java.util.*
@@ -129,5 +130,31 @@ class UtilsTest {
     assertContentEquals(b.controllable, observed.controllable)
     assertContentEquals(b.observable, observed.observable)
     assert(Automata.testEquivalence(b, observed, b.inputAlphabet))
+  }
+
+  @Test
+  fun testAcceptsSubWord() {
+    val a = AutomatonBuilders.newDFA(Alphabets.fromArray('a', 'b', 'c'))
+      .withInitial(0)
+      .from(0).on('a').to(1)
+      .from(1).on('b').to(2)
+      .from(2).on('c').to(0)
+      .withAccepting(0, 1, 2)
+      .create()
+    val word = Word.fromSymbols('a', 'c')
+    assertEquals(true, acceptsSubWord(a, a.inputAlphabet, word))
+  }
+
+  @Test
+  fun testAcceptsSubWord2() {
+    val a = AutomatonBuilders.newDFA(Alphabets.fromArray('a', 'b', 'c', 'd'))
+      .withInitial(0)
+      .from(0).on('a').to(1)
+      .from(1).on('b').to(2)
+      .from(2).on('c').to(3)
+      .from(3).on('d').to(0)
+      .create()
+    val word = Word.fromSymbols('b', 'c')
+    assertEquals(true, acceptsSubWord(a, a.inputAlphabet, word))
   }
 }

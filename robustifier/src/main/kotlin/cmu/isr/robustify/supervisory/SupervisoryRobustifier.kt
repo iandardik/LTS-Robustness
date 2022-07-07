@@ -118,7 +118,7 @@ class SupervisoryRobustifier(
   }
 
   fun checkPreferred(sup: CompactSupDFA<String>, preferred: Collection<Word<String>>): Collection<Word<String>> {
-    return preferred.filter { sup.accepts(it) }
+    return preferred.filter { acceptsSubWord(sup, sup.inputAlphabet, it) }
   }
 
   fun removeUnnecessary(sup: CompactSupDFA<String>): CompactSupDFA<String> {
