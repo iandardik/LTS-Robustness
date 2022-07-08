@@ -2,6 +2,7 @@ package cmu.isr.robustify.supervisory
 
 import cmu.isr.lts.CompactDetLTS
 import cmu.isr.lts.DetLTS
+import cmu.isr.lts.asLTS
 import cmu.isr.robustify.BaseRobustifier
 import cmu.isr.robustify.desops.CompactSupDFA
 import cmu.isr.robustify.desops.DESopsRunner
@@ -37,12 +38,15 @@ class SupervisoryRobustifier(
   val preferredMap: Map<Priority, Collection<Word<String>>>,
   val controllableMap: Map<Priority, Collection<String>>,
   val observableMap: Map<Priority, Collection<String>>,
-) : BaseRobustifier<Int, String, Int>(sys, devEnv, safety)
+  val maxIter: Int = 1
+) : BaseRobustifier<Int, String, Int>(sys, sysInputs, devEnv, envInputs, safety, safetyInputs)
 {
   private val logger = LoggerFactory.getLogger(javaClass)
   private val desops = DESopsRunner()
   private val plant: CompactDetLTS<String> = parallelLTS(sys, sysInputs, devEnv, envInputs)
   private val prop: CompactDFA<String>
+  private val synthesisCache = mutableMapOf<Pair<Collection<String>, Collection<String>>, Pair<CompactSupDFA<String>?, CompactSupDFA<String>?>>()
+  private val checkPreferredCache = mutableMapOf<Triple<Collection<String>, Collection<String>, Word<String>>, Boolean>()
 
   init {
     val extendedSafety = extendAlphabet(safety, safetyInputs, plant.inputAlphabet)
@@ -59,13 +63,24 @@ class SupervisoryRobustifier(
   }
 
   fun synthesize(alg: Algorithms, deadlockFree: Boolean = false): Iterable<CompactDetLTS<String>> {
-    return SolutionIterator(this, alg, deadlockFree)
+    return SolutionIterator(this, alg, deadlockFree, maxIter)
   }
 
-  fun supervisorySynthesize(controllable: Collection<String>, observable: Collection<String>): CompactSupDFA<String>? {
-    val g = plant.asSupDFA(controllable, observable)
-    val p = prop.asSupDFA(controllable, observable)
-    return desops.synthesize(g, g.inputAlphabet, p, p.inputAlphabet)
+  fun supervisorySynthesize(controllable: Collection<String>,
+                            observable: Collection<String>): Pair<CompactSupDFA<String>?, CompactSupDFA<String>?> {
+    val key = Pair(controllable, observable)
+    if (key !in synthesisCache) {
+      val g = plant.asSupDFA(controllable, observable)
+      val p = prop.asSupDFA(controllable, observable)
+      val sup = desops.synthesize(g, g.inputAlphabet, p, p.inputAlphabet)
+      if (sup == null)
+        synthesisCache[key] = Pair(null, null)
+      else
+        synthesisCache[key] = Pair(observer(sup, sup.inputAlphabet), sup)
+    } else {
+      logger.debug("Synthesis cache hit: $key")
+    }
+    return synthesisCache[key]!!
   }
 
   /**
@@ -117,8 +132,37 @@ class SupervisoryRobustifier(
     return WeightsMap(preferred, controllable, observable)
   }
 
+  /**
+   * @param sup the raw Sup || G model from the DESops output
+   */
   fun checkPreferred(sup: CompactSupDFA<String>, preferred: Collection<Word<String>>): Collection<Word<String>> {
-    return preferred.filter { acceptsSubWord(sup, sup.inputAlphabet, it) }
+    return preferred.filter {
+      val key = Triple(sup.controllable, sup.observable, it)
+      if (key !in checkPreferredCache) {
+        checkPreferredCache[key] = acceptsSubWord(sup, sup.inputAlphabet, it)
+      } else {
+        logger.debug("CheckPreferred cache hit: $key")
+      }
+      checkPreferredCache[key]!!
+    }
+  }
+
+  /**
+   * @param sup the raw Sup || G model from the DESops output
+   */
+  fun satisfyPreferred(sup: CompactSupDFA<String>, preferred: Collection<Word<String>>): Boolean {
+    for (p in preferred) {
+      val key = Triple(sup.controllable, sup.observable, p)
+      if (key !in checkPreferredCache) {
+        checkPreferredCache[key] = acceptsSubWord(sup, sup.inputAlphabet, p)
+      } else {
+        logger.debug("CheckPreferred cache hit: $key")
+      }
+      if (!(checkPreferredCache[key]!!)) {
+        return false
+      }
+    }
+    return true
   }
 
   fun removeUnnecessary(sup: CompactSupDFA<String>): CompactSupDFA<String> {
@@ -147,7 +191,10 @@ class SupervisoryRobustifier(
     )
   }
 
-  private fun constructSupervisor(sup: CompactSupDFA<String>): CompactSupDFA<String> {
+  /**
+   * @param sup the observed(Sup || G) model from the DESops output
+   */
+  fun constructSupervisor(sup: CompactSupDFA<String>): CompactSupDFA<String> {
     val supQueue = java.util.ArrayDeque<Int>()
     val plantQueue = java.util.ArrayDeque<Int>()
     val out = CompactDFA(sup).asSupDFA(sup.controllable, sup.observable)
@@ -167,9 +214,13 @@ class SupervisoryRobustifier(
       for (a in sup.inputAlphabet) {
         val supSucc = sup.getSuccessor(supState, a)
         val plantSucc = sup.getSuccessor(plantState, a)
-        if (supSucc != SimpleDeterministicAutomaton.IntAbstraction.INVALID_STATE) {
+        if (supSucc != SimpleDeterministicAutomaton.IntAbstraction.INVALID_STATE &&
+            plantSucc != SimpleDeterministicAutomaton.IntAbstraction.INVALID_STATE) {
           supQueue.offer(supSucc)
           plantQueue.offer(plantSucc)
+        } else if (supSucc != SimpleDeterministicAutomaton.IntAbstraction.INVALID_STATE) {
+          // sup has more transitions meaning that this sup is probably constructed.
+          continue
         } else if (a in sup.observable) {
           // uncontrollable event, make admissible
           if (a !in sup.controllable)
@@ -184,5 +235,10 @@ class SupervisoryRobustifier(
     return observer(out, out.inputAlphabet)
   }
 
-
+  fun buildSys(sup: CompactSupDFA<String>): CompactDetLTS<String> {
+    // make all states acceptable
+    for (state in sup)
+      sup.setAccepting(state, true)
+    return parallelLTS(sys, sysInputs, sup.asLTS(), sup.inputAlphabet)
+  }
 }

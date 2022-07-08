@@ -157,4 +157,42 @@ class UtilsTest {
     val word = Word.fromSymbols('b', 'c')
     assertEquals(true, acceptsSubWord(a, a.inputAlphabet, word))
   }
+
+  @Test
+  fun testCombinations() {
+    val l = listOf('a', 'b', 'c', 'd')
+    val cs = l.combinations(2)
+    assertContentEquals(
+      listOf(
+        listOf('a', 'b'),
+        listOf('a', 'c'),
+        listOf('a', 'd'),
+        listOf('b', 'c'),
+        listOf('b', 'd'),
+        listOf('c', 'd')
+      ),
+      cs
+    )
+  }
+
+  @Test
+  fun testCombinations2() {
+    val l = listOf('a')
+    val cs = l.combinations(1)
+    assertContentEquals(
+      listOf(listOf('a')),
+      cs
+    )
+  }
+
+  @Test
+  fun testCombinations3() {
+    val l = listOf('a')
+    val cs = l.combinations(0)
+    assertContentEquals(
+      listOf(emptyList()),
+      cs
+    )
+  }
+
 }

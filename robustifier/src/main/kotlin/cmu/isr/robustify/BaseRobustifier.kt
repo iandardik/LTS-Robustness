@@ -1,6 +1,7 @@
 package cmu.isr.robustify
 
 import cmu.isr.lts.DetLTS
+import net.automatalib.words.Alphabet
 
 
 /**
@@ -10,8 +11,11 @@ import cmu.isr.lts.DetLTS
  */
 abstract class BaseRobustifier<S, I, T>(
   val sys: DetLTS<*, I, *>,
+  val sysInputs: Alphabet<I>,
   val devEnv: DetLTS<*, I, *>,
-  val safety: DetLTS<*, I, *>
+  val envInputs: Alphabet<I>,
+  val safety: DetLTS<*, I, *>,
+  val safetyInputs: Alphabet<I>
 ) {
 
   /**

@@ -6,6 +6,7 @@ import cmu.isr.ltsa.LTSACall.asDetLTS
 import cmu.isr.ltsa.LTSACall.compose
 import net.automatalib.words.Word
 import org.junit.jupiter.api.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 
 class SupervisoryRobustifierTest {
@@ -38,7 +39,8 @@ class SupervisoryRobustifierTest {
       observableMap = mapOf(
         Priority.P0 to listOf("back", "confirm", "password", "select", "vote"),
         Priority.P2 to listOf("eo.enter", "eo.exit", "v.enter", "v.exit")
-      )
+      ),
+      maxIter = 1
     )
   }
 
@@ -72,9 +74,63 @@ class SupervisoryRobustifierTest {
   }
 
   @Test
+  fun testPreferredBehIterator() {
+    val a = Word.fromSymbols('a', 'b')
+    val preferred = mapOf(Priority.P1 to listOf(a))
+    val iter = PreferredBehIterator(preferred).asSequence().toList()
+    assertContentEquals(
+      listOf(listOf(emptyList()), listOf(listOf(a))),
+      iter
+    )
+  }
+
+  @Test
+  fun testPreferredBehIterator2() {
+    val a = Word.fromSymbols('a', 'b')
+    val b = Word.fromSymbols('c', 'd')
+    val c = Word.fromSymbols('e', 'f')
+    val preferred = mapOf(Priority.P1 to listOf(a), Priority.P2 to listOf(b), Priority.P3 to listOf(c))
+    val iter = PreferredBehIterator(preferred).asSequence().toList()
+    assertContentEquals(
+      listOf(
+        listOf(emptyList()),
+        listOf(listOf(a)),
+        listOf(listOf(b)),
+        listOf(listOf(a, b)),
+        listOf(listOf(c)),
+        listOf(listOf(a, c)),
+        listOf(listOf(b, c)),
+        listOf(listOf(a, b, c))
+      ),
+      iter
+    )
+  }
+
+  @Test
+  fun testPreferredBehIterator3() {
+    val a = Word.fromSymbols('a', 'b')
+    val b = Word.fromSymbols('c', 'd')
+    val c = Word.fromSymbols('e', 'f')
+    val preferred = mapOf(Priority.P1 to listOf(a, b), Priority.P3 to listOf(c))
+    val iter = PreferredBehIterator(preferred).asSequence().toList()
+    assertContentEquals(
+      listOf(
+        listOf(emptyList()),
+        listOf(listOf(a), listOf(b)),
+        listOf(listOf(a, b)),
+        listOf(listOf(c)),
+        listOf(listOf(a, c), listOf(b, c)),
+        listOf(listOf(a, b, c)),
+      ),
+      iter
+    )
+  }
+
+  @Test
   fun testVoting() {
     val robustifier = loadVoting()
-    robustifier.synthesize()
+    robustifier.synthesize(Algorithms.Pareto).toList()
+    robustifier.synthesize(Algorithms.Fast).toList()
   }
 
 }

@@ -37,3 +37,27 @@ fun <I> makeProgress(input: I): CompactDFA<I> {
     .withAccepting(1)
     .create()
 }
+
+
+fun <E> List<E>.combinations(k: Int): Collection<Collection<E>> {
+  if (k > this.size)
+    error("k should not be bigger than the size of this list")
+
+  val l = mutableListOf<Collection<E>>()
+  val c = (0 until k).toMutableList()
+
+  while (true) {
+    l.add(c.map { this[it] })
+
+    var i = k - 1
+    while (i >= 0 && c[i] == this.size - k + i)
+      i--
+    if (i < 0)
+      break
+    c[i]++
+    for (j in i+1 until k)
+      c[j] = c[j-1] + 1
+  }
+
+  return l
+}

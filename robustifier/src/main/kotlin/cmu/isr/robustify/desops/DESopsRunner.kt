@@ -1,11 +1,15 @@
 package cmu.isr.robustify.desops
 
+import cmu.isr.utils.pretty
 import net.automatalib.words.Alphabet
+import org.slf4j.LoggerFactory
 import java.io.FileOutputStream
+import java.time.Duration
 
 
 class DESopsRunner {
 
+  private val logger = LoggerFactory.getLogger(javaClass)
   private val desops = ClassLoader.getSystemResource("scripts/desops.py")?.readBytes() ?: error("Cannot find desops.py")
 
   init {
@@ -34,15 +38,21 @@ class DESopsRunner {
     if (plant.observable != prop.observable)
       throw Error("The plant and the property should have the same observable")
 
+    val startTime = System.currentTimeMillis()
     val processBuilder = ProcessBuilder("python", "desops.py")
     val process = processBuilder.start()
 
     write(process.outputStream, plant, inputs1)
     write(process.outputStream, prop, inputs2)
     process.waitFor()
+
     return when (process.exitValue()) {
-      0 -> parse(process.inputStream, inputs1, plant.controllable, plant.observable, transformer)
-      -1 -> null
+      0 -> {
+        val sup = parse(process.inputStream, inputs1, plant.controllable, plant.observable, transformer)
+        logger.debug("Synthesis spent ${Duration.ofMillis(System.currentTimeMillis() - startTime).pretty()}")
+        sup
+      }
+      255 -> null
       else -> throw Error(
         "Exit code: ${process.exitValue()}. Caused by: " + process.errorStream.bufferedReader().readText()
       )
