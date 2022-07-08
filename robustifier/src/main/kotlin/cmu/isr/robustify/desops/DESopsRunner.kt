@@ -1,5 +1,9 @@
 package cmu.isr.robustify.desops
 
+
+import cmu.isr.robustify.supervisory.CompactSupDFA
+import cmu.isr.robustify.supervisory.SupervisoryDFA
+import cmu.isr.robustify.supervisory.SupervisorySynthesizer
 import cmu.isr.utils.pretty
 import net.automatalib.words.Alphabet
 import org.slf4j.LoggerFactory
@@ -7,7 +11,7 @@ import java.io.FileOutputStream
 import java.time.Duration
 
 
-class DESopsRunner {
+class DESopsRunner<I>(val transformer: (String) -> I) : SupervisorySynthesizer<Int, I> {
 
   private val logger = LoggerFactory.getLogger(javaClass)
   private val desops = ClassLoader.getSystemResource("scripts/desops.py")?.readBytes() ?: error("Cannot find desops.py")
@@ -18,17 +22,9 @@ class DESopsRunner {
     out.close()
   }
 
-  fun synthesize(
-    plant: SupervisoryDFA<*, String>, inputs1: Alphabet<String>,
-    prop: SupervisoryDFA<*, String>, inputs2: Alphabet<String>
-  ): CompactSupDFA<String>? {
-    return synthesize(plant, inputs1, prop, inputs2) { it }
-  }
-
-  fun <I> synthesize(
+  override fun synthesize(
     plant: SupervisoryDFA<*, I>, inputs1: Alphabet<I>,
-    prop: SupervisoryDFA<*, I>, inputs2: Alphabet<I>,
-    transformer: (String) -> I
+    prop: SupervisoryDFA<*, I>, inputs2: Alphabet<I>
   ): CompactSupDFA<I>? {
     // check alphabets
     if (inputs1 != inputs2)

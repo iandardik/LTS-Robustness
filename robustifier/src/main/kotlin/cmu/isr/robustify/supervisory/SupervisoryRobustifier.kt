@@ -4,17 +4,14 @@ import cmu.isr.lts.CompactDetLTS
 import cmu.isr.lts.DetLTS
 import cmu.isr.lts.asLTS
 import cmu.isr.robustify.BaseRobustifier
-import cmu.isr.robustify.desops.CompactSupDFA
 import cmu.isr.robustify.desops.DESopsRunner
-import cmu.isr.robustify.desops.asSupDFA
-import cmu.isr.robustify.desops.observer
 import net.automatalib.automata.fsa.impl.compact.CompactDFA
 import net.automatalib.automata.simple.SimpleDeterministicAutomaton
 import net.automatalib.words.Alphabet
 import net.automatalib.words.Word
 import org.slf4j.LoggerFactory
 import cmu.isr.lts.parallelComposition as parallelLTS
-import cmu.isr.robustify.desops.parallelComposition as parallelDFA
+import cmu.isr.robustify.supervisory.parallelComposition as parallelDFA
 
 enum class Priority { P0, P1, P2, P3 }
 
@@ -42,7 +39,7 @@ class SupervisoryRobustifier(
 ) : BaseRobustifier<Int, String, Int>(sys, sysInputs, devEnv, envInputs, safety, safetyInputs)
 {
   private val logger = LoggerFactory.getLogger(javaClass)
-  private val desops = DESopsRunner()
+  private val desops = DESopsRunner() { it }
   private val plant: CompactDetLTS<String> = parallelLTS(sys, sysInputs, devEnv, envInputs)
   private val prop: CompactDFA<String>
   private val synthesisCache = mutableMapOf<Pair<Collection<String>, Collection<String>>, CompactSupDFA<String>?>()

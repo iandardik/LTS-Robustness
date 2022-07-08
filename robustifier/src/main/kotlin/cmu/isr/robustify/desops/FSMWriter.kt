@@ -1,5 +1,6 @@
 package cmu.isr.robustify.desops
 
+import cmu.isr.robustify.supervisory.SupervisoryDFA
 import net.automatalib.words.Alphabet
 import java.io.OutputStream
 

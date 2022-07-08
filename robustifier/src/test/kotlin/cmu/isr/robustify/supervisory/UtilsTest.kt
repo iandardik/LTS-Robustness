@@ -1,10 +1,6 @@
 package cmu.isr.robustify.supervisory
 
 import cmu.isr.lts.asLTS
-import cmu.isr.robustify.desops.asSupDFA
-import cmu.isr.robustify.desops.observer
-import cmu.isr.robustify.desops.parallelComposition
-import cmu.isr.robustify.desops.reachableSet
 import net.automatalib.util.automata.Automata
 import net.automatalib.util.automata.builders.AutomatonBuilders
 import net.automatalib.words.Word

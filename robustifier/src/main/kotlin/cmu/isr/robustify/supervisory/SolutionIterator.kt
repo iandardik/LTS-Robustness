@@ -1,7 +1,6 @@
 package cmu.isr.robustify.supervisory
 
 import cmu.isr.lts.CompactDetLTS
-import cmu.isr.robustify.desops.CompactSupDFA
 import cmu.isr.utils.pretty
 import net.automatalib.words.Word
 import org.slf4j.LoggerFactory

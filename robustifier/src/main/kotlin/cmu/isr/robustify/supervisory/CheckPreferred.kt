@@ -1,6 +1,5 @@
 package cmu.isr.robustify.supervisory
 
-import cmu.isr.robustify.desops.DFAParallelComposition
 import net.automatalib.automata.fsa.DFA
 import net.automatalib.commons.util.Holder
 import net.automatalib.util.automata.builders.AutomatonBuilders

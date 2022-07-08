@@ -1,5 +1,6 @@
 package cmu.isr.robustify.desops
 
+import cmu.isr.robustify.supervisory.asSupDFA
 import net.automatalib.util.automata.Automata
 import net.automatalib.util.automata.builders.AutomatonBuilders
 import net.automatalib.words.impl.Alphabets
@@ -92,7 +93,7 @@ class DESopsTests {
       .create()
       .asSupDFA(controllable, observable)
 
-    val runner = DESopsRunner()
+    val runner = DESopsRunner() { it }
     val controller = runner.synthesize(a, inputs, b, inputs)
 
     val c = AutomatonBuilders.newDFA(inputs)

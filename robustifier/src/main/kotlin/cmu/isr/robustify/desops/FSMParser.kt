@@ -1,8 +1,9 @@
 package cmu.isr.robustify.desops
 
+import cmu.isr.robustify.supervisory.CompactSupDFA
+import cmu.isr.robustify.supervisory.asSupDFA
 import net.automatalib.util.automata.builders.AutomatonBuilders
 import net.automatalib.words.Alphabet
-import net.automatalib.words.impl.Alphabets
 import java.io.BufferedReader
 import java.io.InputStream
 
