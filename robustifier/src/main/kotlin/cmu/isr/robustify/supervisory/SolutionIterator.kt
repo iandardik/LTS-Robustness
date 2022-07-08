@@ -61,8 +61,8 @@ class SolutionIterator(
     logger.info("Number of observable events with cost: ${observable.size - (problem.observableMap[Priority.P0]?.size ?: 0)}")
 
     // synthesize a supervisor with the max controllable and observable events
-    val (supObserved, sup) = problem.supervisorySynthesize(controllable, observable)
-    if (sup == null || supObserved == null) {
+    val sup = problem.supervisorySynthesize(controllable, observable)
+    if (sup == null) {
       logger.warn("No supervisor found with max controllable and observable events.")
       return emptyArray<CompactDetLTS<String>>().iterator()
     }
@@ -74,7 +74,7 @@ class SolutionIterator(
       logger.info("\t$p")
 
     // remove those absolutely unused controllable and observable events which generates the initial solution
-    initSup = problem.removeUnnecessary(supObserved)
+    initSup = problem.removeUnnecessary(sup)
 
     preferredIterator = PreferredBehIterator(problem.preferredMap)
 
@@ -198,12 +198,12 @@ class SolutionIterator(
       logger.debug("Controllable: ${initSup.controllable - controllable.toSet()}")
       logger.debug("Observable: ${initSup.observable - observable.toSet()}")
 
-      val (supObserved, sup) = problem.supervisorySynthesize(controllable, observable)
+      val sup = problem.supervisorySynthesize(controllable, observable)
       synthesisCounter++
-      if (sup == null || supObserved == null)
+      if (sup == null)
         continue
       if (problem.satisfyPreferred(sup, preferred))
-        minSup = supObserved
+        minSup = sup
     }
     return listOf(problem.constructSupervisor(minSup))
   }
@@ -232,13 +232,13 @@ class SolutionIterator(
           logger.debug("Controllable: ${initSup.controllable - controllable.toSet()}")
           logger.debug("Observable: ${initSup.observable - observable.toSet()}")
 
-          val (supObserved, sup) = problem.supervisorySynthesize(controllable, observable)
+          val sup = problem.supervisorySynthesize(controllable, observable)
           synthesisCounter++
-          if (sup == null || supObserved == null)
+          if (sup == null)
             continue
           // add minimization if preferred behavior maintained
           if (problem.satisfyPreferred(sup, preferred)) {
-            minSups.add(problem.constructSupervisor(supObserved))
+            minSups.add(problem.constructSupervisor(sup))
           }
         }
       }

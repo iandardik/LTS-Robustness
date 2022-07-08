@@ -45,7 +45,7 @@ class SupervisoryRobustifier(
   private val desops = DESopsRunner()
   private val plant: CompactDetLTS<String> = parallelLTS(sys, sysInputs, devEnv, envInputs)
   private val prop: CompactDFA<String>
-  private val synthesisCache = mutableMapOf<Pair<Collection<String>, Collection<String>>, Pair<CompactSupDFA<String>?, CompactSupDFA<String>?>>()
+  private val synthesisCache = mutableMapOf<Pair<Collection<String>, Collection<String>>, CompactSupDFA<String>?>()
   private val checkPreferredCache = mutableMapOf<Triple<Collection<String>, Collection<String>, Word<String>>, Boolean>()
 
   init {
@@ -66,21 +66,23 @@ class SupervisoryRobustifier(
     return SolutionIterator(this, alg, deadlockFree, maxIter)
   }
 
-  fun supervisorySynthesize(controllable: Collection<String>,
-                            observable: Collection<String>): Pair<CompactSupDFA<String>?, CompactSupDFA<String>?> {
+  /**
+   * @return the observed(Sup || G) model
+   */
+  fun supervisorySynthesize(controllable: Collection<String>, observable: Collection<String>): CompactSupDFA<String>? {
     val key = Pair(controllable, observable)
     if (key !in synthesisCache) {
       val g = plant.asSupDFA(controllable, observable)
       val p = prop.asSupDFA(controllable, observable)
       val sup = desops.synthesize(g, g.inputAlphabet, p, p.inputAlphabet)
       if (sup == null)
-        synthesisCache[key] = Pair(null, null)
+        synthesisCache[key] = null
       else
-        synthesisCache[key] = Pair(observer(sup, sup.inputAlphabet), sup)
+        synthesisCache[key] = observer(sup, sup.inputAlphabet)
     } else {
       logger.debug("Synthesis cache hit: $key")
     }
-    return synthesisCache[key]!!
+    return synthesisCache[key]
   }
 
   /**
@@ -133,7 +135,7 @@ class SupervisoryRobustifier(
   }
 
   /**
-   * @param sup the raw Sup || G model from the DESops output
+   * @param sup the observed(Sup || G) model from the DESops output
    */
   fun checkPreferred(sup: CompactSupDFA<String>, preferred: Collection<Word<String>>): Collection<Word<String>> {
     return preferred.filter {
@@ -148,7 +150,7 @@ class SupervisoryRobustifier(
   }
 
   /**
-   * @param sup the raw Sup || G model from the DESops output
+   * @param sup the observed(Sup || G) model from the DESops output
    */
   fun satisfyPreferred(sup: CompactSupDFA<String>, preferred: Collection<Word<String>>): Boolean {
     for (p in preferred) {
@@ -165,6 +167,9 @@ class SupervisoryRobustifier(
     return true
   }
 
+  /**
+   * @param sup the observed(Sup || G) model from the DESops output
+   */
   fun removeUnnecessary(sup: CompactSupDFA<String>): CompactSupDFA<String> {
     val control = constructSupervisor(sup)
     val makeUc = control.observable.toMutableSet()
@@ -197,6 +202,7 @@ class SupervisoryRobustifier(
   fun constructSupervisor(sup: CompactSupDFA<String>): CompactSupDFA<String> {
     val supQueue = java.util.ArrayDeque<Int>()
     val plantQueue = java.util.ArrayDeque<Int>()
+    val observedPlant = observer(plant.asSupDFA(sup.controllable, sup.observable), plant.inputAlphabet)
     val out = CompactDFA(sup).asSupDFA(sup.controllable, sup.observable)
     val visited = mutableSetOf<Int>()
 
@@ -211,9 +217,10 @@ class SupervisoryRobustifier(
         continue
       visited.add(supState)
 
-      for (a in sup.inputAlphabet) {
+      assert(sup.observable.toSet() == sup.inputAlphabet.toSet())
+      for (a in sup.observable) {
         val supSucc = sup.getSuccessor(supState, a)
-        val plantSucc = sup.getSuccessor(plantState, a)
+        val plantSucc = observedPlant.getSuccessor(plantState, a)
         if (supSucc != SimpleDeterministicAutomaton.IntAbstraction.INVALID_STATE &&
             plantSucc != SimpleDeterministicAutomaton.IntAbstraction.INVALID_STATE) {
           supQueue.offer(supSucc)
@@ -221,13 +228,11 @@ class SupervisoryRobustifier(
         } else if (supSucc != SimpleDeterministicAutomaton.IntAbstraction.INVALID_STATE) {
           // sup has more transitions meaning that this sup is probably constructed.
           continue
-        } else if (a in sup.observable) {
-          // uncontrollable event, make admissible
-          if (a !in sup.controllable)
-            out.addTransition(supState, a, supState, null)
+        } else if (a !in sup.controllable) { // uncontrollable event, make admissible
+          out.addTransition(supState, a, supState, null)
+        } else if (plantSucc == SimpleDeterministicAutomaton.IntAbstraction.INVALID_STATE) {
           // controllable but not defined in plant, make redundant
-          else if (plantSucc == SimpleDeterministicAutomaton.IntAbstraction.INVALID_STATE)
-            out.addTransition(supState, a, supState, null)
+          out.addTransition(supState, a, supState, null)
         }
       }
     }
