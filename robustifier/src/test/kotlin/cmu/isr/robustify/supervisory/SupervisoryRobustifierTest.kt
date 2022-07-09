@@ -4,6 +4,7 @@ import cmu.isr.lts.checkDeadlock
 import cmu.isr.ltsa.LTSACall
 import cmu.isr.ltsa.LTSACall.asDetLTS
 import cmu.isr.ltsa.LTSACall.compose
+import cmu.isr.robustify.supremica.SupremicaRunner
 import net.automatalib.words.Word
 import org.junit.jupiter.api.Test
 import kotlin.test.assertContentEquals
@@ -40,6 +41,7 @@ class SupervisoryRobustifierTest {
         Priority.P0 to listOf("back", "confirm", "password", "select", "vote"),
         Priority.P2 to listOf("eo.enter", "eo.exit", "v.enter", "v.exit")
       ),
+      synthesizer = SupremicaRunner(),
       maxIter = 1
     )
   }

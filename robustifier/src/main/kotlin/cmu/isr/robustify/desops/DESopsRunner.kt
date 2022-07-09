@@ -1,9 +1,7 @@
 package cmu.isr.robustify.desops
 
 
-import cmu.isr.robustify.supervisory.CompactSupDFA
-import cmu.isr.robustify.supervisory.SupervisoryDFA
-import cmu.isr.robustify.supervisory.SupervisorySynthesizer
+import cmu.isr.robustify.supervisory.*
 import cmu.isr.utils.pretty
 import net.automatalib.words.Alphabet
 import org.slf4j.LoggerFactory
@@ -11,7 +9,7 @@ import java.io.FileOutputStream
 import java.time.Duration
 
 
-class DESopsRunner<I>(val transformer: (String) -> I) : SupervisorySynthesizer<Int, I> {
+class DESopsRunner<I>(private val transformer: (String) -> I) : SupervisorySynthesizer<Int, I> {
 
   private val logger = LoggerFactory.getLogger(javaClass)
   private val desops = ClassLoader.getSystemResource("scripts/desops.py")?.readBytes() ?: error("Cannot find desops.py")
@@ -22,17 +20,14 @@ class DESopsRunner<I>(val transformer: (String) -> I) : SupervisorySynthesizer<I
     out.close()
   }
 
-  override fun synthesize(
+  private fun synthesizeRaw(
     plant: SupervisoryDFA<*, I>, inputs1: Alphabet<I>,
     prop: SupervisoryDFA<*, I>, inputs2: Alphabet<I>
   ): CompactSupDFA<I>? {
     // check alphabets
     if (inputs1 != inputs2)
-      throw Error("The plant and the property should have the same alphabet")
-    if (plant.controllable != prop.controllable)
-      throw Error("The plant and the property should have the same controllable")
-    if (plant.observable != prop.observable)
-      throw Error("The plant and the property should have the same observable")
+      error("The plant and the property should have the same alphabet")
+    checkAlphabets(plant, inputs1, prop, inputs2)
 
     val startTime = System.currentTimeMillis()
     val processBuilder = ProcessBuilder("python", "desops.py")
@@ -46,12 +41,25 @@ class DESopsRunner<I>(val transformer: (String) -> I) : SupervisorySynthesizer<I
       0 -> {
         val sup = parse(process.inputStream, inputs1, plant.controllable, plant.observable, transformer)
         logger.debug("Synthesis spent ${Duration.ofMillis(System.currentTimeMillis() - startTime).pretty()}")
-        sup
+        observer(sup, sup.inputAlphabet)
       }
       255 -> null
-      else -> throw Error(
+      else -> error(
         "Exit code: ${process.exitValue()}. Caused by: " + process.errorStream.bufferedReader().readText()
       )
     }
+  }
+
+  override fun synthesize(
+    plant: SupervisoryDFA<*, I>, inputs1: Alphabet<I>,
+    prop: SupervisoryDFA<*, I>, inputs2: Alphabet<I>
+  ): CompactSupDFA<I>? {
+    // DESops requires the prop to have the same alphabet as the plant
+    if (inputs1 != inputs2) {
+      val extendedProp = extendAlphabet(prop, inputs2, inputs1).asSupDFA(
+        prop.controllable union plant.controllable, prop.observable union plant.observable)
+      return synthesizeRaw(plant, inputs1, extendedProp, extendedProp.inputAlphabet)
+    }
+    return synthesizeRaw(plant, inputs1, prop, inputs2)
   }
 }

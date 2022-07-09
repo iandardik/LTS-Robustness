@@ -1,9 +1,7 @@
 package cmu.isr.robustify.supervisory
 
-import cmu.isr.lts.CompactDetLTS
-import cmu.isr.lts.DetLTS
-import cmu.isr.lts.asLTS
 import net.automatalib.automata.fsa.impl.compact.CompactDFA
+import net.automatalib.ts.UniversalDTS
 import net.automatalib.util.automata.builders.AutomatonBuilders
 import net.automatalib.util.ts.copy.TSCopy
 import net.automatalib.util.ts.traversal.TSTraversal
@@ -12,19 +10,16 @@ import net.automatalib.words.Alphabet
 import net.automatalib.words.impl.Alphabets
 
 
-fun <S, I, T> extendAlphabet(lts: DetLTS<S, I, T>, old: Alphabet<I>, extended: Alphabet<I>): CompactDetLTS<I> {
+fun <S, I, T> extendAlphabet(lts: UniversalDTS<S, I, T, Boolean, Void?>, old: Alphabet<I>, extended: Alphabet<I>): CompactDFA<I> {
   val out = CompactDFA(extended)
   TSCopy.copy(TSTraversalMethod.DEPTH_FIRST, lts, TSTraversal.NO_LIMIT, old, out)
 
-  val outLTS = out.asLTS()
-  for (state in outLTS) {
-    if (outLTS.isErrorState(state))
-      continue
+  for (state in out) {
     for (a in extended - old) {
-      outLTS.addTransition(state, a, state, null)
+      out.addTransition(state, a, state, null)
     }
   }
-  return outLTS
+  return out
 }
 
 

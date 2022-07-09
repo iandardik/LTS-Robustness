@@ -1,15 +1,19 @@
 package cmu.isr.robustify.desops
 
+import cmu.isr.robustify.supervisory.SupervisorySynthesizer
+import cmu.isr.robustify.supervisory.SynthesisTests
 import cmu.isr.robustify.supervisory.asSupDFA
 import net.automatalib.util.automata.Automata
 import net.automatalib.util.automata.builders.AutomatonBuilders
 import net.automatalib.words.impl.Alphabets
 import org.junit.jupiter.api.Test
 import java.io.ByteArrayOutputStream
-import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 
-class DESopsTests {
+class DESopsTests : SynthesisTests() {
+
+  override val synthesizer: SupervisorySynthesizer<Int, String>
+    get() = DESopsRunner { it }
 
   @Test
   fun testWriter() {
@@ -66,47 +70,5 @@ class DESopsTests {
     assert(Automata.testEquivalence(a, b, alphabets))
     assertEquals(a.controllable, b.controllable)
     assertEquals(a.observable, b.observable)
-  }
-
-  @Test
-  fun testDESopsRunner() {
-    val inputs = Alphabets.fromArray("a", "b", "c")
-    val controllable = Alphabets.fromArray("a", "b", "c")
-    val observable = Alphabets.fromArray("a", "b", "c")
-    val a = AutomatonBuilders.newDFA(inputs)
-      .withInitial(0)
-      .from(0).on("a").to(1)
-      .from(1)
-      .on("a").to(1)
-      .on("b").to(2)
-      .from(2).on("c").to(0)
-      .withAccepting(0, 1, 2)
-      .create()
-      .asSupDFA(controllable, observable)
-
-    val b = AutomatonBuilders.newDFA(inputs)
-      .withInitial(0)
-      .from(0).on("a").to(1)
-      .from(1).on("b").to(2)
-      .from(2).on("c").to(0)
-      .withAccepting(0, 1, 2)
-      .create()
-      .asSupDFA(controllable, observable)
-
-    val runner = DESopsRunner() { it }
-    val controller = runner.synthesize(a, inputs, b, inputs)
-
-    val c = AutomatonBuilders.newDFA(inputs)
-      .withInitial(0)
-      .from(0).on("a").to(1)
-      .from(1).on("b").to(2)
-      .from(2).on("c").to(0)
-      .withAccepting(0, 1, 2)
-      .create()
-      .asSupDFA(controllable, observable)
-
-    assertContentEquals(c.controllable, controller!!.controllable)
-    assertContentEquals(c.observable, controller.observable)
-    assert(Automata.testEquivalence(c, controller, inputs))
   }
 }

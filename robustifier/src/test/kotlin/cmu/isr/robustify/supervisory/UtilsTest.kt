@@ -155,6 +155,19 @@ class UtilsTest {
   }
 
   @Test
+  fun testAcceptsSubWord3() {
+    val a = AutomatonBuilders.newDFA(Alphabets.fromArray('a', 'b', 'c'))
+      .withInitial(0)
+      .from(0).on('a').to(1)
+      .from(1).on('b').to(2)
+      .from(2).on('c').to(0)
+      .withAccepting(0, 1, 2)
+      .create()
+    val word = Word.fromSymbols('b', 'd', 'c')
+    assertEquals(true, acceptsSubWord(a, a.inputAlphabet, word))
+  }
+
+  @Test
   fun testCombinations() {
     val l = listOf('a', 'b', 'c', 'd')
     val cs = l.combinations(2)

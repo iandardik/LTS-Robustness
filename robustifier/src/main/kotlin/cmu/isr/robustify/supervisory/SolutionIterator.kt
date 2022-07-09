@@ -138,7 +138,7 @@ class SolutionIterator(
     if (minBracketCost > minCost) {
       minCost = minBracketCost
       for (candidate in candidates) {
-        val solution = problem.buildSys(candidate.sup)
+        val solution = problem.buildSys(problem.constructSupervisor(candidate.sup))
         if (alg == Algorithms.Pareto)
           logger.info("New pareto-optimal found:")
         else
@@ -204,7 +204,7 @@ class SolutionIterator(
       if (problem.satisfyPreferred(sup, preferred))
         minSup = sup
     }
-    return listOf(problem.constructSupervisor(minSup))
+    return listOf(minSup)
   }
 
   private fun minimizePareto(preferred: Collection<Word<String>>): Collection<CompactSupDFA<String>> {
@@ -237,7 +237,7 @@ class SolutionIterator(
             continue
           // add minimization if preferred behavior maintained
           if (problem.satisfyPreferred(sup, preferred)) {
-            minSups.add(problem.constructSupervisor(sup))
+            minSups.add(sup)
           }
         }
       }

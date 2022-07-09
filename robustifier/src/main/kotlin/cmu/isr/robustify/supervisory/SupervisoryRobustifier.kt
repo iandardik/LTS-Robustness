@@ -4,7 +4,6 @@ import cmu.isr.lts.CompactDetLTS
 import cmu.isr.lts.DetLTS
 import cmu.isr.lts.asLTS
 import cmu.isr.robustify.BaseRobustifier
-import cmu.isr.robustify.desops.DESopsRunner
 import net.automatalib.automata.fsa.impl.compact.CompactDFA
 import net.automatalib.automata.simple.SimpleDeterministicAutomaton
 import net.automatalib.words.Alphabet
@@ -35,11 +34,11 @@ class SupervisoryRobustifier(
   val preferredMap: Map<Priority, Collection<Word<String>>>,
   val controllableMap: Map<Priority, Collection<String>>,
   val observableMap: Map<Priority, Collection<String>>,
+  val synthesizer: SupervisorySynthesizer<Int, String>,
   val maxIter: Int = 1
 ) : BaseRobustifier<Int, String, Int>(sys, sysInputs, devEnv, envInputs, safety, safetyInputs)
 {
   private val logger = LoggerFactory.getLogger(javaClass)
-  private val desops = DESopsRunner() { it }
   private val plant: CompactDetLTS<String> = parallelLTS(sys, sysInputs, devEnv, envInputs)
   private val prop: CompactDFA<String>
   private val synthesisCache = mutableMapOf<Pair<Collection<String>, Collection<String>>, CompactSupDFA<String>?>()
@@ -48,7 +47,7 @@ class SupervisoryRobustifier(
   init {
     val extendedSafety = extendAlphabet(safety, safetyInputs, plant.inputAlphabet)
     val progressProp = progress.map { makeProgress(it) }
-    var c = extendedSafety as CompactDFA<String>
+    var c = extendedSafety
     for (p in progressProp) {
       c = parallelDFA(c, c.inputAlphabet, p, p.inputAlphabet)
     }
@@ -71,11 +70,7 @@ class SupervisoryRobustifier(
     if (key !in synthesisCache) {
       val g = plant.asSupDFA(controllable, observable)
       val p = prop.asSupDFA(controllable, observable)
-      val sup = desops.synthesize(g, g.inputAlphabet, p, p.inputAlphabet)
-      if (sup == null)
-        synthesisCache[key] = null
-      else
-        synthesisCache[key] = observer(sup, sup.inputAlphabet)
+      synthesisCache[key] = synthesizer.synthesize(g, g.inputAlphabet, p, p.inputAlphabet) as CompactSupDFA<String>?
     } else {
       logger.debug("Synthesis cache hit: $key")
     }
@@ -234,7 +229,7 @@ class SupervisoryRobustifier(
       }
     }
 
-    return observer(out, out.inputAlphabet)
+    return out
   }
 
   fun buildSys(sup: CompactSupDFA<String>): CompactDetLTS<String> {
