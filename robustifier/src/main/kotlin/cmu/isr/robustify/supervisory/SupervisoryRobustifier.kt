@@ -76,7 +76,13 @@ class SupervisoryRobustifier(
     if (key !in synthesisCache) {
       val g = plant.asSupDFA(controllable, observable)
       val p = prop.asSupDFA(controllable, observable)
-      synthesisCache[key] = synthesizer.synthesize(g, g.inputAlphabet, p, p.inputAlphabet) as CompactSupDFA<String>?
+      val sup = synthesizer.synthesize(g, g.inputAlphabet, p, p.inputAlphabet) as CompactSupDFA<String>?
+      if (sup != null) {
+        // FIXME: is it okay to make all the states of the supervisor accepting?
+        for (state in sup)
+          sup.setAccepting(state, true)
+      }
+      synthesisCache[key] = sup
     } else {
       logger.debug("Synthesis cache hit: $key")
     }
@@ -136,33 +142,33 @@ class SupervisoryRobustifier(
    * @param sup the observed(Sup || G) model from the DESops output
    */
   fun checkPreferred(sup: CompactSupDFA<String>, preferred: Collection<Word<String>>): Collection<Word<String>> {
-    return preferred.filter {
-      val key = Triple(sup.controllable, sup.observable, it)
-      if (key !in checkPreferredCache) {
-        checkPreferredCache[key] = acceptsSubWord(sup, sup.inputAlphabet, it)
-      } else {
-        logger.debug("CheckPreferred cache hit: $key")
-      }
-      checkPreferredCache[key]!!
-    }
+    val ctrlPlant = parallelDFA(plant, plant.inputAlphabet, sup, sup.inputAlphabet)
+      .asSupDFA(sup.controllable, sup.observable)
+    return preferred.filter { checkPreferred(ctrlPlant, it) }
   }
 
   /**
    * @param sup the observed(Sup || G) model from the DESops output
    */
   fun satisfyPreferred(sup: CompactSupDFA<String>, preferred: Collection<Word<String>>): Boolean {
+    val ctrlPlant = parallelDFA(plant, plant.inputAlphabet, sup, sup.inputAlphabet)
+      .asSupDFA(sup.controllable, sup.observable)
     for (p in preferred) {
-      val key = Triple(sup.controllable, sup.observable, p)
-      if (key !in checkPreferredCache) {
-        checkPreferredCache[key] = acceptsSubWord(sup, sup.inputAlphabet, p)
-      } else {
-        logger.debug("CheckPreferred cache hit: $key")
-      }
-      if (!(checkPreferredCache[key]!!)) {
+      if (!checkPreferred(ctrlPlant, p)) {
         return false
       }
     }
     return true
+  }
+
+  private fun checkPreferred(sup: CompactSupDFA<String>, p: Word<String>): Boolean {
+    val key = Triple(sup.controllable, sup.observable, p)
+    if (key !in checkPreferredCache) {
+      checkPreferredCache[key] = acceptsSubWord(sup, sup.inputAlphabet, p)
+    } else {
+      logger.debug("CheckPreferred cache hit: $key")
+    }
+    return checkPreferredCache[key]!!
   }
 
   /**

@@ -156,7 +156,7 @@ class SupervisoryRobustifierTest {
           "turn_on",
         )
       ),
-      synthesizer = DESopsRunner() { it },
+      synthesizer = SupremicaRunner(),
       maxIter = 1
     )
   }
