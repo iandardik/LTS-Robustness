@@ -1,3 +1,4 @@
+import socket
 from typing import Optional
 
 import sys
@@ -197,7 +198,7 @@ def read_fsm(f) -> Optional[ig.Graph]:
         line = read_nonempty_line(f)
         num_states = int(line)
     except ValueError:
-        sys.stderr.write("ERROR: Need the number of states")
+        sys.stderr.write("ERROR: Need the number of states\n")
         return None
 
     g = ig.Graph(directed=True)
@@ -206,7 +207,7 @@ def read_fsm(f) -> Optional[ig.Graph]:
     try:
         return read_states(f, g, num_states)
     except error.FileFormatError as e:
-        sys.stderr.write(repr(e))
+        sys.stderr.write(repr(e) + "\n")
         return None
 
 
@@ -282,25 +283,30 @@ def str2(name):
 
 
 if __name__ == "__main__":
-    try:
-        plant = read_fsm(sys.stdin)
-        prop = read_fsm(sys.stdin)
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        s.bind(("127.0.0.1", 5000))
+        s.listen()
+        while True:
+            conn, _ = s.accept()
+            with conn.makefile("rw") as f:
+                plant = read_fsm(f)
+                prop = read_fsm(f)
 
-        if plant is not None and prop is not None:
-            L = d.supervisor.offline_VLPPO(plant, prop)
-            L.vs["marked"] = [1 for i in range(L.vcount())]
-            L = d.composition.parallel(L, plant, prop)
-            L = d.supervisor.supremal_sublanguage(plant, L, prefix_closed=False, mode=d.supervisor.Mode.CONTROLLABLE_NORMAL)
-            # L_observed = d.composition.observer(L)
+                if plant is not None and prop is not None:
+                    L = d.supervisor.offline_VLPPO(plant, prop)
+                    L.vs["marked"] = [1 for i in range(L.vcount())]
+                    L = d.composition.parallel(L, plant, prop)
+                    L = d.supervisor.supremal_sublanguage(plant, L, prefix_closed=False, mode=d.supervisor.Mode.CONTROLLABLE_NORMAL)
+                    # L_observed = d.composition.observer(L)
 
-            if len(L.vs) != 0:
-                write_fsm(sys.stdout, L)
-                sys.exit(0)
-            else:
-                print("No controller")
-                sys.exit(-1)
-        else:
-            sys.exit(-2)
-    except Exception as e:
-        sys.stderr.write(repr(e))
-        sys.exit(-2)
+                    if len(L.vs) != 0:
+                        f.write("0\n")
+                        write_fsm(f, L)
+                    else:
+                        f.write("1\n")
+                else:
+                    f.write("2\n")
+                
+                f.flush()
+            conn.close()

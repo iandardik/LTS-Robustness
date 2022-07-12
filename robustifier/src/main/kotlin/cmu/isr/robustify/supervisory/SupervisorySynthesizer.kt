@@ -1,8 +1,9 @@
 package cmu.isr.robustify.supervisory
 
 import net.automatalib.words.Alphabet
+import java.io.Closeable
 
-interface SupervisorySynthesizer<S, I> {
+interface SupervisorySynthesizer<S, I> : Closeable {
   fun synthesize(
     plant: SupervisoryDFA<*, I>, inputs1: Alphabet<I>,
     prop: SupervisoryDFA<*, I>, inputs2: Alphabet<I>

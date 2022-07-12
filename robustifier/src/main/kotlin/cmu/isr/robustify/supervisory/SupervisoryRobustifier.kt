@@ -9,6 +9,7 @@ import net.automatalib.automata.simple.SimpleDeterministicAutomaton
 import net.automatalib.words.Alphabet
 import net.automatalib.words.Word
 import org.slf4j.LoggerFactory
+import java.io.Closeable
 import cmu.isr.lts.parallelComposition as parallelLTS
 import cmu.isr.robustify.supervisory.parallelComposition as parallelDFA
 
@@ -36,7 +37,8 @@ class SupervisoryRobustifier(
   val observableMap: Map<Priority, Collection<String>>,
   val synthesizer: SupervisorySynthesizer<Int, String>,
   val maxIter: Int = 1
-) : BaseRobustifier<Int, String, Int>(sys, sysInputs, devEnv, envInputs, safety, safetyInputs)
+) : BaseRobustifier<Int, String, Int>(sys, sysInputs, devEnv, envInputs, safety, safetyInputs),
+    Closeable
 {
   private val logger = LoggerFactory.getLogger(javaClass)
   private val plant: CompactDetLTS<String> = parallelLTS(sys, sysInputs, devEnv, envInputs)
@@ -52,6 +54,10 @@ class SupervisoryRobustifier(
       c = parallelDFA(c, c.inputAlphabet, p, p.inputAlphabet)
     }
     prop = c
+  }
+
+  override fun close() {
+    synthesizer.close()
   }
 
   override fun synthesize(): CompactDetLTS<String>? {

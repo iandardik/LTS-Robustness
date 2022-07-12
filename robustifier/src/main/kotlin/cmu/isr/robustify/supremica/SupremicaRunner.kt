@@ -55,4 +55,6 @@ class SupremicaRunner : SupervisorySynthesizer<Int, String> {
         return if (sup.nbrOfStates() == 0) null else read(sup)
     }
 
+    override fun close() {}
+
 }

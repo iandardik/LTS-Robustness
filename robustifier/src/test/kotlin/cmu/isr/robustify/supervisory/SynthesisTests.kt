@@ -4,6 +4,7 @@ import net.automatalib.serialization.aut.AUTWriter
 import net.automatalib.util.automata.Automata
 import net.automatalib.util.automata.builders.AutomatonBuilders
 import net.automatalib.words.impl.Alphabets
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertNotNull
@@ -11,6 +12,11 @@ import kotlin.test.assertNotNull
 abstract class SynthesisTests {
 
   abstract val synthesizer: SupervisorySynthesizer<Int, String>
+
+  @AfterEach
+  private fun close() {
+    synthesizer.close()
+  }
 
   private fun assertSynthesisResult(c: CompactSupDFA<String>, sup: CompactSupDFA<String>) {
     assertNotNull(sup)

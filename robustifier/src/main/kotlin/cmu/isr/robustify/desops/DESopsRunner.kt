@@ -5,7 +5,9 @@ import cmu.isr.robustify.supervisory.*
 import cmu.isr.utils.pretty
 import net.automatalib.words.Alphabet
 import org.slf4j.LoggerFactory
+import java.io.BufferedReader
 import java.io.FileOutputStream
+import java.net.Socket
 import java.time.Duration
 
 
@@ -13,11 +15,20 @@ class DESopsRunner<I>(private val transformer: (String) -> I) : SupervisorySynth
 
   private val logger = LoggerFactory.getLogger(javaClass)
   private val desops = ClassLoader.getSystemResource("scripts/desops.py")?.readBytes() ?: error("Cannot find desops.py")
+  private val process: Process
+  private val processStdErr: BufferedReader
+  private val port = 5000
 
   init {
     val out = FileOutputStream("./desops.py")
     out.write(desops)
     out.close()
+
+    val processBuilder = ProcessBuilder("python", "desops.py")
+    process = processBuilder.start()
+    processStdErr = process.errorStream.bufferedReader()
+
+    Thread.sleep(500) // Wait the DESops process to start
   }
 
   private fun synthesizeRaw(
@@ -29,25 +40,31 @@ class DESopsRunner<I>(private val transformer: (String) -> I) : SupervisorySynth
       error("The plant and the property should have the same alphabet")
     checkAlphabets(plant, inputs1, prop, inputs2)
 
+    if (!process.isAlive) {
+      error("The DESops process has terminated. Caused by: ${processStdErr.readText()}")
+    }
+
     val startTime = System.currentTimeMillis()
-    val processBuilder = ProcessBuilder("python", "desops.py")
-    val process = processBuilder.start()
+    val socket = Socket("127.0.0.1", port)
 
-    write(process.outputStream, plant, inputs1)
-    write(process.outputStream, prop, inputs2)
-    process.waitFor()
+    val outStream = socket.getOutputStream()
+    write(outStream, plant, inputs1)
+    write(outStream, prop, inputs2)
 
-    return when (process.exitValue()) {
-      0 -> {
-        val sup = parse(process.inputStream, inputs1, plant.controllable, plant.observable, transformer)
+    val inStream = socket.getInputStream()
+    val reader = inStream.bufferedReader()
+    val sup = when (reader.readLine()) {
+      "0" -> {
+        val sup = parse(reader, inputs1, plant.controllable, plant.observable, transformer)
         logger.debug("Synthesis spent ${Duration.ofMillis(System.currentTimeMillis() - startTime).pretty()}")
         observer(sup, sup.inputAlphabet)
       }
-      255 -> null
-      else -> error(
-        "Exit code: ${process.exitValue()}. Caused by: " + process.errorStream.bufferedReader().readText()
-      )
+      "1" -> null
+      else -> error(processStdErr.readLine())
     }
+
+    socket.close()
+    return sup
   }
 
   override fun synthesize(
@@ -61,5 +78,9 @@ class DESopsRunner<I>(private val transformer: (String) -> I) : SupervisorySynth
       return synthesizeRaw(plant, inputs1, extendedProp, extendedProp.inputAlphabet)
     }
     return synthesizeRaw(plant, inputs1, prop, inputs2)
+  }
+
+  override fun close() {
+    process.destroy()
   }
 }

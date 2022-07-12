@@ -5,35 +5,33 @@ import cmu.isr.robustify.supervisory.asSupDFA
 import net.automatalib.util.automata.builders.AutomatonBuilders
 import net.automatalib.words.Alphabet
 import java.io.BufferedReader
-import java.io.InputStream
 
 
-fun <I> parse(input: InputStream, alphabets: Alphabet<I>, controllable: Collection<I>,
+fun <I> parse(reader: BufferedReader, alphabets: Alphabet<I>, controllable: Collection<I>,
               observable: Collection<I>, transformer: (String) -> I): CompactSupDFA<I> {
-  val reader = input.bufferedReader()
   val states = mutableListOf<Pair<String, Boolean>>()
   val stateTransitions = mutableMapOf<String, List<Pair<String, String>>>()
 //  val alphabetsRead = mutableMapOf<String, Pair<Boolean, Boolean>>() // event -> <controllable, observable>
   var isDFA = true
 
-  val line = readNonEmptyLine(reader)
+  val numStateLine = readNonEmptyLine(reader)
   try {
-    val numStates = line.toInt()
+    val numStates = numStateLine.toInt()
     for (i in 0 until numStates) {
-      val line = readNonEmptyLine(reader)
-      val stateTuple = line.split('\t')
+      val stateLine = readNonEmptyLine(reader)
+      val stateTuple = stateLine.split('\t')
       if (stateTuple.size < 3)
-        throw Error("Missing argument at '${line}'. States are in the format: SOURCE_STATE\\tMARKED\\t#TRANSITIONS")
+        throw Error("Missing argument at '${stateLine}'. States are in the format: SOURCE_STATE\\tMARKED\\t#TRANSITIONS")
       states.add(Pair(stateTuple[0], stateTuple[1] == "1"))
 
       try {
         val transitions = mutableListOf<Pair<String, String>>()
         val events = mutableSetOf<String>()
         for (j in 0 until stateTuple[2].toInt()) {
-          val line = readNonEmptyLine(reader)
-          val transTuple = line.split('\t')
+          val transLine = readNonEmptyLine(reader)
+          val transTuple = transLine.split('\t')
           if (transTuple.size > 5 || transTuple.size < 4)
-            throw Error("ERROR: Wrong arguments at '${line}'. Transitions are in the format: EVENT\tTARGET_STATE\tc/uc\to/uo\tprob(optional)")
+            throw Error("ERROR: Wrong arguments at '${transLine}'. Transitions are in the format: EVENT\tTARGET_STATE\tc/uc\to/uo\tprob(optional)")
           // Add transition
           transitions.add(Pair(transTuple[0], transTuple[1]))
           // Decide NFA
@@ -55,11 +53,11 @@ fun <I> parse(input: InputStream, alphabets: Alphabet<I>, controllable: Collecti
         }
         stateTransitions[stateTuple[0]] = transitions
       } catch (e: NumberFormatException) {
-        throw Error("Need number of transitions at '${line}'")
+        throw Error("Need number of transitions at '${stateLine}'")
       }
     }
   } catch (e: NumberFormatException) {
-    throw Error("Need number of states, get '${line}'")
+    throw Error("Need number of states, get '${numStateLine}'")
   }
 
   // Builder automaton
@@ -78,9 +76,9 @@ fun <I> parse(input: InputStream, alphabets: Alphabet<I>, controllable: Collecti
 //    alphabetsRead.keys.filter { alphabetsRead[it]!!.second }.map(transformer)
 }
 
-fun parse(input: InputStream, alphabets: Alphabet<String>,
+fun parse(reader: BufferedReader, alphabets: Alphabet<String>,
           controllable: Collection<String>, observable: Collection<String>): CompactSupDFA<String> {
-  return parse(input, alphabets, controllable, observable) { it }
+  return parse(reader, alphabets, controllable, observable) { it }
 }
 
 

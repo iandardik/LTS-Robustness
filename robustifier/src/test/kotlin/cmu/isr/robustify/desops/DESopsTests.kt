@@ -12,8 +12,9 @@ import kotlin.test.assertEquals
 
 class DESopsTests : SynthesisTests() {
 
-  override val synthesizer: SupervisorySynthesizer<Int, String>
-    get() = DESopsRunner { it }
+  private val _synthesizer = DESopsRunner { it }
+
+  override val synthesizer: SupervisorySynthesizer<Int, String> = _synthesizer
 
   @Test
   fun testWriter() {
@@ -54,7 +55,7 @@ class DESopsTests : SynthesisTests() {
         "b\t2\tuc\to\n\n" +
         "2\t0\t1\n" +
         "c\t0\tc\to\n\n"
-    val a = parse(fsm.byteInputStream(), alphabets, controllable, observable)
+    val a = parse(fsm.byteInputStream().bufferedReader(), alphabets, controllable, observable)
 
     val b = AutomatonBuilders.newDFA(alphabets)
       .withInitial(0)

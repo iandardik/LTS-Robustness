@@ -38,7 +38,7 @@ class SupervisoryRobustifierTest {
         Priority.P0 to listOf("back", "confirm", "password", "select", "vote"),
         Priority.P2 to listOf("eo.enter", "eo.exit", "v.enter", "v.exit")
       ),
-      synthesizer = SupremicaRunner(),
+      synthesizer = DESopsRunner() { it },
       maxIter = 1
     )
   }
@@ -156,7 +156,7 @@ class SupervisoryRobustifierTest {
           "turn_on",
         )
       ),
-      synthesizer = SupremicaRunner(),
+      synthesizer = DESopsRunner() { it },
       maxIter = 1
     )
   }
@@ -188,6 +188,8 @@ class SupervisoryRobustifierTest {
     assertEquals(-5, weights.controllable["v.exit"])
 
     assertEquals(5, weights.preferred[Word.fromSymbols("select", "back")])
+
+    robustifier.close()
   }
 
   @Test
@@ -248,6 +250,7 @@ class SupervisoryRobustifierTest {
     val robustifier = loadVoting()
     robustifier.synthesize(Algorithms.Pareto).toList()
     robustifier.synthesize(Algorithms.Fast).toList()
+    robustifier.close()
   }
 
   @Test
@@ -255,6 +258,7 @@ class SupervisoryRobustifierTest {
     val robustifier = loadTherac()
     robustifier.synthesize(Algorithms.Pareto).toList()
     robustifier.synthesize(Algorithms.Fast).toList()
+    robustifier.close()
   }
 
   @Test
@@ -262,5 +266,6 @@ class SupervisoryRobustifierTest {
     val robustifier = loadPump()
     robustifier.synthesize(Algorithms.Pareto).toList()
     robustifier.synthesize(Algorithms.Fast).toList()
+    robustifier.close()
   }
 }

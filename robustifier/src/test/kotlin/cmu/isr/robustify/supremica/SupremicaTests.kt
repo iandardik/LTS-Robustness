@@ -11,8 +11,9 @@ import kotlin.test.assertContentEquals
 
 class SupremicaTests : SynthesisTests() {
 
-  override val synthesizer: SupervisorySynthesizer<Int, String>
-    get() = SupremicaRunner()
+  private val _synthesizer = SupremicaRunner()
+
+  override val synthesizer: SupervisorySynthesizer<Int, String> = _synthesizer
 
   @Test
   fun testWriteRead() {
