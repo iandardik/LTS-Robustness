@@ -1,4 +1,4 @@
-package cmu.isr.robustify.supervisory
+package cmu.isr.dfa
 
 import net.automatalib.automata.fsa.DFA
 import net.automatalib.automata.fsa.impl.compact.CompactDFA

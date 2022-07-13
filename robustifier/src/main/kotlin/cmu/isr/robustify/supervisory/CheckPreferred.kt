@@ -1,5 +1,6 @@
 package cmu.isr.robustify.supervisory
 
+import cmu.isr.dfa.DFAParallelComposition
 import net.automatalib.automata.fsa.DFA
 import net.automatalib.commons.util.Holder
 import net.automatalib.util.automata.builders.AutomatonBuilders
@@ -27,7 +28,7 @@ fun <I> acceptsSubWord(sup: DFA<*, I>, inputs: Alphabet<I>, word: Word<I>): Bool
 
   val composition = DFAParallelComposition(sup, inputs, wordDFA, wordDFA.inputAlphabet)
   val result = booleanArrayOf(false)
-  TSTraversal.depthFirst(composition, inputs + wordDFA.inputAlphabet, AcceptsSubWordVisitor(wordDFA, result))
+  TSTraversal.depthFirst(composition, inputs union wordDFA.inputAlphabet, AcceptsSubWordVisitor(wordDFA, result))
 
   return result[0]
 }

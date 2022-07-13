@@ -1,7 +1,8 @@
 package cmu.isr.robustify.supervisory
 
-import cmu.isr.lts.CompactDetLTS
+import cmu.isr.utils.combinations
 import cmu.isr.utils.pretty
+import net.automatalib.automata.fsa.impl.compact.CompactDFA
 import net.automatalib.words.Word
 import org.slf4j.LoggerFactory
 import java.time.Duration
@@ -20,7 +21,7 @@ class SolutionIterator(
   private val alg: Algorithms,
   private val deadlockFree: Boolean,
   private val maxIter: Int
-) : Iterable<CompactDetLTS<String>>, Iterator<CompactDetLTS<String>> {
+) : Iterable<CompactDFA<String>>, Iterator<CompactDFA<String>> {
 
   private val logger = LoggerFactory.getLogger(javaClass)
   private lateinit var weights: WeightsMap
@@ -29,10 +30,10 @@ class SolutionIterator(
   private lateinit var maxPreferred: Collection<Word<String>>
   private var minCost = Int.MIN_VALUE
   private var synthesisCounter = 0
-  private val solutions: Deque<CompactDetLTS<String>> = ArrayDeque()
+  private val solutions: Deque<CompactDFA<String>> = ArrayDeque()
   private var curIter = 0
 
-  override fun iterator(): Iterator<CompactDetLTS<String>> {
+  override fun iterator(): Iterator<CompactDFA<String>> {
     val startTime = System.currentTimeMillis()
     logger.info("==============================>")
     logger.info("Initializing search by using $alg search...")
@@ -63,7 +64,7 @@ class SolutionIterator(
     val sup = problem.supervisorySynthesize(controllable, observable)
     if (sup == null) {
       logger.warn("No supervisor found with max controllable and observable events.")
-      return emptyArray<CompactDetLTS<String>>().iterator()
+      return emptyArray<CompactDFA<String>>().iterator()
     }
 
     // compute the maximum fulfilled preferred behavior under the max controllability and observability
@@ -93,7 +94,7 @@ class SolutionIterator(
     return solutions.isNotEmpty()
   }
 
-  override fun next(): CompactDetLTS<String> {
+  override fun next(): CompactDFA<String> {
     return solutions.poll()
   }
 
