@@ -1,9 +1,11 @@
 package cmu.isr.dfa
 
+import cmu.isr.robustify.supervisory.asSupDFA
 import net.automatalib.util.automata.Automata
 import net.automatalib.util.automata.builders.AutomatonBuilders
 import net.automatalib.words.impl.Alphabets
 import org.junit.jupiter.api.Test
+import java.util.*
 import kotlin.test.assertEquals
 
 class DFATests {
@@ -39,4 +41,38 @@ class DFATests {
     assert(Automata.testEquivalence(c, d, d.inputAlphabet))
   }
 
+  @Test
+  fun testReachableSet() {
+    val a = AutomatonBuilders.newDFA(Alphabets.fromArray('a', 'b', 'c'))
+      .withInitial(0)
+      .from(0).on('a').to(1)
+      .from(1).on('b').to(2)
+      .from(2).on('c').to(0)
+      .withAccepting(0, 1, 2)
+      .create()
+      .asSupDFA(listOf('a', 'b', 'c'), listOf('a', 'b'))
+
+    val reachable = reachableSet(a, a.inputAlphabet - a.observable.toSet())
+    assertEquals(BitSet(), reachable[0])
+    assertEquals(BitSet(), reachable[1])
+    assertEquals(let { val s = BitSet(); s.set(0); s }, reachable[2])
+  }
+
+  @Test
+  fun testReachableSet2() {
+    val a = AutomatonBuilders.newDFA(Alphabets.fromArray('a', 'b', 'c'))
+      .withInitial(0)
+      .from(0).on('a').to(1)
+      .from(1).on('b').to(2)
+      .from(2).on('c').to(3).on('b').to(1)
+      .from(3).on('a').to(1)
+      .create()
+      .asSupDFA(listOf('a', 'b', 'c'), listOf('a', 'c'))
+
+    val reachable = reachableSet(a, a.inputAlphabet - a.observable.toSet())
+    assertEquals(BitSet(), reachable[0])
+    assertEquals(let { val s = BitSet(); s.set(2); s.set(1); s }, reachable[1])
+    assertEquals(let { val s = BitSet(); s.set(1); s.set(2); s }, reachable[2])
+    assertEquals(BitSet(), reachable[3])
+  }
 }

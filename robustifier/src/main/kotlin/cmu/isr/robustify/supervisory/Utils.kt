@@ -1,5 +1,6 @@
 package cmu.isr.robustify.supervisory
 
+import cmu.isr.dfa.hide
 import net.automatalib.automata.fsa.impl.compact.CompactDFA
 import net.automatalib.ts.UniversalDTS
 import net.automatalib.util.automata.builders.AutomatonBuilders
@@ -31,4 +32,14 @@ fun <I> makeProgress(input: I): CompactDFA<I> {
     .from(1).on(input).to(1)
     .withAccepting(1)
     .create()
+}
+
+
+/**
+ * @param dfa the DFA to be observed
+ * @param inputs the alphabet of the DFA
+ */
+fun <S, I> observer(dfa: SupervisoryDFA<S, I>, inputs: Alphabet<I>): CompactSupDFA<I> {
+  val out = hide(dfa, inputs, inputs - dfa.observable.toSet())
+  return out.asSupDFA(dfa.controllable intersect dfa.observable.toSet(), dfa.observable)
 }
