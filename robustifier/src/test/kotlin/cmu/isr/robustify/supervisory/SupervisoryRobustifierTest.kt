@@ -3,7 +3,6 @@ package cmu.isr.robustify.supervisory
 import cmu.isr.ltsa.LTSACall
 import cmu.isr.ltsa.LTSACall.asDetLTS
 import cmu.isr.ltsa.LTSACall.compose
-import cmu.isr.robustify.desops.DESopsRunner
 import cmu.isr.robustify.supremica.SupremicaRunner
 import net.automatalib.words.Word
 import org.junit.jupiter.api.Test
@@ -23,6 +22,8 @@ class SupervisoryRobustifierTest {
     val env = LTSACall.compile(envSpec).compose().asDetLTS()
     val safety = LTSACall.compile(pSpec).compose().asDetLTS()
     val back = Word.fromSymbols("select", "back")
+//    val back = Word.fromSymbols("select", "back", "select")
+//    val back2 = Word.fromSymbols("select", "vote", "back", "back", "select")
 
     return SupervisoryRobustifier(
       sys, sys.inputAlphabet,
@@ -38,7 +39,7 @@ class SupervisoryRobustifierTest {
         Priority.P0 to listOf("back", "confirm", "password", "select", "vote"),
         Priority.P2 to listOf("eo.enter", "eo.exit", "v.enter", "v.exit")
       ),
-      synthesizer = DESopsRunner() { it },
+      synthesizer = SupremicaRunner(),
       maxIter = 1
     )
   }
@@ -164,32 +165,34 @@ class SupervisoryRobustifierTest {
   @Test
   fun testComputeWeights() {
     val robustifier = loadVoting()
-    val weights = robustifier.computeWeights()
-    assertEquals(0, weights.controllable["back"])
-    assertEquals(0, weights.controllable["confirm"])
-    assertEquals(0, weights.controllable["password"])
-    assertEquals(0, weights.controllable["select"])
-    assertEquals(0, weights.controllable["vote"])
 
-    assertEquals(0, weights.observable["back"])
-    assertEquals(0, weights.observable["confirm"])
-    assertEquals(0, weights.observable["password"])
-    assertEquals(0, weights.observable["select"])
-    assertEquals(0, weights.observable["vote"])
+    robustifier.use {
+      val weights = robustifier.computeWeights()
 
-    assertEquals(-1, weights.observable["eo.enter"])
-    assertEquals(-1, weights.observable["eo.exit"])
-    assertEquals(-1, weights.observable["v.enter"])
-    assertEquals(-1, weights.observable["v.exit"])
+      assertEquals(0, weights.controllable["back"])
+      assertEquals(0, weights.controllable["confirm"])
+      assertEquals(0, weights.controllable["password"])
+      assertEquals(0, weights.controllable["select"])
+      assertEquals(0, weights.controllable["vote"])
 
-    assertEquals(-5, weights.controllable["eo.enter"])
-    assertEquals(-5, weights.controllable["eo.exit"])
-    assertEquals(-5, weights.controllable["v.enter"])
-    assertEquals(-5, weights.controllable["v.exit"])
+      assertEquals(0, weights.observable["back"])
+      assertEquals(0, weights.observable["confirm"])
+      assertEquals(0, weights.observable["password"])
+      assertEquals(0, weights.observable["select"])
+      assertEquals(0, weights.observable["vote"])
 
-    assertEquals(5, weights.preferred[Word.fromSymbols("select", "back")])
+      assertEquals(-1, weights.observable["eo.enter"])
+      assertEquals(-1, weights.observable["eo.exit"])
+      assertEquals(-1, weights.observable["v.enter"])
+      assertEquals(-1, weights.observable["v.exit"])
 
-    robustifier.close()
+      assertEquals(-5, weights.controllable["eo.enter"])
+      assertEquals(-5, weights.controllable["eo.exit"])
+      assertEquals(-5, weights.controllable["v.enter"])
+      assertEquals(-5, weights.controllable["v.exit"])
+
+      assertEquals(5, weights.preferred[Word.fromSymbols("select", "back")])
+    }
   }
 
   @Test
@@ -248,104 +251,107 @@ class SupervisoryRobustifierTest {
   @Test
   fun testVoting() {
     val robustifier = loadVoting()
-    val paretoExpected = listOf(
-      Pair(
-        listOf("confirm", "select", "back", "password", "vote"),
-        listOf("back", "confirm", "password", "select", "vote", "v.enter", "v.exit")
-      ),
-      Pair(
-        listOf("confirm", "select", "back", "password", "vote"),
-        listOf("back", "confirm", "password", "select", "vote", "eo.exit", "v.exit")
-      ),
-      Pair(
-        listOf("confirm", "select", "back", "password", "vote"),
-        listOf("back", "confirm", "password", "select", "vote", "eo.exit", "v.enter")
-      ),
-      Pair(
-        listOf("confirm", "select", "back", "password", "vote"),
-        listOf("back", "confirm", "password", "select", "vote", "eo.enter", "v.exit")
-      ),
-      Pair(
-        listOf("confirm", "select", "back", "password", "vote"),
-        listOf("back", "confirm", "password", "select", "vote", "eo.enter", "v.enter")
-      ),
-      Pair(
-        listOf("confirm", "select", "back", "password", "vote"),
-        listOf("back", "confirm", "password", "select", "vote", "eo.enter", "eo.exit")
-      )
-    )
-    for ((i, sys) in robustifier.synthesize(Algorithms.Pareto).withIndex()) {
-      assertContentEquals(paretoExpected[i].first, (sys as CompactSupDFA).controllable)
-      assertContentEquals(paretoExpected[i].second, sys.observable)
-    }
 
-    val fastExpected = listOf(
-      Pair(
-        listOf("confirm", "select", "back", "password", "vote"),
-        listOf("back", "confirm", "password", "select", "vote", "v.enter", "v.exit")
+    robustifier.use {
+      val paretoExpected = listOf(
+        Pair(
+          listOf("confirm", "select", "back", "password", "vote"),
+          listOf("back", "confirm", "password", "select", "vote", "v.enter", "v.exit")
+        ),
+        Pair(
+          listOf("confirm", "select", "back", "password", "vote"),
+          listOf("back", "confirm", "password", "select", "vote", "eo.exit", "v.exit")
+        ),
+        Pair(
+          listOf("confirm", "select", "back", "password", "vote"),
+          listOf("back", "confirm", "password", "select", "vote", "eo.exit", "v.enter")
+        ),
+        Pair(
+          listOf("confirm", "select", "back", "password", "vote"),
+          listOf("back", "confirm", "password", "select", "vote", "eo.enter", "v.exit")
+        ),
+        Pair(
+          listOf("confirm", "select", "back", "password", "vote"),
+          listOf("back", "confirm", "password", "select", "vote", "eo.enter", "v.enter")
+        ),
+        Pair(
+          listOf("confirm", "select", "back", "password", "vote"),
+          listOf("back", "confirm", "password", "select", "vote", "eo.enter", "eo.exit")
+        )
       )
-    )
-    for ((i, sys) in robustifier.synthesize(Algorithms.Fast).withIndex()) {
-      assertContentEquals(fastExpected[i].first, (sys as CompactSupDFA).controllable)
-      assertContentEquals(fastExpected[i].second, sys.observable)
-    }
+      for ((i, sys) in robustifier.synthesize(Algorithms.Pareto).withIndex()) {
+        assertEquals(paretoExpected[i].first.toSet(), (sys as CompactSupDFA).controllable.toSet())
+        assertEquals(paretoExpected[i].second.toSet(), sys.observable.toSet())
+      }
 
-    robustifier.close()
+      val fastExpected = listOf(
+        Pair(
+          listOf("confirm", "select", "back", "password", "vote"),
+          listOf("back", "confirm", "password", "select", "vote", "v.enter", "v.exit")
+        )
+      )
+      for ((i, sys) in robustifier.synthesize(Algorithms.Fast).withIndex()) {
+        assertEquals(fastExpected[i].first.toSet(), (sys as CompactSupDFA).controllable.toSet())
+        assertEquals(fastExpected[i].second.toSet(), sys.observable.toSet())
+      }
+    }
   }
 
   @Test
   fun testTherac() {
     val robustifier = loadTherac()
-    val paretoExpected = listOf(
-      Pair(
-        listOf("b"),
-        listOf("b", "e", "enter", "fire_ebeam", "fire_xray", "setMode", "up", "x")
-      )
-    )
-    for ((i, sys) in robustifier.synthesize(Algorithms.Pareto).withIndex()) {
-      assertContentEquals(paretoExpected[i].first, (sys as CompactSupDFA).controllable)
-      assertContentEquals(paretoExpected[i].second, sys.observable)
-    }
 
-    val fastExpected = listOf(
-      Pair(
-        listOf("b"),
-        listOf("b", "e", "enter", "fire_ebeam", "fire_xray", "setMode", "up", "x")
+    robustifier.use {
+      val paretoExpected = listOf(
+        Pair(
+          listOf("b"),
+          listOf("b", "e", "enter", "fire_ebeam", "fire_xray", "setMode", "up", "x")
+        )
       )
-    )
-    for ((i, sys) in robustifier.synthesize(Algorithms.Fast).withIndex()) {
-      assertContentEquals(fastExpected[i].first, (sys as CompactSupDFA).controllable)
-      assertContentEquals(fastExpected[i].second, sys.observable)
-    }
+      for ((i, sys) in robustifier.synthesize(Algorithms.Pareto).withIndex()) {
+        assertEquals(paretoExpected[i].first.toSet(), (sys as CompactSupDFA).controllable.toSet())
+        assertEquals(paretoExpected[i].second.toSet(), sys.observable.toSet())
+      }
 
-    robustifier.close()
+      val fastExpected = listOf(
+        Pair(
+          listOf("b"),
+          listOf("b", "e", "enter", "fire_ebeam", "fire_xray", "setMode", "up", "x")
+        )
+      )
+      for ((i, sys) in robustifier.synthesize(Algorithms.Fast).withIndex()) {
+        assertEquals(fastExpected[i].first.toSet(), (sys as CompactSupDFA).controllable.toSet())
+        assertEquals(fastExpected[i].second.toSet(), sys.observable.toSet())
+      }
+    }
   }
 
   @Test
   fun testPump() {
     val robustifier = loadPump()
-    val paretoExpected = listOf(
-      Pair(
-        listOf("line.1.dispense_main_med_flow", "line.1.flow_complete", "line.1.set_rate", "line.1.start_dispense"),
-        listOf("battery_charge", "line.1.change_settings", "line.1.clear_rate", "line.1.confirm_settings", "line.1.dispense_main_med_flow", "line.1.flow_complete", "line.1.set_rate", "line.1.start_dispense", "unplug")
-      )
-    )
-    for ((i, sys) in robustifier.synthesize(Algorithms.Pareto).withIndex()) {
-      assertContentEquals(paretoExpected[i].first, (sys as CompactSupDFA).controllable)
-      assertContentEquals(paretoExpected[i].second, sys.observable)
-    }
 
-    val fastExpected = listOf(
-      Pair(
-        listOf("line.1.dispense_main_med_flow", "line.1.flow_complete", "line.1.set_rate", "line.1.start_dispense"),
-        listOf("line.1.change_settings", "line.1.clear_rate", "line.1.confirm_settings", "line.1.dispense_main_med_flow", "line.1.flow_complete", "line.1.set_rate", "line.1.start_dispense", "turn_off", "turn_on", "unplug")
+    robustifier.use {
+      val paretoExpected = listOf(
+        Pair(
+          listOf("line.1.dispense_main_med_flow", "line.1.flow_complete", "line.1.set_rate", "line.1.start_dispense"),
+          listOf("battery_charge", "line.1.change_settings", "line.1.clear_rate", "line.1.confirm_settings", "line.1.dispense_main_med_flow", "line.1.flow_complete", "line.1.set_rate", "line.1.start_dispense", "unplug")
+        )
       )
-    )
-    for ((i, sys) in robustifier.synthesize(Algorithms.Fast).withIndex()) {
-      assertContentEquals(fastExpected[i].first, (sys as CompactSupDFA).controllable)
-      assertContentEquals(fastExpected[i].second, sys.observable)
-    }
+      for ((i, sys) in robustifier.synthesize(Algorithms.Pareto).withIndex()) {
+        assertEquals(paretoExpected[i].first.toSet(), (sys as CompactSupDFA).controllable.toSet())
+        assertEquals(paretoExpected[i].second.toSet(), sys.observable.toSet())
+      }
 
-    robustifier.close()
+      val fastExpected = listOf(
+        Pair(
+          listOf("line.1.dispense_main_med_flow", "line.1.flow_complete", "line.1.set_rate", "line.1.start_dispense"),
+          listOf("line.1.change_settings", "line.1.clear_rate", "line.1.confirm_settings", "line.1.dispense_main_med_flow", "line.1.flow_complete", "line.1.set_rate", "line.1.start_dispense", "turn_off", "turn_on", "unplug")
+        )
+      )
+      for ((i, sys) in robustifier.synthesize(Algorithms.Fast).withIndex()) {
+        assertEquals(fastExpected[i].first.toSet(), (sys as CompactSupDFA).controllable.toSet())
+        assertEquals(fastExpected[i].second.toSet(), sys.observable.toSet())
+      }
+    }
   }
 }
