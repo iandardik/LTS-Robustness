@@ -3,3 +3,4 @@ out/
 target/
 robustifier.iml
 /lib/waterside271.linux.amd64.tar.gz
+src/test/resources/specs/*/solutions/

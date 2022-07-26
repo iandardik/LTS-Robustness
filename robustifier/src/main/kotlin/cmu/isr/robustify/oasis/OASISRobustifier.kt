@@ -33,6 +33,8 @@ class OASISRobustifier(
   private val prop: CompactDFA<String>
   private val synthesizer = SupremicaRunner()
 
+  override var numberOfSynthesis: Int = 0
+
   init {
     val progressProp = progress.map { makeProgress(it) }
     var c = safety as CompactDFA<String>
@@ -47,6 +49,9 @@ class OASISRobustifier(
   }
 
   fun synthesize(controllable: Collection<String>, observable: Collection<String>): CompactDFA<String>? {
+    if (!observable.containsAll(controllable))
+      error("The controllable events should be a subset of the observable events.")
+
     val startTime = System.currentTimeMillis()
     val iter = OrderedPowerSetIterator((controllable union observable).toList())
     for (abs in iter) {
@@ -61,6 +66,8 @@ class OASISRobustifier(
       )
 
       val sup = synthesizer.synthesize(g, g.inputAlphabet, p, p.inputAlphabet)
+      numberOfSynthesis++
+
       if (sup != null) {
         if (satisfyPreferred(g, sup, preferred)) {
           logger.info("Found solution!")

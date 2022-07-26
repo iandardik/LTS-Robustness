@@ -18,6 +18,9 @@ abstract class BaseRobustifier<S, I>(
   val safetyInputs: Alphabet<I>
 ) {
 
+  abstract var numberOfSynthesis: Int
+    protected set
+
   /**
    * Synthesize a new system model such that it satisfies the safety property under the deviated environment.
    */

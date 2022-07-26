@@ -44,6 +44,8 @@ class SupervisoryRobustifier(
   private val synthesisCache = LRUCache<Pair<Collection<String>, Collection<String>>, CompactSupDFA<String>?>(100)
   private val checkPreferredCache = LRUCache<Triple<Collection<String>, Collection<String>, Word<String>>, Boolean>(100)
 
+  override var numberOfSynthesis: Int = 0
+
   init {
     val extendedSafety = extendAlphabet(safety, safetyInputs, plant.inputAlphabet)
     val progressProp = progress.map { makeProgress(it) }
@@ -74,11 +76,16 @@ class SupervisoryRobustifier(
    * @return the observed(Sup || G) model
    */
   fun supervisorySynthesize(controllable: Collection<String>, observable: Collection<String>): CompactSupDFA<String>? {
+    numberOfSynthesis++
+
     val key = Pair(controllable, observable)
     if (key !in synthesisCache) {
       val g = plant.asSupDFA(controllable, observable)
       val p = prop.asSupDFA(controllable, observable)
+
+      logger.debug("Start supervisory controller synthesis...")
       synthesisCache[key] = synthesizer.synthesize(g, g.inputAlphabet, p, p.inputAlphabet) as CompactSupDFA<String>?
+      logger.debug("Controller synthesis completed.")
     } else {
       logger.debug("Synthesis cache hit: $key")
     }
@@ -160,11 +167,13 @@ class SupervisoryRobustifier(
   private fun checkPreferred(sup: CompactSupDFA<String>, p: Word<String>): Boolean {
     val key = Triple(sup.controllable, sup.observable, p)
     if (key !in checkPreferredCache) {
+      logger.debug("Start checking preferred behavior: [$p]")
       checkPreferredCache[key] = acceptsSubWord(sup, sup.inputAlphabet, p)
+      logger.debug("Preferred behavior check completed: ${checkPreferredCache[key]}.")
     } else {
       logger.debug("CheckPreferred cache hit: $key")
     }
-    return checkPreferredCache[key]!!
+    return checkPreferredCache[key]
   }
 
   /**

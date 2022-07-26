@@ -1,6 +1,6 @@
 {
   "sys": ["sys.lts"],
-  "env": [""],
+  "env": [],
   "dev": ["env2.lts"],
   "safety": ["p.lts"],
   "method": "supervisory",

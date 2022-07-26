@@ -5,40 +5,65 @@ import cmu.isr.ltsa.LTSACall
 import cmu.isr.ltsa.LTSACall.asDetLTS
 import cmu.isr.ltsa.LTSACall.compose
 import cmu.isr.robustify.desops.DESopsRunner
+import cmu.isr.robustify.oasis.OASISRobustifier
 import cmu.isr.robustify.supervisory.Algorithms
 import cmu.isr.robustify.supervisory.Priority
 import cmu.isr.robustify.supervisory.SupervisoryRobustifier
 import cmu.isr.robustify.supremica.SupremicaRunner
+import cmu.isr.utils.pretty
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import net.automatalib.automata.fsa.impl.compact.CompactDFA
+import net.automatalib.serialization.aut.AUTWriter
 import net.automatalib.words.Word
+import org.slf4j.LoggerFactory
 import java.io.File
+import java.time.Duration
 
 class Robustify : CliktCommand(help = "Robustify a system design using supervisory control.") {
   private val configFile by argument(name = "<config.json>")
   private val verbose by option("--verbose", "-v", help = "Enable verbose mode.").flag()
+
+  private val logger = LoggerFactory.getLogger(javaClass)
 
   override fun run() {
     if (verbose)
       System.setProperty(org.slf4j.impl.SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "Debug")
 
     val config = jacksonObjectMapper().readValue(File(configFile), RobustifyConfigJSON::class.java)
+    val startTime = System.currentTimeMillis()
+
     when (config.method) {
       "supervisory" -> {
         val robustifer = buildSupervisory(config)
         robustifer.use {
-          it.synthesize(Algorithms.valueOf(config.options.algorithm)).toList()
+          val sols = it.synthesize(Algorithms.valueOf(config.options.algorithm)).toList()
+          logger.info("Total number of controller synthesis invoked: ${it.numberOfSynthesis}")
+          logger.info("Total number of solutions: ${sols.size}")
+          saveSolutions(sols)
         }
       }
       "oasis" -> {
-        TODO("unimplemented")
+        val robustifier = buildOASIS(config)
+        val sol = if (config.options.controllable.isEmpty() || config.options.observable.isNotEmpty()) {
+          robustifier.synthesize()
+        } else {
+          robustifier.synthesize(config.options.controllable, config.options.observable)
+        }
+        logger.info("Total number of controller synthesis invoked: ${robustifier.numberOfSynthesis}")
+        if (sol != null) {
+          saveSolutions(listOf(sol))
+        } else {
+          logger.warn("Failed to find a solution.")
+        }
       }
       else -> error("Unsupported method, should be either 'supervisory' or 'oasis'.")
     }
+
+    logger.info("Robustification completes, total time: ${Duration.ofMillis(System.currentTimeMillis() - startTime).pretty()}")
   }
 
   private fun parseSpecFile(path: String): CompactDFA<String> {
@@ -58,6 +83,20 @@ class Robustify : CliktCommand(help = "Robustify a system design using superviso
       }
     }
     return c
+  }
+
+  private fun saveSolutions(dfas: List<CompactDFA<String>>) {
+    val dir = File("./solutions")
+    if (dir.exists())
+      dir.deleteRecursively()
+    dir.mkdir()
+    for (i in dfas.indices) {
+      val f = File("./solutions/sol${i+1}.aut")
+      f.createNewFile()
+      val out = f.outputStream()
+      AUTWriter.writeAutomaton(dfas[i], dfas[i].inputAlphabet, out)
+      out.close()
+    }
   }
 
   private fun buildSupervisory(config: RobustifyConfigJSON): SupervisoryRobustifier {
@@ -101,6 +140,19 @@ class Robustify : CliktCommand(help = "Robustify a system design using superviso
         SolverType.DESops -> DESopsRunner { it }
       },
       maxIter = config.options.maxIter
+    )
+  }
+
+  private fun buildOASIS(config: RobustifyConfigJSON): OASISRobustifier {
+    val sys = parseSpecFiles(config.sys)
+    val dev = parseSpecFiles(config.dev)
+    val safety = parseSpecFiles(config.safety)
+    return OASISRobustifier(
+      sys, sys.inputAlphabet,
+      dev, dev.inputAlphabet,
+      safety, safety.inputAlphabet,
+      progress = config.options.progress,
+      preferred = config.options.preferred.map { Word.fromList(it) }
     )
   }
 }
