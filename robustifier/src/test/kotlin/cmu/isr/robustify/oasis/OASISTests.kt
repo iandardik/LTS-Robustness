@@ -1,6 +1,6 @@
 package cmu.isr.robustify.oasis
 
-import cmu.isr.lts.parallelComposition
+import cmu.isr.dfa.parallelComposition
 import cmu.isr.ltsa.LTSACall
 import cmu.isr.ltsa.LTSACall.asDetLTS
 import cmu.isr.ltsa.LTSACall.compose

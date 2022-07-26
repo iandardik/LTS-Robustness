@@ -1,5 +1,6 @@
 package cmu.isr.robustify.supervisory
 
+import cmu.isr.dfa.parallelComposition
 import cmu.isr.ltsa.LTSACall
 import cmu.isr.ltsa.LTSACall.asDetLTS
 import cmu.isr.ltsa.LTSACall.compose
@@ -26,8 +27,8 @@ class PumpBenchmarkTests {
     val power = LTSACall.compile(powerSpec).compose().asDetLTS()
     val lines = LTSACall.compile(linesSpec).compose().asDetLTS()
     val alarm = LTSACall.compile(alarmSpec).compose().asDetLTS()
-    var sys = cmu.isr.lts.parallelComposition(power, power.inputAlphabet, lines, lines.inputAlphabet)
-    sys = cmu.isr.lts.parallelComposition(sys, sys.inputAlphabet, alarm, alarm.inputAlphabet)
+    var sys = parallelComposition(power, power.inputAlphabet, lines, lines.inputAlphabet)
+    sys = parallelComposition(sys, sys.inputAlphabet, alarm, alarm.inputAlphabet)
     val env = LTSACall.compile(envSepc).compose().asDetLTS()
     val safety = LTSACall.compile(pSpec).compose().asDetLTS()
 
@@ -112,7 +113,7 @@ class PumpBenchmarkTests {
   fun testPump() {
     val robustifier = loadPump()
     robustifier.use {
-      it.synthesize(Algorithms.Pareto).toList()
+      it.synthesize(Algorithms.Fast).toList()
     }
   }
 

@@ -2,22 +2,24 @@ package cmu.isr.dfa
 
 import net.automatalib.automata.fsa.DFA
 import net.automatalib.automata.fsa.impl.compact.CompactDFA
-import net.automatalib.util.ts.copy.TSCopy
+import net.automatalib.commons.util.Holder
 import net.automatalib.util.ts.traversal.TSTraversal
-import net.automatalib.util.ts.traversal.TSTraversalMethod
+import net.automatalib.util.ts.traversal.TSTraversalAction
+import net.automatalib.util.ts.traversal.TSTraversalVisitor
 import net.automatalib.words.Alphabet
 import net.automatalib.words.impl.Alphabets
 
 
-class DFAParallelComposition<S1, S2, I, A1, A2>(
-  private val dfa1: A1,
+class DFAParallelComposition<S1, S2, I>(
+  private val dfa1: DFA<S1, I>,
   private val inputs1: Alphabet<I>,
-  private val dfa2: A2,
+  private val dfa2: DFA<S2, I>,
   private val inputs2: Alphabet<I>
-) : DFA<Pair<S1, S2>, I> where A1 : DFA<S1, I>, A2 : DFA<S2, I> {
+) : DFA<Pair<S1, S2>, I> {
 
   override fun getStates(): MutableCollection<Pair<S1, S2>> {
-    return dfa1.states.flatMap { s1 -> dfa2.states.map { s2 -> Pair(s1, s2) } }.toMutableList()
+    error("Cannot generate all states without traversal.")
+//    return dfa1.states.flatMap { s1 -> dfa2.states.map { s2 -> Pair(s1, s2) } }.toMutableList()
   }
 
   override fun getInitialState(): Pair<S1, S2> {
@@ -50,13 +52,58 @@ class DFAParallelComposition<S1, S2, I, A1, A2>(
 
 }
 
+private class DFAParallelCompositionVisitor<S, I>(
+  val comp: DFA<S, I>,
+  val out: CompactDFA<I>
+) : TSTraversalVisitor<S, I, S, Int> {
 
-fun <I> parallelComposition(dfa1: DFA<*, I>, inputs1: Alphabet<I>,
-                            dfa2: DFA<*, I>, inputs2: Alphabet<I>): CompactDFA<I> {
-  val inputs = Alphabets.fromCollection(inputs1.union(inputs2))
+  private val visited = mutableSetOf<S>()
+  private val stateMapping = mutableMapOf<S, Int>()
+
+  override fun processInitial(state: S, outData: Holder<Int>): TSTraversalAction {
+    val initState = out.addInitialState(comp.isAccepting(state))
+    stateMapping[state] = initState
+    outData.value = initState
+    return TSTraversalAction.EXPLORE
+  }
+
+  override fun startExploration(state: S, data: Int): Boolean {
+    return if (state !in visited) {
+      visited.add(state)
+      true
+    } else {
+      false
+    }
+  }
+
+  override fun processTransition(
+    source: S,
+    srcData: Int,
+    input: I,
+    transition: S,
+    succ: S,
+    outData: Holder<Int>
+  ): TSTraversalAction {
+    val succState = if (succ in stateMapping) {
+      stateMapping[succ]!!
+    } else {
+      val s = out.addState(comp.isAccepting(succ))
+      stateMapping[succ] = s
+      s
+    }
+    outData.value = succState
+    out.addTransition(srcData, input, succState, null)
+    return TSTraversalAction.EXPLORE
+  }
+
+}
+
+fun <S1, S2, I> parallelComposition(dfa1: DFA<S1, I>, inputs1: Alphabet<I>,
+                                    dfa2: DFA<S2, I>, inputs2: Alphabet<I>): CompactDFA<I> {
+  val inputs = Alphabets.fromCollection(inputs1 union inputs2)
   val out = CompactDFA(inputs)
   val composition = DFAParallelComposition(dfa1, inputs1, dfa2, inputs2)
 
-  TSCopy.copy(TSTraversalMethod.BREADTH_FIRST, composition, TSTraversal.NO_LIMIT, inputs, out)
+  TSTraversal.depthFirst(composition, inputs, DFAParallelCompositionVisitor(composition, out))
   return out
 }
