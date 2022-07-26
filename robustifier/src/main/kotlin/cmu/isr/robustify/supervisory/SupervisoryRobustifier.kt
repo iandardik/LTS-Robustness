@@ -9,6 +9,7 @@ import net.automatalib.words.Word
 import org.slf4j.LoggerFactory
 import java.io.Closeable
 import cmu.isr.dfa.parallelComposition
+import cmu.isr.utils.LRUCache
 
 enum class Priority { P0, P1, P2, P3 }
 
@@ -40,8 +41,8 @@ class SupervisoryRobustifier(
   private val logger = LoggerFactory.getLogger(javaClass)
   private val plant = parallelComposition(sys, sysInputs, devEnv, envInputs)
   private val prop: CompactDFA<String>
-  private val synthesisCache = mutableMapOf<Pair<Collection<String>, Collection<String>>, CompactSupDFA<String>?>()
-  private val checkPreferredCache = mutableMapOf<Triple<Collection<String>, Collection<String>, Word<String>>, Boolean>()
+  private val synthesisCache = LRUCache<Pair<Collection<String>, Collection<String>>, CompactSupDFA<String>?>(100)
+  private val checkPreferredCache = LRUCache<Triple<Collection<String>, Collection<String>, Word<String>>, Boolean>(100)
 
   init {
     val extendedSafety = extendAlphabet(safety, safetyInputs, plant.inputAlphabet)
@@ -62,6 +63,10 @@ class SupervisoryRobustifier(
   }
 
   fun synthesize(alg: Algorithms, deadlockFree: Boolean = false): Iterable<CompactDFA<String>> {
+    logger.info("Number of states of the system: ${sys.states.size}")
+    logger.info("Number of states of the environment: ${devEnv.states.size}")
+    logger.info("Number of states of the plant (S || E): ${plant.states.size}")
+
     return SolutionIterator(this, alg, deadlockFree, maxIter)
   }
 

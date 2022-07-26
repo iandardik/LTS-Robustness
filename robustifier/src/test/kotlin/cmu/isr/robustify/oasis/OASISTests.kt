@@ -4,11 +4,11 @@ import cmu.isr.lts.parallelComposition
 import cmu.isr.ltsa.LTSACall
 import cmu.isr.ltsa.LTSACall.asDetLTS
 import cmu.isr.ltsa.LTSACall.compose
-import cmu.isr.ltsa.write
 import net.automatalib.words.Word
 import org.junit.jupiter.api.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
 class OASISTests {
 
@@ -110,7 +110,7 @@ class OASISTests {
     val robustifier = loadVoting()
     val sup = robustifier.synthesize()
 
-    assertNotNull(sup)
+    assertNull(sup)
 //    write(System.out, sup, sup.inputAlphabet)
   }
 

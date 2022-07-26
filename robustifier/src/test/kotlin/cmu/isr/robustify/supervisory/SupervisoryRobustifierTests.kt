@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 
-class SupervisoryRobustifierTest {
+class SupervisoryRobustifierTests {
 
   private fun loadVoting(): SupervisoryRobustifier {
     val sysSpec =
@@ -167,7 +167,7 @@ class SupervisoryRobustifierTest {
     val robustifier = loadVoting()
 
     robustifier.use {
-      val weights = robustifier.computeWeights()
+      val weights = it.computeWeights()
 
       assertEquals(0, weights.controllable["back"])
       assertEquals(0, weights.controllable["confirm"])
@@ -279,7 +279,7 @@ class SupervisoryRobustifierTest {
           listOf("back", "confirm", "password", "select", "vote", "eo.enter", "eo.exit")
         )
       )
-      for ((i, sys) in robustifier.synthesize(Algorithms.Pareto).withIndex()) {
+      for ((i, sys) in it.synthesize(Algorithms.Pareto).withIndex()) {
         assertEquals(paretoExpected[i].first.toSet(), (sys as CompactSupDFA).controllable.toSet())
         assertEquals(paretoExpected[i].second.toSet(), sys.observable.toSet())
       }
@@ -290,7 +290,7 @@ class SupervisoryRobustifierTest {
           listOf("back", "confirm", "password", "select", "vote", "v.enter", "v.exit")
         )
       )
-      for ((i, sys) in robustifier.synthesize(Algorithms.Fast).withIndex()) {
+      for ((i, sys) in it.synthesize(Algorithms.Fast).withIndex()) {
         assertEquals(fastExpected[i].first.toSet(), (sys as CompactSupDFA).controllable.toSet())
         assertEquals(fastExpected[i].second.toSet(), sys.observable.toSet())
       }
@@ -308,7 +308,7 @@ class SupervisoryRobustifierTest {
           listOf("b", "e", "enter", "fire_ebeam", "fire_xray", "setMode", "up", "x")
         )
       )
-      for ((i, sys) in robustifier.synthesize(Algorithms.Pareto).withIndex()) {
+      for ((i, sys) in it.synthesize(Algorithms.Pareto).withIndex()) {
         assertEquals(paretoExpected[i].first.toSet(), (sys as CompactSupDFA).controllable.toSet())
         assertEquals(paretoExpected[i].second.toSet(), sys.observable.toSet())
       }
@@ -319,7 +319,7 @@ class SupervisoryRobustifierTest {
           listOf("b", "e", "enter", "fire_ebeam", "fire_xray", "setMode", "up", "x")
         )
       )
-      for ((i, sys) in robustifier.synthesize(Algorithms.Fast).withIndex()) {
+      for ((i, sys) in it.synthesize(Algorithms.Fast).withIndex()) {
         assertEquals(fastExpected[i].first.toSet(), (sys as CompactSupDFA).controllable.toSet())
         assertEquals(fastExpected[i].second.toSet(), sys.observable.toSet())
       }
@@ -337,7 +337,7 @@ class SupervisoryRobustifierTest {
           listOf("battery_charge", "line.1.change_settings", "line.1.clear_rate", "line.1.confirm_settings", "line.1.dispense_main_med_flow", "line.1.flow_complete", "line.1.set_rate", "line.1.start_dispense", "unplug")
         )
       )
-      for ((i, sys) in robustifier.synthesize(Algorithms.Pareto).withIndex()) {
+      for ((i, sys) in it.synthesize(Algorithms.Pareto).withIndex()) {
         assertEquals(paretoExpected[i].first.toSet(), (sys as CompactSupDFA).controllable.toSet())
         assertEquals(paretoExpected[i].second.toSet(), sys.observable.toSet())
       }
@@ -348,7 +348,7 @@ class SupervisoryRobustifierTest {
           listOf("line.1.change_settings", "line.1.clear_rate", "line.1.confirm_settings", "line.1.dispense_main_med_flow", "line.1.flow_complete", "line.1.set_rate", "line.1.start_dispense", "turn_off", "turn_on", "unplug")
         )
       )
-      for ((i, sys) in robustifier.synthesize(Algorithms.Fast).withIndex()) {
+      for ((i, sys) in it.synthesize(Algorithms.Fast).withIndex()) {
         assertEquals(fastExpected[i].first.toSet(), (sys as CompactSupDFA).controllable.toSet())
         assertEquals(fastExpected[i].second.toSet(), sys.observable.toSet())
       }
