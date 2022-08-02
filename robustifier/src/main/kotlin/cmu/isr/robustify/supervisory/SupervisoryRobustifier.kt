@@ -1,6 +1,8 @@
 package cmu.isr.robustify.supervisory
 
+import cmu.isr.dfa.parallelComposition
 import cmu.isr.robustify.BaseRobustifier
+import cmu.isr.utils.LRUCache
 import net.automatalib.automata.fsa.DFA
 import net.automatalib.automata.fsa.impl.compact.CompactDFA
 import net.automatalib.automata.simple.SimpleDeterministicAutomaton
@@ -8,8 +10,6 @@ import net.automatalib.words.Alphabet
 import net.automatalib.words.Word
 import org.slf4j.LoggerFactory
 import java.io.Closeable
-import cmu.isr.dfa.parallelComposition
-import cmu.isr.utils.LRUCache
 
 enum class Priority { P0, P1, P2, P3 }
 
@@ -68,6 +68,7 @@ class SupervisoryRobustifier(
     logger.info("Number of states of the system: ${sys.states.size}")
     logger.info("Number of states of the environment: ${devEnv.states.size}")
     logger.info("Number of states of the plant (S || E): ${plant.states.size}")
+    logger.info("Number of transitions of the plant: ${plant.numOfTransitions()}")
 
     return SolutionIterator(this, alg, deadlockFree, maxIter)
   }
