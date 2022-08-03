@@ -59,6 +59,7 @@
         "turn_off",
         "turn_on"
       ]
-    }
+    },
+    "algorithm": "Fast"
   }
 }
