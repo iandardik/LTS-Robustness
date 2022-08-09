@@ -53,7 +53,7 @@ class Robustify : CliktCommand(help = "Robustify a system design using superviso
       }
       "oasis" -> {
         val robustifier = buildOASIS(config)
-        val sol = if (config.options.controllable.isEmpty() || config.options.observable.isNotEmpty()) {
+        val sol = if (config.options.controllable.isEmpty() || config.options.observable.isEmpty()) {
           robustifier.synthesize()
         } else {
           robustifier.synthesize(config.options.controllable, config.options.observable)

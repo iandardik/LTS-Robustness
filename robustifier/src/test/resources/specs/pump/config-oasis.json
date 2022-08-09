@@ -1,0 +1,15 @@
+{
+  "sys": ["power.lts", "lines.lts", "alarm.lts"],
+  "env": [],
+  "dev": ["deviation.lts"],
+  "safety": ["p.lts"],
+  "method": "oasis",
+  "options": {
+    "progress": ["line.1.flow_complete"],
+    "preferred": [
+        ["plug_in", "battery_charge", "battery_charge", "turn_on", "line.1.dispense_main_med_flow", "line.1.flow_complete"],
+        ["plug_in", "line.1.start_dispense", "line.1.dispense_main_med_flow", "line.1.dispense_main_med_flow",
+          "power_failure", "plug_in", "line.1.start_dispense", "line.1.dispense_main_med_flow"]
+      ]
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "sys": ["sys.lts"],
+  "env": [],
+  "dev": ["env.lts"],
+  "safety": ["p.lts"],
+  "method": "oasis",
+  "options": {
+    "progress": ["fire_xray", "fire_ebeam"],
+    "preferred": [ ["x", "up"], ["e", "up"], ["enter", "up"] ],
+    "controllable": ["fire_xray", "fire_ebeam"],
+    "observable": ["x", "e", "enter", "up", "b", "fire_xray", "fire_ebeam"]
+  }
+}
