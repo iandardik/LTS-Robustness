@@ -8,7 +8,6 @@ import net.automatalib.words.Word
 import org.junit.jupiter.api.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 
 class OASISTests {
 
@@ -110,7 +109,7 @@ class OASISTests {
     val robustifier = loadVoting()
     val sup = robustifier.synthesize()
 
-    assertNull(sup)
+    assertNotNull(sup)
 //    write(System.out, sup, sup.inputAlphabet)
   }
 

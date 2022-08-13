@@ -6,6 +6,7 @@ import cmu.isr.ltsa.LTSACall.asDetLTS
 import cmu.isr.ltsa.LTSACall.compose
 import cmu.isr.robustify.desops.DESopsRunner
 import cmu.isr.robustify.oasis.OASISRobustifier
+import cmu.isr.robustify.simple.SimpleRobustifier
 import cmu.isr.robustify.supervisory.Algorithms
 import cmu.isr.robustify.supervisory.Priority
 import cmu.isr.robustify.supervisory.SupervisoryRobustifier
@@ -41,15 +42,12 @@ class Robustify : CliktCommand(help = "Robustify a system design using superviso
     val config = jacksonObjectMapper().readValue(File(configFile), RobustifyConfigJSON::class.java)
     val startTime = System.currentTimeMillis()
 
-    when (config.method) {
+    val (robustifier, sols) = when (config.method) {
       "supervisory" -> {
         val robustifer = buildSupervisory(config)
-        robustifer.use {
-          val sols = it.synthesize(Algorithms.valueOf(config.options.algorithm)).toList()
-          logger.info("Total number of controller synthesis invoked: ${it.numberOfSynthesis}")
-          logger.info("Total number of solutions: ${sols.size}")
-          saveSolutions(sols)
-        }
+        val sols = robustifer.synthesize(Algorithms.valueOf(config.options.algorithm)).toList()
+        robustifer.close()
+        Pair(robustifer, sols)
       }
       "oasis" -> {
         val robustifier = buildOASIS(config)
@@ -58,16 +56,27 @@ class Robustify : CliktCommand(help = "Robustify a system design using superviso
         } else {
           robustifier.synthesize(config.options.controllable, config.options.observable)
         }
-        logger.info("Total number of controller synthesis invoked: ${robustifier.numberOfSynthesis}")
-        if (sol != null) {
-          saveSolutions(listOf(sol))
-        } else {
-          logger.warn("Failed to find a solution.")
-        }
+        Pair(robustifier, if (sol != null) listOf(sol) else emptyList())
       }
-      else -> error("Unsupported method, should be either 'supervisory' or 'oasis'.")
+      "simple" -> {
+        val robustifier = buildSimple(config)
+        val sol = if (config.options.controllable.isEmpty() || config.options.observable.isEmpty()) {
+          robustifier.synthesize()
+        } else {
+          robustifier.synthesize(config.options.controllable, config.options.observable)
+        }
+        Pair(robustifier, if (sol != null) listOf(sol) else emptyList())
+      }
+      else -> error("Unsupported method, should be either 'supervisory', 'oasis', or 'simple'.")
     }
 
+    logger.info("Total number of controller synthesis invoked: ${robustifier.numberOfSynthesis}")
+    if (sols.isNotEmpty()) {
+      logger.info("Total number of solutions: ${sols.size}")
+      saveSolutions(sols)
+    } else {
+      logger.warn("Failed to find a solution.")
+    }
     logger.info("Robustification completes, total time: ${Duration.ofMillis(System.currentTimeMillis() - startTime).pretty()}")
   }
 
@@ -153,6 +162,19 @@ class Robustify : CliktCommand(help = "Robustify a system design using superviso
     val dev = parseSpecFiles(config.dev)
     val safety = parseSpecFiles(config.safety)
     return OASISRobustifier(
+      sys, sys.inputAlphabet,
+      dev, dev.inputAlphabet,
+      safety, safety.inputAlphabet,
+      progress = config.options.progress,
+      preferred = config.options.preferred.map { Word.fromList(it) }
+    )
+  }
+
+  private fun buildSimple(config: RobustifyConfigJSON): SimpleRobustifier {
+    val sys = parseSpecFiles(config.sys)
+    val dev = parseSpecFiles(config.dev)
+    val safety = parseSpecFiles(config.safety)
+    return SimpleRobustifier(
       sys, sys.inputAlphabet,
       dev, dev.inputAlphabet,
       safety, safety.inputAlphabet,

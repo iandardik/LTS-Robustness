@@ -19,6 +19,6 @@
       "0": ["back", "confirm", "password", "select", "vote"],
       "2": ["eo.enter", "eo.exit", "v.enter", "v.exit"]
     },
-    "algorithm": "Pareto"
+    "algorithm": "Fast"
   }
 }

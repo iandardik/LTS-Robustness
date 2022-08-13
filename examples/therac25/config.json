@@ -11,7 +11,7 @@
       "2": [ ["enter", "up"] ]
     },
     "controllableMap": {
-      "1": ["fire_xray", "fire_ebeam"],
+      "0": ["fire_xray", "fire_ebeam"],
       "2": ["setMode"],
       "3": ["x", "e", "enter", "up", "b"]
     },

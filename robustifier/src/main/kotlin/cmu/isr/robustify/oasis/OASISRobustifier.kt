@@ -2,9 +2,7 @@ package cmu.isr.robustify.oasis
 
 import cmu.isr.dfa.hide
 import cmu.isr.dfa.parallelComposition
-import cmu.isr.ltsa.write
 import cmu.isr.robustify.BaseRobustifier
-import cmu.isr.robustify.supervisory.CompactSupDFA
 import cmu.isr.robustify.supervisory.acceptsSubWord
 import cmu.isr.robustify.supervisory.asSupDFA
 import cmu.isr.robustify.supervisory.makeProgress
@@ -69,15 +67,25 @@ class OASISRobustifier(
       numberOfSynthesis++
 
       if (sup != null) {
-        if (satisfyPreferred(g, sup, preferred)) {
-          logger.info("Found solution!")
-          logger.info("Controlled events: ${controlledEvents(g, sup, g.inputAlphabet)}")
-          logger.info("Time to find the solution: ${Duration.ofMillis(System.currentTimeMillis() - startTime).pretty()}")
-          return sup
+        val ctrlPlant = parallelComposition(g, g.inputAlphabet, sup, sup.inputAlphabet)
+          .asSupDFA(sup.controllable, sup.observable)
+
+        logger.info("Found solution!")
+        logger.info("Controlled events: ${controlledEvents(g, ctrlPlant, g.inputAlphabet)}")
+
+        val satisfiedPreferred = preferred.filter { acceptsSubWord(ctrlPlant, ctrlPlant.inputAlphabet, it) }
+        if (satisfiedPreferred.isEmpty()) {
+          logger.info("No preferred behaviors are satisfied!")
+        } else {
+          logger.info("Satisfied preferred behaviors:")
+          satisfiedPreferred.forEach { logger.info("\t$it") }
         }
-        logger.info("Preferred behaviors are not satisfied")
+
+        logger.info("Termination time: ${Duration.ofMillis(System.currentTimeMillis() - startTime).pretty()}")
+        return sup
       }
     }
+
     logger.info("Termination time: ${Duration.ofMillis(System.currentTimeMillis() - startTime).pretty()}")
     return null
   }
@@ -86,16 +94,6 @@ class OASISRobustifier(
     val m = hide(sys, sysInputs, abs)
     val n = hide(sys, sysInputs, sysInputs - abs.toSet())
     return parallelComposition(m, m.inputAlphabet, n, n.inputAlphabet)
-  }
-
-  private fun satisfyPreferred(plant: CompactDFA<String>, sup: CompactSupDFA<String>,
-                               preferred: Collection<Word<String>>): Boolean {
-    val ctrlPlant = parallelComposition(plant, plant.inputAlphabet, sup, sup.inputAlphabet)
-    for (p in preferred) {
-      if (!acceptsSubWord(ctrlPlant, ctrlPlant.inputAlphabet, p))
-        return false
-    }
-    return true
   }
 
 }
