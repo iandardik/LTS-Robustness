@@ -251,6 +251,8 @@ class SupervisoryRobustifier(
   }
 
   fun buildSys(sup: CompactSupDFA<String>): CompactDFA<String> {
+    logger.info("Build new design from controller...")
+    logger.info("Size of the controller: ${sup.size()} states and ${sup.numOfTransitions()} transitions")
     return parallelComposition(sys, sysInputs, sup, sup.inputAlphabet).asSupDFA(sup.controllable, sup.observable)
   }
 }

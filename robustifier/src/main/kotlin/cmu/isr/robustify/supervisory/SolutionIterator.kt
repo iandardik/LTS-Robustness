@@ -144,8 +144,12 @@ class SolutionIterator(
           logger.info("New pareto-optimal found:")
         else
           logger.info("New solution found:")
+        logger.info("\tSize of the new design: ${solution.size()} states and ${solution.numOfTransitions()} transitions")
+        logger.info("\tNumber of controllable events: ${candidate.sup.controllable.size}")
         logger.info("\tControllable: ${candidate.sup.controllable}")
+        logger.info("\tNumber of observable events: ${candidate.sup.observable.size}")
         logger.info("\tObservable: ${candidate.sup.observable}")
+        logger.info("\tNumber of preferred behavior: ${candidate.preferred.size}")
         logger.info("\tPreferred Behavior:")
         for (p in candidate.preferred)
           logger.info("\t\t$p")

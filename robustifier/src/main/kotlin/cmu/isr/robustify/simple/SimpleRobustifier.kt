@@ -51,6 +51,11 @@ class SimpleRobustifier(
     if (!observable.containsAll(controllable))
       error("The controllable events should be a subset of the observable events.")
 
+    logger.info("Number of controllable events: ${controllable.size}")
+    logger.info("Controllable: $controllable")
+    logger.info("Number of observable events: ${observable.size}")
+    logger.info("Observable: $observable")
+
     val startTime = System.currentTimeMillis()
     val g = plant.asSupDFA(controllable, observable)
     val p = prop.asSupDFA(
@@ -71,6 +76,7 @@ class SimpleRobustifier(
       if (satisfiedPreferred.isEmpty()) {
         logger.info("No preferred behaviors are satisfied!")
       } else {
+        logger.info("Number of satisfied preferred behavior: ${satisfiedPreferred.size}")
         logger.info("Satisfied preferred behaviors:")
         satisfiedPreferred.forEach { logger.info("\t$it") }
       }

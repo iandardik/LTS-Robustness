@@ -6,6 +6,9 @@ import cmu.isr.ltsa.LTSACall.asDetLTS
 import cmu.isr.ltsa.LTSACall.compose
 import cmu.isr.robustify.supremica.SupremicaRunner
 import net.automatalib.words.Word
+import org.apache.logging.log4j.Level
+import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.core.config.Configurator
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 
@@ -111,6 +114,7 @@ class PumpBenchmarkTests {
 
   @Test
   fun testPump() {
+    Configurator.setAllLevels(LogManager.getRootLogger().name, Level.DEBUG)
     val robustifier = loadPump()
     robustifier.use {
       it.synthesize(Algorithms.Fast).toList()

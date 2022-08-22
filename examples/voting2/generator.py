@@ -1,5 +1,17 @@
 import sys
 
+
+def gen_sys(n, m):
+  return f'''
+range N_VOTER = 1..{n}
+
+EM = (password -> P1),
+P1 = (select -> P2),
+P2 = (vote -> P3 | back -> P1),
+P3 = (confirm -> v[N_VOTER].done -> EM | back -> P2).
+'''
+
+
 def gen_env(n, m):
   return f'''
 range N_VOTER = 1..{n}
@@ -32,7 +44,7 @@ VOTE[in:WHO][sel:WHO][v:WHO] = (
 '''
 
 
-def gen_run(n, m):
+def gen_run(n, m, mode):
   enter_exits = ", ".join(
     [f'"v.{i}.enter"' for i in range(1, n+1)] +
     [f'"v.{i}.exit"' for i in range(1, n+1)] +
@@ -50,17 +62,51 @@ def gen_run(n, m):
   "options": {{
     "progress": [{dones}],
     "preferredMap": {{
-      "3": [ ["select", "back"] ]
+      "3": [ ["select", "back", "select", "vote", "confirm"] ]
     }},
     "controllableMap": {{
-      "0": ["back", "confirm", "password", "select", "vote"],
+      "0": ["back", "confirm", "password", "select", "vote", {dones}],
       "3": [{enter_exits}]
     }},
     "observableMap": {{
       "0": ["back", "confirm", "password", "select", "vote", {dones}],
       "2": [{enter_exits}]
     }},
-    "algorithm": "Pareto"
+    "algorithm": "{mode}"
+  }}
+}}
+'''
+
+
+def gen_oasis(n, m):
+  dones = ", ".join([f'"v.{i}.done"' for i in range(1, n+1)])
+  return f'''
+{{
+  "sys": ["sys.lts"],
+  "env": [""],
+  "dev": ["env.lts"],
+  "safety": ["p.lts"],
+  "method": "oasis",
+  "options": {{
+    "progress": [{dones}],
+    "preferred": [ ["select", "back", "select", "vote", "confirm"] ]
+  }}
+}}
+'''
+
+
+def gen_simple(n, m):
+  dones = ", ".join([f'"v.{i}.done"' for i in range(1, n+1)])
+  return f'''
+{{
+  "sys": ["sys.lts"],
+  "env": [""],
+  "dev": ["env.lts"],
+  "safety": ["p.lts"],
+  "method": "simple",
+  "options": {{
+    "progress": [{dones}],
+    "preferred": [ ["select", "back", "select", "vote", "confirm"] ]
   }}
 }}
 '''
@@ -71,6 +117,9 @@ if __name__ == "__main__":
     print("Usage: generator.py <num of voters> <num of officials>")
     exit(0)
   n, m = int(sys.argv[1]), int(sys.argv[2])
+
+  with open("sys.lts", "w") as f:
+    f.write(gen_sys(n, m))
   
   with open("env.lts", "w") as f:
     f.write(gen_env(n, m))
@@ -78,5 +127,14 @@ if __name__ == "__main__":
   with open("p.lts", "w") as f:
     f.write(gen_p(n, m))
   
-  with open("config.json", "w") as f:
-    f.write(gen_run(n, m))
+  with open("config-pareto.json", "w") as f:
+    f.write(gen_run(n, m, "Pareto"))
+  
+  with open("config-fast.json", "w") as f:
+    f.write(gen_run(n, m, "Fast"))
+  
+  with open("config-oasis.json", "w") as f:
+    f.write(gen_oasis(n, m))
+  
+  with open("config-simple.json", "w") as f:
+    f.write(gen_simple(n, m))
