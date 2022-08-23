@@ -15,25 +15,38 @@
     },
     "controllableMap": {
       "0": [
-        "line.1.start_dispense",
-        "line.1.dispense_main_med_flow",
-        "line.1.flow_complete"
-      ],
-      "1": [
+        "alarm_rings",
+        "alarm_silence",
+        "enable_alarm",
+
         "line.1.change_settings",
         "line.1.clear_rate",
         "line.1.confirm_settings",
-        "line.1.set_rate"
+        "line.1.dispense_main_med_flow",
+        "line.1.flow_complete",
+        "line.1.set_rate",
+        "line.1.start_dispense"
       ],
       "3": [
         "line.1.erase_and_unlock_line",
         "line.1.lock_line",
         "line.1.lock_unit",
-        "line.1.unlock_unit"
+        "line.1.unlock_unit",
+
+        "plug_in",
+        "turn_off",
+        "turn_on",
+        "unplug"
       ]
     },
     "observableMap": {
       "0": [
+        "alarm_rings",
+        "alarm_silence",
+        "battery_charge",
+        "battery_spent",
+        "enable_alarm",
+
         "line.1.change_settings",
         "line.1.clear_rate",
         "line.1.confirm_settings",
@@ -45,18 +58,10 @@
         "line.1.set_rate",
         "line.1.start_dispense",
         "line.1.unlock_unit",
-
+        
+        "plug_in",
         "turn_off",
         "turn_on",
-        "power_failure"
-      ],
-      "3": [
-        "alarm_rings",
-        "alarm_silence",
-        "enable_alarm",
-        "battery_charge",
-        "battery_spent",
-        "plug_in",
         "unplug"
       ]
     },
