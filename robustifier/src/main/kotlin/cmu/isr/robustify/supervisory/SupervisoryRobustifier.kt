@@ -77,8 +77,6 @@ class SupervisoryRobustifier(
    * @return the observed(Sup || G) model
    */
   fun supervisorySynthesize(controllable: Collection<String>, observable: Collection<String>): CompactSupDFA<String>? {
-    numberOfSynthesis++
-
     val key = Pair(controllable, observable)
     if (key !in synthesisCache) {
       val g = plant.asSupDFA(controllable, observable)
@@ -86,6 +84,7 @@ class SupervisoryRobustifier(
 
       logger.debug("Start supervisory controller synthesis...")
       synthesisCache[key] = synthesizer.synthesize(g, g.inputAlphabet, p, p.inputAlphabet) as CompactSupDFA<String>?
+      numberOfSynthesis++
       logger.debug("Controller synthesis completed.")
     } else {
       logger.debug("Synthesis cache hit: $key")
