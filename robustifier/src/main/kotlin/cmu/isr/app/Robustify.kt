@@ -15,6 +15,7 @@ import cmu.isr.utils.pretty
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.arguments.argument
+import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import net.automatalib.automata.fsa.impl.compact.CompactDFA
@@ -30,6 +31,7 @@ import java.time.Duration
 class Robustify : CliktCommand(help = "Robustify a system design using supervisory control.") {
   private val configFile by argument(name = "<config.json>")
   private val verbose by option("--verbose", "-v", help = "Enable verbose mode.").flag()
+  private val output by option("--output", "-o", help = "Output file format.").default("aut")
 
   private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -84,6 +86,7 @@ class Robustify : CliktCommand(help = "Robustify a system design using superviso
     val f = File(path)
     return when (f.extension) {
       "lts" -> LTSACall.compile(f.readText()).compose().asDetLTS()
+      "fsm" -> cmu.isr.robustify.desops.parse(f.bufferedReader())
       else -> error("Unsupported file type '.${f.extension}'")
     }
   }
@@ -104,11 +107,28 @@ class Robustify : CliktCommand(help = "Robustify a system design using superviso
     if (dir.exists())
       dir.deleteRecursively()
     dir.mkdir()
+    when (output) {
+      "aut" -> saveSolutionsAUT(dfas)
+      "fsp" -> saveSolutionsFSP(dfas)
+    }
+  }
+
+  private fun saveSolutionsAUT(dfas: List<CompactDFA<String>>) {
     for (i in dfas.indices) {
       val f = File("./solutions/sol${i+1}.aut")
       f.createNewFile()
       val out = f.outputStream()
       AUTWriter.writeAutomaton(dfas[i], dfas[i].inputAlphabet, out)
+      out.close()
+    }
+  }
+
+  private fun saveSolutionsFSP(dfas: List<CompactDFA<String>>) {
+    for (i in dfas.indices) {
+      val f = File("./solutions/sol${i+1}.lts")
+      f.createNewFile()
+      val out = f.outputStream()
+      cmu.isr.ltsa.write(out, dfas[i], dfas[i].inputAlphabet)
       out.close()
     }
   }
