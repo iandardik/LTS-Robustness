@@ -1,0 +1,46 @@
+{
+  "sys": ["GateIn.fsm", "GateOut.fsm"],
+  "env": [],
+  "dev": ["human-dev.lts"],
+  "safety": ["ColisionProperty-no-err.fsm"],
+  "method": "supervisory",
+  "options": {
+    "progress": ["rcv.oyster.fin", "rcv.card.fin"],
+    "preferredMap": {
+      "3": [
+        ["snd.oyster", "snd.card.gin", "snd.oyster.gin", "rcv.oyster.fin"],
+        ["snd.card", "snd.oyster.gin", "snd.card.gin", "rcv.card.fin"]
+      ]
+    },
+    "controllableMap": {
+      "0": [        
+        "rcv.oyster.gin",
+        "rcv.card.gin",
+
+        "rcv.oyster.fin",
+        "rcv.card.fin"
+      ],
+      "3": [
+        "snd.oyster",
+        "snd.card",
+        
+        "snd.oyster.gin",
+        "snd.card.gin"
+      ]
+    },
+    "observableMap": {
+      "0": [
+        "snd.oyster",
+        "snd.card",
+        "rcv.oyster.gin",
+        "rcv.card.gin",
+
+        "snd.oyster.gin",
+        "snd.card.gin",
+        "rcv.oyster.fin",
+        "rcv.card.fin"
+      ]
+    },
+    "algorithm": "Fast"
+  }
+}
