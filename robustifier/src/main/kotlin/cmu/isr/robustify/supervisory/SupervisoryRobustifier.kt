@@ -181,35 +181,6 @@ class SupervisoryRobustifier(
   /**
    * @param sup the observed(Sup || G) model from the DESops output
    */
-  fun removeUnnecessary(sup: CompactSupDFA<String>): CompactSupDFA<String> {
-    val control = constructSupervisor(sup)
-    val makeUc = control.observable.toMutableSet()
-    for (state in control) {
-      for (a in control.observable) {
-        if (control.getTransition(state, a) == null)
-          makeUc.remove(a)
-      }
-    }
-    val makeUo = makeUc.toMutableSet()
-    for (state in control) {
-      for (a in makeUc) {
-        if (control.getSuccessor(state, a) != state)
-          makeUo.remove(a)
-      }
-    }
-
-    return observer(
-      CompactDFA(control).asSupDFA(
-        (control.controllable - makeUc) union (controllableMap[Priority.P0]?: emptySet()),
-        (control.observable - makeUo) union (observableMap[Priority.P0]?: emptySet())
-      ),
-      control.inputAlphabet
-    )
-  }
-
-  /**
-   * @param sup the observed(Sup || G) model from the DESops output
-   */
   fun constructSupervisor(sup: CompactSupDFA<String>): CompactSupDFA<String> {
     val supQueue = java.util.ArrayDeque<Int>()
     val plantQueue = java.util.ArrayDeque<Int>()

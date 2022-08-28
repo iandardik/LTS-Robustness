@@ -51,9 +51,10 @@ class SupervisoryRobustifierTests {
     val envSpec =
       ClassLoader.getSystemResource("specs/therac25/env.lts")?.readText() ?: error("Cannot find therac25/env.lts")
     val pSpec = ClassLoader.getSystemResource("specs/therac25/p.lts")?.readText() ?: error("Cannot find therac25/p.lts")
-    val back1 = Word.fromSymbols("x", "up")
-    val back2 = Word.fromSymbols("e", "up")
-    val back3 = Word.fromSymbols("enter", "up")
+    val back1 = Word.fromSymbols("x", "up", "e", "enter", "b")
+    val back2 = Word.fromSymbols("e", "up", "x", "enter", "b")
+    val back3 = Word.fromSymbols("x", "enter", "up", "up", "e", "enter", "b")
+    val back4 = Word.fromSymbols("e", "enter", "up", "up", "x", "enter", "b")
 
     val sys = LTSACall.compile(sysSpec).compose().asDetLTS()
     val env = LTSACall.compile(envSpec).compose().asDetLTS()
@@ -64,15 +65,13 @@ class SupervisoryRobustifierTests {
       env, env.inputAlphabet,
       safety, safety.inputAlphabet,
       progress = listOf("fire_xray", "fire_ebeam"),
-      preferredMap = mapOf(Priority.P3 to listOf(back1, back2), Priority.P2 to listOf(back3)),
+      preferredMap = mapOf(Priority.P3 to listOf(back1, back2), Priority.P2 to listOf(back3, back4)),
       controllableMap = mapOf(
-        Priority.P1 to listOf("fire_xray", "fire_ebeam"),
-        Priority.P2 to listOf("setMode"),
-        Priority.P3 to listOf("x", "e", "enter", "up", "b")
+        Priority.P0 to listOf("fire_xray", "fire_ebeam", "setMode"),
+        Priority.P1 to listOf("x", "e", "enter", "up", "b")
       ),
       observableMap = mapOf(
-        Priority.P0 to listOf("x", "e", "enter", "up", "b", "fire_xray", "fire_ebeam"),
-        Priority.P1 to listOf("setMode")
+        Priority.P0 to listOf("x", "e", "enter", "up", "b", "fire_xray", "fire_ebeam", "setMode"),
       ),
       synthesizer = SupremicaRunner(),
       maxIter = 1
@@ -305,7 +304,11 @@ class SupervisoryRobustifierTests {
     robustifier.use {
       val paretoExpected = listOf(
         Pair(
-          listOf("b"),
+          listOf("b", "fire_ebeam", "fire_xray", "setMode"),
+          listOf("b", "e", "enter", "fire_ebeam", "fire_xray", "setMode", "up", "x")
+        ),
+        Pair(
+          listOf("enter", "fire_ebeam", "fire_xray", "setMode"),
           listOf("b", "e", "enter", "fire_ebeam", "fire_xray", "setMode", "up", "x")
         )
       )
@@ -316,7 +319,7 @@ class SupervisoryRobustifierTests {
 
       val fastExpected = listOf(
         Pair(
-          listOf("b"),
+          listOf("enter", "fire_ebeam", "fire_xray", "setMode"),
           listOf("b", "e", "enter", "fire_ebeam", "fire_xray", "setMode", "up", "x")
         )
       )

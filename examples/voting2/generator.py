@@ -65,7 +65,7 @@ def gen_run(n, m, mode, opt=True):
       "3": [ ["select", "back", "select", "vote", "confirm"] ]
     }},
     "controllableMap": {{
-      "0": ["back", "confirm", "password", "select", "vote", {dones}],
+      "1": ["back", "confirm", "password", "select", "vote", {dones}],
       "3": [{enter_exits}]
     }},
     "observableMap": {{

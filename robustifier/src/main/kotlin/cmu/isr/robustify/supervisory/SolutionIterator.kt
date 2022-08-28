@@ -8,6 +8,7 @@ import net.automatalib.words.impl.Alphabets
 import org.slf4j.LoggerFactory
 import java.time.Duration
 import java.util.*
+import kotlin.math.abs
 
 private class SolutionCandidate(
   val sup: CompactSupDFA<String>,
@@ -75,7 +76,7 @@ class SolutionIterator(
       logger.info("\t$p")
 
     // remove those absolutely unused controllable and observable events which generates the initial solution
-    initSup = if (problem.optimization) problem.removeUnnecessary(sup) else sup
+    initSup = if (problem.optimization) removeUnnecessary(sup) else sup
 
     preferredIterator = PreferredBehIterator(problem.preferredMap)
 
@@ -87,8 +88,60 @@ class SolutionIterator(
     return this
   }
 
+  /**
+   * @param sup the observed(Sup || G) model from the DESops output
+   */
+  private fun removeUnnecessary(sup: CompactSupDFA<String>): CompactSupDFA<String> {
+    val control = problem.constructSupervisor(sup)
+    val makeUc = control.observable.toMutableSet()
+    for (state in control) {
+      for (a in control.observable) {
+        if (control.getTransition(state, a) == null)
+          makeUc.remove(a)
+      }
+    }
+    val makeUo = makeUc.toMutableSet()
+    for (state in control) {
+      for (a in makeUc) {
+        if (control.getSuccessor(state, a) != state)
+          makeUo.remove(a)
+      }
+    }
+
+    val neededControllable = control.controllable.toMutableSet()
+    val neededObservable = control.observable.toMutableSet()
+    val usedCost = abs((neededControllable - makeUc).sumOf { weights.controllable[it]!! } +
+        (neededObservable - makeUo).sumOf { weights.observable[it]!! })
+    for (a in makeUc) {
+      if (a in weights.controllable && abs(weights.controllable[a]!!) > usedCost)
+        neededControllable.remove(a)
+    }
+    for (a in makeUo) {
+      if (a !in neededControllable && a in weights.observable && abs(weights.observable[a]!!) > usedCost)
+        neededObservable.remove(a)
+    }
+//    for (p in listOf(Priority.P3, Priority.P2, Priority.P1)) {
+//      val ctrl = controllableMap[p]?.toSet() ?: emptySet()
+//      if (makeUc.containsAll(ctrl)) {
+//        neededControllable.removeAll(ctrl)
+//      } else {
+//        break
+//      }
+//    }
+//    for (p in listOf(Priority.P3, Priority.P2, Priority.P1)) {
+//      val obsrv = observableMap[p]?.toSet() ?: emptySet()
+//      if (makeUo.containsAll(obsrv) && (neededControllable intersect obsrv).isEmpty()) {
+//        neededObservable.removeAll(obsrv)
+//      } else {
+//        break
+//      }
+//    }
+
+    return observer(CompactDFA(control).asSupDFA(neededControllable, neededObservable), control.inputAlphabet)
+  }
+
   override fun hasNext(): Boolean {
-    while (solutions.isEmpty() && curIter < maxIter && preferredIterator.hasNext()) {
+    while (solutions.isEmpty() && (maxIter == -1 || curIter < maxIter) && preferredIterator.hasNext()) {
       nextIteration()
       curIter++
     }
@@ -256,52 +309,96 @@ class SolutionIterator(
   }
 
   private fun minimizeParetoNonOpt(preferred: Collection<Word<String>>): Collection<CompactSupDFA<String>> {
-    val eventsMap = mutableMapOf<Priority, Pair<Collection<String>, Collection<String>>>()
-    for (p in listOf(Priority.P3, Priority.P2, Priority.P1)) {
-      eventsMap[p] = Pair(
-        problem.controllableMap[p]?.intersect(initSup.controllable.toSet()) ?: emptySet(),
-        problem.observableMap[p]?.intersect(initSup.observable.toSet()) ?: emptySet()
-      )
-    }
-
-    // the list of combinations of events that minimize the controller s.t. the given preferred behavior is satisfied
+    val canRemoveCtrl = problem.controllableMap
+      .flatMap { if (it.key != Priority.P0) it.value else emptyList() }
+      .intersect(initSup.controllable.toSet())
+    val canRemoveObsrv = problem.observableMap
+      .flatMap { if (it.key != Priority.P0) it.value else emptyList() }
+      .intersect(initSup.observable.toSet())
+    var minCost = abs(computeUtility(preferred, initSup.controllable, initSup.observable).second)
     var minSups = mutableListOf(initSup)
-    var lastNonEmptySups = minSups
-    var sups = mutableListOf(initSup)
-    var lastSups = sups
-    for (p in listOf(Priority.P3, Priority.P2, Priority.P1)) {
-      val (canRemoveCtrl, canRemoveObsrv) = eventsMap[p]!!
-      var removedCounter = 0
+    var lastSups = mutableListOf(initSup)
+    var removedCounter = 0
 
-      while (removedCounter++ < canRemoveCtrl.size + canRemoveObsrv.size) {
-        lastNonEmptySups = minSups
-        minSups = mutableListOf()
-        lastSups = sups
-        sups = mutableListOf()
-        for ((controllable, observable) in removeOneEventFrom(lastSups, canRemoveCtrl, canRemoveObsrv)) {
-          logger.debug("Try removing the following events:")
-          logger.debug("Controllable: ${initSup.controllable - controllable.toSet()}")
-          logger.debug("Observable: ${initSup.observable - observable.toSet()}")
+    while (removedCounter++ < canRemoveCtrl.size + canRemoveObsrv.size) {
+      val sups = mutableListOf<CompactSupDFA<String>>()
+      for ((controllable, observable) in removeOneEventFrom(lastSups, canRemoveCtrl, canRemoveObsrv)) {
+        logger.debug("Try removing the following events:")
+        logger.debug("Controllable: ${initSup.controllable - controllable.toSet()}")
+        logger.debug("Observable: ${initSup.observable - observable.toSet()}")
 
-          val sup = problem.supervisorySynthesize(controllable, observable)
-          synthesisCounter++
-          if (sup == null) {
-            // Add an empty supervisor
-            sups.add(CompactDFA(Alphabets.fromCollection(observable)).asSupDFA(controllable, observable))
-            continue
-          }
-          sups.add(sup)
-          // add minimization if preferred behavior maintained
-          if (problem.satisfyPreferred(sup, preferred)) {
+        val sup = problem.supervisorySynthesize(controllable, observable)
+        synthesisCounter++
+        if (sup == null) {
+          // Add an empty supervisor
+          sups.add(CompactDFA(Alphabets.fromCollection(observable)).asSupDFA(controllable, observable))
+          continue
+        }
+        sups.add(sup)
+        // add minimization if preferred behavior maintained
+        if (problem.satisfyPreferred(sup, preferred)) {
+          val u = abs(computeUtility(preferred, controllable, observable).second)
+          if (u < minCost) {
+            minCost = u
+            minSups = mutableListOf(sup)
+          } else if (u == minCost) {
             minSups.add(sup)
           }
         }
-        if (minSups.isEmpty())
-          minSups = lastNonEmptySups
       }
+      lastSups = sups
     }
 
     return minSups
+
+//    val eventsMap = mutableMapOf<Priority, Pair<Collection<String>, Collection<String>>>()
+//    for (p in listOf(Priority.P3, Priority.P2, Priority.P1)) {
+//      eventsMap[p] = Pair(
+//        problem.controllableMap[p]?.intersect(initSup.controllable.toSet()) ?: emptySet(),
+//        problem.observableMap[p]?.intersect(initSup.observable.toSet()) ?: emptySet()
+//      )
+//    }
+//
+//    // the list of combinations of events that minimize the controller s.t. the given preferred behavior is satisfied
+//    var minSups = mutableListOf(initSup)
+//    var lastNonEmptySups = minSups
+//    var sups = mutableListOf(initSup)
+//    var lastSups = sups
+//    for (p in listOf(Priority.P3, Priority.P2, Priority.P1)) {
+//      val (canRemoveCtrl, canRemoveObsrv) = eventsMap[p]!!
+//      var removedCounter = 0
+//
+//      while (removedCounter++ < canRemoveCtrl.size + canRemoveObsrv.size) {
+//        lastNonEmptySups = minSups
+//        minSups = mutableListOf()
+//        lastSups = sups
+//        sups = mutableListOf()
+//        for ((controllable, observable) in removeOneEventFrom(lastSups, canRemoveCtrl, canRemoveObsrv)) {
+//          logger.debug("Try removing the following events:")
+//          logger.debug("Controllable: ${initSup.controllable - controllable.toSet()}")
+//          logger.debug("Observable: ${initSup.observable - observable.toSet()}")
+//
+//          val sup = problem.supervisorySynthesize(controllable, observable)
+//          synthesisCounter++
+//          if (sup == null) {
+//            // Add an empty supervisor
+//            sups.add(CompactDFA(Alphabets.fromCollection(observable)).asSupDFA(controllable, observable))
+//            continue
+//          }
+//          sups.add(sup)
+//          // add minimization if preferred behavior maintained
+//          if (problem.satisfyPreferred(sup, preferred)) {
+//            minSups.add(sup)
+//          }
+//        }
+//        if (minSups.isEmpty())
+//          minSups = lastNonEmptySups
+//      }
+//      // sups may be invalid, thus make it to the minimal sups in after removing events in this priority
+//      sups = minSups
+//    }
+//
+//    return minSups
   }
 
   private fun removeOneEventFrom(
