@@ -25,6 +25,8 @@ class SolutionIterator(
   private val maxIter: Int
 ) : Iterable<CompactDFA<String>>, Iterator<CompactDFA<String>> {
 
+  private val constructNewDesign = false
+
   private val logger = LoggerFactory.getLogger(javaClass)
   private lateinit var weights: WeightsMap
   private lateinit var initSup: CompactSupDFA<String>
@@ -193,12 +195,17 @@ class SolutionIterator(
     if (minBracketCost > minCost) {
       minCost = minBracketCost
       for (candidate in candidates) {
-        val solution = problem.buildSys(problem.constructSupervisor(candidate.sup))
+        val solution = if (constructNewDesign)
+          problem.buildSys(problem.constructSupervisor(candidate.sup))
+        else
+          candidate.sup
+
         if (alg == Algorithms.Pareto)
           logger.info("New pareto-optimal found:")
         else
           logger.info("New solution found:")
-        logger.info("\tSize of the new design: ${solution.size()} states and ${solution.numOfTransitions()} transitions")
+        logger.info("\tSize of the ${if (constructNewDesign) "new design" else "controller"}: " +
+            "${solution.size()} states and ${solution.numOfTransitions()} transitions")
         logger.info("\tNumber of controllable events: ${candidate.sup.controllable.size}")
         logger.info("\tControllable: ${candidate.sup.controllable}")
         logger.info("\tNumber of observable events: ${candidate.sup.observable.size}")
