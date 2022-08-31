@@ -29,16 +29,12 @@
       "line.1.lock_unit",
       "line.1.unlock_unit",
 
-      "plug_in",
       "turn_off",
-      "turn_on",
-      "unplug"
+      "turn_on"
     ],
     "observable": [
       "alarm_rings",
       "alarm_silence",
-      "battery_charge",
-      "battery_spent",
       "enable_alarm",
 
       "line.1.change_settings",
@@ -53,10 +49,8 @@
       "line.1.start_dispense",
       "line.1.unlock_unit",
       
-      "plug_in",
       "turn_off",
-      "turn_on",
-      "unplug"
+      "turn_on"
     ]
   }
 }

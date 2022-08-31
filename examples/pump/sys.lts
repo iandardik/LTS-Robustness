@@ -139,7 +139,7 @@ range DispenseState = Dispensing .. DispenseDone
 //=====================
 // Process Definitions
 //=====================
-range NUM_LINE = 1..2
+range NUM_LINE = 1..1
 
 LINE = LINE[LineUnlocked],
 
