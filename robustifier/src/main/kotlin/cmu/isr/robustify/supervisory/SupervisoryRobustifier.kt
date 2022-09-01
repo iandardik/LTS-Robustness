@@ -170,7 +170,9 @@ class SupervisoryRobustifier(
     val key = Triple(sup.controllable, sup.observable, p)
     if (key !in checkPreferredCache) {
       logger.debug("Start checking preferred behavior: [$p]")
-      checkPreferredCache[key] = acceptsSubWord(sup, sup.inputAlphabet, p)
+      val (r, how) = acceptsSubWord(sup, sup.inputAlphabet, p)
+      logger.debug("It is satisfied by $how")
+      checkPreferredCache[key] = r
       logger.debug("Preferred behavior check completed: ${checkPreferredCache[key]}.")
     } else {
       logger.debug("CheckPreferred cache hit: $key")

@@ -1,21 +1,19 @@
 {
-  "sys": ["power.lts", "lines.lts", "alarm.lts"],
+  "sys": ["lines.lts"],
   "env": [],
-  "dev": ["deviation.lts"],
+  "dev": ["deviation.lts", "power.lts", "alarm.lts"],
   "safety": ["p.lts"],
   "method": "oasis",
   "options": {
     "progress": ["line.1.flow_complete"],
     "preferred": [
-      ["plug_in", "battery_charge", "battery_charge", "turn_on", "line.1.dispense_main_med_flow", "line.1.flow_complete"],
-      ["plug_in", "line.1.start_dispense", "line.1.dispense_main_med_flow", "line.1.dispense_main_med_flow",
-        "power_failure", "plug_in", "line.1.start_dispense", "line.1.dispense_main_med_flow"]
+      ["turn_on", "line.1.dispense_main_med_flow", "line.1.flow_complete", "turn_off"],
+
+      ["turn_on", "line.1.start_dispense", "line.1.dispense_main_med_flow", 
+        "line.1.dispense_main_med_flow", "power_failure", "turn_on", "line.1.start_dispense",
+        "line.1.dispense_main_med_flow", "line.1.flow_complete", "turn_off"]
     ],
     "controllable": [
-      "alarm_rings",
-      "alarm_silence",
-      "enable_alarm",
-
       "line.1.change_settings",
       "line.1.clear_rate",
       "line.1.confirm_settings",
@@ -33,10 +31,6 @@
       "turn_on"
     ],
     "observable": [
-      "alarm_rings",
-      "alarm_silence",
-      "enable_alarm",
-
       "line.1.change_settings",
       "line.1.clear_rate",
       "line.1.confirm_settings",

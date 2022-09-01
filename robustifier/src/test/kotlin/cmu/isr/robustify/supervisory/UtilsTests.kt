@@ -78,7 +78,7 @@ class UtilsTests {
       .withAccepting(0, 1, 2)
       .create()
     val word = Word.fromSymbols('a', 'c')
-    assertEquals(true, acceptsSubWord(a, a.inputAlphabet, word))
+    assertEquals(true, acceptsSubWord(a, a.inputAlphabet, word).first)
   }
 
   @Test
@@ -91,7 +91,7 @@ class UtilsTests {
       .from(3).on('d').to(0)
       .create()
     val word = Word.fromSymbols('b', 'c')
-    assertEquals(true, acceptsSubWord(a, a.inputAlphabet, word))
+    assertEquals(true, acceptsSubWord(a, a.inputAlphabet, word).first)
   }
 
   @Test
@@ -104,7 +104,7 @@ class UtilsTests {
       .withAccepting(0, 1, 2)
       .create()
     val word = Word.fromSymbols('b', 'd', 'c')
-    assertEquals(true, acceptsSubWord(a, a.inputAlphabet, word))
+    assertEquals(true, acceptsSubWord(a, a.inputAlphabet, word).first)
   }
 
 }

@@ -72,7 +72,11 @@ class SimpleRobustifier(
       logger.info("Found solution!")
       logger.info("Controlled events: ${controlledEvents(g, ctrlPlant, g.inputAlphabet)}")
 
-      val satisfiedPreferred = preferred.filter { acceptsSubWord(ctrlPlant, ctrlPlant.inputAlphabet, it) }
+      val satisfiedPreferred = preferred.filter {
+        val (r, how) = acceptsSubWord(ctrlPlant, ctrlPlant.inputAlphabet, it)
+        logger.debug("Preferred behavior [$it] is satisfied by $how")
+        r
+      }
       if (satisfiedPreferred.isEmpty()) {
         logger.info("No preferred behaviors are satisfied!")
       } else {

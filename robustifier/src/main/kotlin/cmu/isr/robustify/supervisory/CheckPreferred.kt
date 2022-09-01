@@ -15,7 +15,7 @@ import net.automatalib.words.impl.Alphabets
 /**
  *
  */
-fun <I> acceptsSubWord(sup: DFA<*, I>, inputs: Alphabet<I>, word: Word<I>): Boolean {
+fun <I> acceptsSubWord(sup: DFA<*, I>, inputs: Alphabet<I>, word: Word<I>): Pair<Boolean, List<I>> {
   // build automata from the word
   val builder = AutomatonBuilders.newDFA(Alphabets.fromCollection(word.distinct()))
     .withInitial(0)
@@ -28,25 +28,29 @@ fun <I> acceptsSubWord(sup: DFA<*, I>, inputs: Alphabet<I>, word: Word<I>): Bool
 
   val composition = DFAParallelComposition(sup, inputs, wordDFA, wordDFA.inputAlphabet)
   val result = booleanArrayOf(false)
-  TSTraversal.depthFirst(composition, inputs union wordDFA.inputAlphabet, AcceptsSubWordVisitor(wordDFA, result))
+  val trace = mutableListOf<I>()
+  TSTraversal.depthFirst(composition, inputs union wordDFA.inputAlphabet,
+    AcceptsSubWordVisitor(wordDFA, result, trace))
 
-  return result[0]
+  return Pair(result[0], trace)
 }
 
 
 private class AcceptsSubWordVisitor<S1, S2, I, T>(
   private val wordDFA: DFA<S2, I>,
-  private val result: BooleanArray
-) : TSTraversalVisitor<Pair<S1, S2>, I, T, Void> {
+  private val result: BooleanArray,
+  private val how: MutableList<I>
+) : TSTraversalVisitor<Pair<S1, S2>, I, T, List<I>> {
 
   private val visited = mutableSetOf<Pair<S1, S2>>()
   private val visitedS2 = mutableSetOf<S2>()
 
-  override fun processInitial(state: Pair<S1, S2>, outData: Holder<Void>): TSTraversalAction {
+  override fun processInitial(state: Pair<S1, S2>, outData: Holder<List<I>>): TSTraversalAction {
+    outData.value = emptyList()
     return TSTraversalAction.EXPLORE
   }
 
-  override fun startExploration(state: Pair<S1, S2>, data: Void?): Boolean {
+  override fun startExploration(state: Pair<S1, S2>, data: List<I>): Boolean {
     return if (state !in visited) {
       visited.add(state)
       visitedS2.add(state.second)
@@ -58,15 +62,16 @@ private class AcceptsSubWordVisitor<S1, S2, I, T>(
 
   override fun processTransition(
     source: Pair<S1, S2>,
-    srcData: Void?,
+    srcData: List<I>,
     input: I,
     transition: T,
     succ: Pair<S1, S2>,
-    outData: Holder<Void>
+    outData: Holder<List<I>>
   ): TSTraversalAction {
-    visitedS2.add(succ.second)
+    outData.value = srcData + input
     return if (visitedS2.size == wordDFA.size()) {
       result[0] = true
+      how.addAll(outData.value)
       TSTraversalAction.ABORT_TRAVERSAL
     } else {
       TSTraversalAction.EXPLORE

@@ -1,24 +1,22 @@
 {
-  "sys": ["power.lts", "lines.lts", "alarm.lts"],
+  "sys": ["lines.lts"],
   "env": [],
-  "dev": ["deviation.lts"],
+  "dev": ["deviation.lts", "power.lts", "alarm.lts"],
   "safety": ["p.lts"],
   "method": "supervisory-non-opt",
   "options": {
     "progress": ["line.1.flow_complete"],
     "preferredMap": {
       "3": [
-        ["plug_in", "battery_charge", "battery_charge", "turn_on", "line.1.dispense_main_med_flow", "line.1.flow_complete"],
-        ["plug_in", "line.1.start_dispense", "line.1.dispense_main_med_flow", "line.1.dispense_main_med_flow",
-          "power_failure", "plug_in", "line.1.start_dispense", "line.1.dispense_main_med_flow"]
+        ["turn_on", "line.1.dispense_main_med_flow", "line.1.flow_complete", "turn_off"],
+
+        ["turn_on", "line.1.start_dispense", "line.1.dispense_main_med_flow", 
+         "line.1.dispense_main_med_flow", "power_failure", "turn_on", "line.1.start_dispense",
+         "line.1.dispense_main_med_flow", "line.1.flow_complete", "turn_off"]
       ]
     },
     "controllableMap": {
       "0": [
-        "alarm_rings",
-        "alarm_silence",
-        "enable_alarm",
-
         "line.1.change_settings",
         "line.1.clear_rate",
         "line.1.confirm_settings",
@@ -27,26 +25,21 @@
         "line.1.set_rate",
         "line.1.start_dispense"
       ],
-      "3": [
+      "2": [
         "line.1.erase_and_unlock_line",
         "line.1.lock_line",
         "line.1.lock_unit",
         "line.1.unlock_unit",
-
-        "plug_in",
         "turn_off",
-        "turn_on",
+        "turn_on"
+      ],
+      "3": [
+        "plug_in",
         "unplug"
       ]
     },
     "observableMap": {
       "0": [
-        "alarm_rings",
-        "alarm_silence",
-        "battery_charge",
-        "battery_spent",
-        "enable_alarm",
-
         "line.1.change_settings",
         "line.1.clear_rate",
         "line.1.confirm_settings",
@@ -59,9 +52,13 @@
         "line.1.start_dispense",
         "line.1.unlock_unit",
         
-        "plug_in",
         "turn_off",
-        "turn_on",
+        "turn_on"
+      ],
+      "3": [
+        "battery_charge",
+        "battery_spent",
+        "plug_in",
         "unplug"
       ]
     },
