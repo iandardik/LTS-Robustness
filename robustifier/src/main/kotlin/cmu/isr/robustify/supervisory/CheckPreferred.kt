@@ -68,6 +68,7 @@ private class AcceptsSubWordVisitor<S1, S2, I, T>(
     succ: Pair<S1, S2>,
     outData: Holder<List<I>>
   ): TSTraversalAction {
+    visitedS2.add(succ.second)
     outData.value = srcData + input
     return if (visitedS2.size == wordDFA.size()) {
       result[0] = true
