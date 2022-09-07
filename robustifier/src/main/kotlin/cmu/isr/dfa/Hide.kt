@@ -1,22 +1,11 @@
 package cmu.isr.dfa
 
+import cmu.isr.utils.forEachSetBit
 import net.automatalib.automata.fsa.DFA
 import net.automatalib.automata.fsa.impl.compact.CompactDFA
 import net.automatalib.words.Alphabet
 import net.automatalib.words.impl.Alphabets
 import java.util.*
-
-
-private fun BitSet.forEachSetBit(f: (Int) -> Unit) {
-  var i = this.nextSetBit(0)
-  while (i >= 0) {
-    if (i == Int.MAX_VALUE)
-      break
-    f(i)
-    i = this.nextSetBit(i+1)
-  }
-}
-
 
 fun <S, I> reachableSet(dfa: DFA<S, I>, hidden: Collection<I>): Map<Int, BitSet> {
   val reachable = mutableMapOf<Int, BitSet>()

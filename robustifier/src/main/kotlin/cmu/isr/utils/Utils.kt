@@ -1,6 +1,7 @@
 package cmu.isr.utils
 
 import java.time.Duration
+import java.util.*
 
 fun Duration.pretty(): String {
   return "%02d:%02d:%02d:%03d".format(toHours(), toMinutes() % 60, seconds % 60, toMillis() % 1000)
@@ -28,4 +29,14 @@ fun <E> List<E>.combinations(k: Int): Collection<Collection<E>> {
   }
 
   return l
+}
+
+fun BitSet.forEachSetBit(f: (Int) -> Unit) {
+  var i = this.nextSetBit(0)
+  while (i >= 0) {
+    if (i == Int.MAX_VALUE)
+      break
+    f(i)
+    i = this.nextSetBit(i+1)
+  }
 }
