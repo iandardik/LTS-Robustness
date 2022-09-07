@@ -93,6 +93,7 @@ object LTSACall {
     }
   }
 
+  // TODO: add support for non-determinism
   fun CompositeState.asDetLTS(): CompactDetLTS<String> {
     // check there's no tau transition
     if (this.composition.hasTau() || this.composition.isNonDeterministic)

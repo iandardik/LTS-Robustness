@@ -4,7 +4,7 @@ import net.automatalib.automata.MutableDeterministic
 import net.automatalib.automata.fsa.impl.compact.CompactDFA
 import net.automatalib.ts.UniversalDTS
 
-
+// TODO: revisit the implementation of LTS, and add support for NonDetLTS
 interface DetLTS<S, I, T> : UniversalDTS<S, I, T, Boolean, Void?> {
 
   val errorState: S

@@ -9,7 +9,7 @@ import net.automatalib.util.ts.traversal.TSTraversalVisitor
 import net.automatalib.words.Alphabet
 import net.automatalib.words.impl.Alphabets
 
-
+// TODO: refactor this as in NFAParallelComposition
 class DFAParallelComposition<S1, S2, I>(
   private val dfa1: DFA<S1, I>,
   private val inputs1: Alphabet<I>,

@@ -7,7 +7,7 @@ import net.automatalib.words.Alphabet
 import net.automatalib.words.impl.Alphabets
 import java.io.BufferedReader
 
-
+// TODO: add support for NFA
 fun <I> parse(reader: BufferedReader, alphabets: Alphabet<I>, controllable: Collection<I>,
               observable: Collection<I>, transformer: (String) -> I): CompactSupDFA<I> {
   val states = mutableListOf<Pair<String, Boolean>>()
