@@ -1,5 +1,6 @@
 package cmu.isr.robustify.supervisory
 
+import cmu.isr.robustify.RobustifierTests
 import cmu.isr.supervisory.CompactSupDFA
 import cmu.isr.supervisory.supremica.SupremicaRunner
 import cmu.isr.ts.dfa.parallelComposition
@@ -11,7 +12,7 @@ import org.junit.jupiter.api.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 
-class SupervisoryRobustifierTests {
+class SupervisoryRobustifierTests : RobustifierTests() {
 
   private fun loadVoting(): SupervisoryRobustifier {
     val sysSpec =
@@ -280,10 +281,10 @@ class SupervisoryRobustifierTests {
           listOf("back", "confirm", "password", "select", "vote", "eo.enter", "eo.exit")
         )
       )
-      for ((i, sys) in it.synthesize(Algorithms.Pareto).withIndex()) {
-        assertEquals(paretoExpected[i].first.toSet(), (sys as CompactSupDFA).controllable.toSet())
-        assertEquals(paretoExpected[i].second.toSet(), sys.observable.toSet())
-      }
+      assertSynthesisResults(
+        paretoExpected,
+        it.synthesize(Algorithms.Pareto).map { r -> Pair((r as CompactSupDFA).controllable, r.observable) }
+      )
 
       val fastExpected = listOf(
         Pair(
@@ -291,10 +292,10 @@ class SupervisoryRobustifierTests {
           listOf("back", "confirm", "password", "select", "vote", "v.enter", "v.exit")
         )
       )
-      for ((i, sys) in it.synthesize(Algorithms.Fast).withIndex()) {
-        assertEquals(fastExpected[i].first.toSet(), (sys as CompactSupDFA).controllable.toSet())
-        assertEquals(fastExpected[i].second.toSet(), sys.observable.toSet())
-      }
+      assertSynthesisResults(
+        fastExpected,
+        it.synthesize(Algorithms.Fast).map { r -> Pair((r as CompactSupDFA).controllable, r.observable) }
+      )
     }
   }
 
@@ -313,10 +314,10 @@ class SupervisoryRobustifierTests {
           listOf("b", "e", "enter", "fire_ebeam", "fire_xray", "setMode", "up", "x")
         )
       )
-      for ((i, sys) in it.synthesize(Algorithms.Pareto).withIndex()) {
-        assertEquals(paretoExpected[i].first.toSet(), (sys as CompactSupDFA).controllable.toSet())
-        assertEquals(paretoExpected[i].second.toSet(), sys.observable.toSet())
-      }
+      assertSynthesisResults(
+        paretoExpected,
+        it.synthesize(Algorithms.Pareto).map { r -> Pair((r as CompactSupDFA).controllable, r.observable) }
+      )
 
       val fastExpected = listOf(
         Pair(
@@ -324,10 +325,10 @@ class SupervisoryRobustifierTests {
           listOf("b", "e", "enter", "fire_ebeam", "fire_xray", "setMode", "up", "x")
         )
       )
-      for ((i, sys) in it.synthesize(Algorithms.Fast).withIndex()) {
-        assertEquals(fastExpected[i].first.toSet(), (sys as CompactSupDFA).controllable.toSet())
-        assertEquals(fastExpected[i].second.toSet(), sys.observable.toSet())
-      }
+      assertSynthesisResults(
+        fastExpected,
+        it.synthesize(Algorithms.Fast).map { r -> Pair((r as CompactSupDFA).controllable, r.observable) }
+      )
     }
   }
 
@@ -342,10 +343,10 @@ class SupervisoryRobustifierTests {
           listOf("battery_charge", "line.1.change_settings", "line.1.clear_rate", "line.1.confirm_settings", "line.1.dispense_main_med_flow", "line.1.flow_complete", "line.1.set_rate", "line.1.start_dispense", "unplug")
         )
       )
-      for ((i, sys) in it.synthesize(Algorithms.Pareto).withIndex()) {
-        assertEquals(paretoExpected[i].first.toSet(), (sys as CompactSupDFA).controllable.toSet())
-        assertEquals(paretoExpected[i].second.toSet(), sys.observable.toSet())
-      }
+      assertSynthesisResults(
+        paretoExpected,
+        it.synthesize(Algorithms.Pareto).map { r -> Pair((r as CompactSupDFA).controllable, r.observable) }
+      )
 
       val fastExpected = listOf(
         Pair(
@@ -353,10 +354,10 @@ class SupervisoryRobustifierTests {
           listOf("line.1.change_settings", "line.1.clear_rate", "line.1.confirm_settings", "line.1.dispense_main_med_flow", "line.1.flow_complete", "line.1.set_rate", "line.1.start_dispense", "turn_off", "turn_on", "unplug")
         )
       )
-      for ((i, sys) in it.synthesize(Algorithms.Fast).withIndex()) {
-        assertEquals(fastExpected[i].first.toSet(), (sys as CompactSupDFA).controllable.toSet())
-        assertEquals(fastExpected[i].second.toSet(), sys.observable.toSet())
-      }
+      assertSynthesisResults(
+        fastExpected,
+        it.synthesize(Algorithms.Fast).map { r -> Pair((r as CompactSupDFA).controllable, r.observable) }
+      )
     }
   }
 }

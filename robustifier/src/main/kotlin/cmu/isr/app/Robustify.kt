@@ -142,7 +142,7 @@ class Robustify : CliktCommand(help = "Robustify a system design using superviso
     }
   }
 
-  private fun buildSupervisory(config: RobustifyConfigJSON): SupervisoryRobustifier {
+  fun buildSupervisory(config: RobustifyConfigJSON): SupervisoryRobustifier {
     val sys = parseSpecFiles(config.sys)
     val dev = parseSpecFiles(config.dev)
     val safety = parseSpecFiles(config.safety)
@@ -186,7 +186,7 @@ class Robustify : CliktCommand(help = "Robustify a system design using superviso
     )
   }
 
-  private fun buildOASIS(config: RobustifyConfigJSON): OASISRobustifier {
+  fun buildOASIS(config: RobustifyConfigJSON): OASISRobustifier {
     val sys = parseSpecFiles(config.sys)
     val dev = parseSpecFiles(config.dev)
     val safety = parseSpecFiles(config.safety)
@@ -199,7 +199,7 @@ class Robustify : CliktCommand(help = "Robustify a system design using superviso
     )
   }
 
-  private fun buildSimple(config: RobustifyConfigJSON): SimpleRobustifier {
+  fun buildSimple(config: RobustifyConfigJSON): SimpleRobustifier {
     val sys = parseSpecFiles(config.sys)
     val dev = parseSpecFiles(config.dev)
     val safety = parseSpecFiles(config.safety)

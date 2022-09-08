@@ -110,7 +110,6 @@ class OASISTests {
     val sup = robustifier.synthesize()
 
     assertNotNull(sup)
-//    write(System.out, sup, sup.inputAlphabet)
   }
 
   @Test
@@ -119,7 +118,6 @@ class OASISTests {
     val sup = robustifier.synthesize()
 
     assertNotNull(sup)
-//    write(System.out, sup, sup.inputAlphabet)
   }
 
   @Test
@@ -128,6 +126,5 @@ class OASISTests {
     val sup = robustifier.synthesize()
 
     assertNotNull(sup)
-//    write(System.out, sup, sup.inputAlphabet)
   }
 }
