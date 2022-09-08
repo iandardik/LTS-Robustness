@@ -1,4 +1,4 @@
-package cmu.isr.robustify.supremica
+package cmu.isr.supremica
 
 import cmu.isr.robustify.supervisory.CompactSupDFA
 import cmu.isr.robustify.supervisory.SupervisoryDFA
@@ -6,11 +6,7 @@ import cmu.isr.robustify.supervisory.SupervisorySynthesizer
 import net.automatalib.words.Alphabet
 import org.supremica.automata.Automata
 import org.supremica.automata.AutomatonType
-import org.supremica.automata.algorithms.AutomataSynthesizer
-import org.supremica.automata.algorithms.SynchronizationOptions
-import org.supremica.automata.algorithms.SynthesisAlgorithm
-import org.supremica.automata.algorithms.SynthesisType
-import org.supremica.automata.algorithms.SynthesizerOptions
+import org.supremica.automata.algorithms.*
 
 class SupremicaRunner : SupervisorySynthesizer<Int, String> {
 

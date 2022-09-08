@@ -1,4 +1,4 @@
-package cmu.isr.robustify.supremica
+package cmu.isr.supremica
 
 import cmu.isr.robustify.supervisory.SupervisoryDFA
 import net.automatalib.words.Alphabet

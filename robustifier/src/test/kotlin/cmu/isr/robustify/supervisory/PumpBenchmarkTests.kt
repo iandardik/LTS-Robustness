@@ -4,7 +4,7 @@ import cmu.isr.dfa.parallelComposition
 import cmu.isr.ltsa.LTSACall
 import cmu.isr.ltsa.LTSACall.asDetLTS
 import cmu.isr.ltsa.LTSACall.compose
-import cmu.isr.robustify.supremica.SupremicaRunner
+import cmu.isr.supremica.SupremicaRunner
 import net.automatalib.words.Word
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager

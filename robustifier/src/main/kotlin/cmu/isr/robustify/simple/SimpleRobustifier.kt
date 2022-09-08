@@ -6,7 +6,7 @@ import cmu.isr.robustify.oasis.controlledEvents
 import cmu.isr.robustify.supervisory.acceptsSubWord
 import cmu.isr.robustify.supervisory.asSupDFA
 import cmu.isr.robustify.supervisory.makeProgress
-import cmu.isr.robustify.supremica.SupremicaRunner
+import cmu.isr.supremica.SupremicaRunner
 import cmu.isr.utils.pretty
 import net.automatalib.automata.fsa.DFA
 import net.automatalib.automata.fsa.impl.compact.CompactDFA
