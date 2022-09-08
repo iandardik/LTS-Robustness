@@ -5,7 +5,6 @@ import cmu.isr.supervisory.SupervisoryNFA
 import net.automatalib.words.Alphabet
 import java.io.OutputStream
 
-// TODO: add support for NFA
 fun <S, I> write(output: OutputStream, dfa: SupervisoryDFA<S, I>, inputs: Alphabet<I>) {
   write(output, dfa as SupervisoryNFA<S, I>, inputs)
 }

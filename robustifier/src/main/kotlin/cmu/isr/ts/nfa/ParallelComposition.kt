@@ -72,3 +72,14 @@ fun <S1, S2, I> parallelComposition(nfa1: NFA<S1, I>, inputs1: Alphabet<I>,
   TSCopy.copy(TSTraversalMethod.DEPTH_FIRST, composition, TSTraversal.NO_LIMIT, inputs, out)
   return out
 }
+
+fun <I> parallelComposition(vararg nfas: CompactNFA<I>): CompactNFA<I> {
+  if (nfas.isEmpty())
+    error("Should provide at least one model")
+  if (nfas.size == 1)
+    return nfas[0]
+  var c = nfas[0]
+  for (i in 1 until nfas.size)
+    c = parallelComposition(c, c.inputAlphabet, nfas[i], nfas[i].inputAlphabet)
+  return c
+}
