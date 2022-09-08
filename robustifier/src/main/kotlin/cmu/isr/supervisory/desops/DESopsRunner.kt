@@ -16,7 +16,7 @@ import java.net.Socket
 import java.time.Duration
 
 
-class DESopsRunner<I>(private val transformer: (String) -> I) : SupervisorySynthesizer<Int, I> {
+class DESopsRunner : SupervisorySynthesizer<Int, String> {
 
   private val logger = LoggerFactory.getLogger(javaClass)
   private val desops = ClassLoader.getSystemResource("scripts/desops.py")?.readBytes() ?: error("Cannot find desops.py")
@@ -37,9 +37,9 @@ class DESopsRunner<I>(private val transformer: (String) -> I) : SupervisorySynth
   }
 
   private fun synthesizeRaw(
-    plant: SupervisoryDFA<*, I>, inputs1: Alphabet<I>,
-    prop: SupervisoryDFA<*, I>, inputs2: Alphabet<I>
-  ): CompactSupDFA<I>? {
+    plant: SupervisoryDFA<*, String>, inputs1: Alphabet<String>,
+    prop: SupervisoryDFA<*, String>, inputs2: Alphabet<String>
+  ): CompactSupDFA<String>? {
     // check alphabets
     if (inputs1 != inputs2)
       error("The plant and the property should have the same alphabet")
@@ -51,31 +51,37 @@ class DESopsRunner<I>(private val transformer: (String) -> I) : SupervisorySynth
 
     val startTime = System.currentTimeMillis()
     val socket = Socket("127.0.0.1", port)
+    var sup: CompactSupDFA<String>? = null
 
-    val outStream = socket.getOutputStream()
-    write(outStream, plant, inputs1)
-    write(outStream, prop, inputs2)
+    socket.use {
+      val outStream = it.getOutputStream()
+      write(outStream, plant, inputs1)
+      write(outStream, prop, inputs2)
 
-    val inStream = socket.getInputStream()
-    val reader = inStream.bufferedReader()
-    val sup = when (reader.readLine()) {
-      "0" -> {
-        val sup = parse(reader, inputs1, plant.controllable, plant.observable, transformer)
-        logger.debug("Synthesis spent ${Duration.ofMillis(System.currentTimeMillis() - startTime).pretty()}")
-        observer(sup, sup.inputAlphabet)
+      val inStream = it.getInputStream()
+      val reader = inStream.bufferedReader()
+      sup = when (reader.readLine()) {
+        "0" -> {
+          val dfa = parse(reader, inputs1, plant.controllable, plant.observable)
+          if (dfa is CompactSupDFA) {
+            logger.debug("Synthesis spent ${Duration.ofMillis(System.currentTimeMillis() - startTime).pretty()}")
+            observer(dfa, dfa.inputAlphabet)
+          } else {
+            error("Does not support NFA synthesis!")
+          }
+        }
+        "1" -> null
+        else -> error(processStdErr.readLine())
       }
-      "1" -> null
-      else -> error(processStdErr.readLine())
     }
 
-    socket.close()
     return sup
   }
 
   override fun synthesize(
-    plant: SupervisoryDFA<*, I>, inputs1: Alphabet<I>,
-    prop: SupervisoryDFA<*, I>, inputs2: Alphabet<I>
-  ): CompactSupDFA<I>? {
+    plant: SupervisoryDFA<*, String>, inputs1: Alphabet<String>,
+    prop: SupervisoryDFA<*, String>, inputs2: Alphabet<String>
+  ): CompactSupDFA<String>? {
     // DESops requires the prop to have the same alphabet as the plant
     if (inputs1 != inputs2) {
       val extendedProp = extendAlphabet(prop, inputs2, inputs1).asSupDFA(

@@ -5,6 +5,7 @@ import cmu.isr.robustify.simple.SimpleRobustifier
 import cmu.isr.robustify.supervisory.Algorithms
 import cmu.isr.robustify.supervisory.Priority
 import cmu.isr.robustify.supervisory.SupervisoryRobustifier
+import cmu.isr.supervisory.CompactSupDFA
 import cmu.isr.supervisory.desops.DESopsRunner
 import cmu.isr.supervisory.supremica.SupremicaRunner
 import cmu.isr.ts.dfa.parallelComposition
@@ -94,7 +95,7 @@ class Robustify : CliktCommand(help = "Robustify a system design using superviso
     val f = File(path)
     return when (f.extension) {
       "lts" -> LTSACall.compile(f.readText()).compose().asDetLTS()
-      "fsm" -> cmu.isr.supervisory.desops.parse(f.bufferedReader())
+      "fsm" -> cmu.isr.supervisory.desops.parse(f.bufferedReader()) as? CompactSupDFA ?: error("Does not support NFA at '${f.name}'")
       else -> error("Unsupported file type '.${f.extension}'")
     }
   }
@@ -179,7 +180,7 @@ class Robustify : CliktCommand(help = "Robustify a system design using superviso
       }.toMap(),
       synthesizer = when (SolverType.valueOf(config.options.solver)) {
         SolverType.Supremica -> SupremicaRunner()
-        SolverType.DESops -> DESopsRunner { it }
+        SolverType.DESops -> DESopsRunner()
       },
       maxIter = config.options.maxIter
     )

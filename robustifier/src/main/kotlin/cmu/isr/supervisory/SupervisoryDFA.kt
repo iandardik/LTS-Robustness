@@ -3,13 +3,7 @@ package cmu.isr.supervisory
 import net.automatalib.automata.fsa.DFA
 import net.automatalib.automata.fsa.impl.compact.CompactDFA
 
-interface SupervisoryDFA<S, I> : DFA<S, I> {
-
-  val controllable: Collection<I>
-
-  val observable: Collection<I>
-
-}
+interface SupervisoryDFA<S, I> : DFA<S, I>, SupervisoryNFA<S, I>
 
 class CompactSupDFA<I>(
   dfa: CompactDFA<I>,
@@ -33,6 +27,6 @@ class CompactSupDFA<I>(
 
 fun <I> CompactDFA<I>.asSupDFA(controllable: Collection<I>, observable: Collection<I>): CompactSupDFA<I> {
   if (!inputAlphabet.containsAll(controllable) || !inputAlphabet.containsAll(observable))
-    throw Error("controllable and observable should be subsets of the alphabet")
+    error("controllable and observable should be subsets of the alphabet")
   return CompactSupDFA(this, controllable, observable)
 }

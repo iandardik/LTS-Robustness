@@ -97,7 +97,7 @@ object LTSACall {
   fun CompositeState.asDetLTS(): CompactDetLTS<String> {
     // check there's no tau transition
     if (this.composition.hasTau() || this.composition.isNonDeterministic)
-      throw Error("The given LTS is non-deterministic")
+      error("The given LTS is non-deterministic")
 
     val alphabet = Alphabets.fromCollection(alphabetNoTau())
     val builder = AutomatonBuilders.newDFA(alphabet).withInitial(0)
