@@ -1,6 +1,9 @@
 package cmu.isr.robustify.supervisory
 
-import cmu.isr.dfa.hide
+import cmu.isr.supervisory.CompactSupDFA
+import cmu.isr.supervisory.SupervisoryDFA
+import cmu.isr.supervisory.asSupDFA
+import cmu.isr.ts.dfa.hide
 import net.automatalib.automata.fsa.impl.compact.CompactDFA
 import net.automatalib.commons.util.Holder
 import net.automatalib.ts.UniversalDTS

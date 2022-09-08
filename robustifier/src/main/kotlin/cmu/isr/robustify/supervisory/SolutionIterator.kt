@@ -1,5 +1,7 @@
 package cmu.isr.robustify.supervisory
 
+import cmu.isr.supervisory.CompactSupDFA
+import cmu.isr.supervisory.asSupDFA
 import cmu.isr.utils.combinations
 import cmu.isr.utils.pretty
 import net.automatalib.automata.fsa.impl.compact.CompactDFA

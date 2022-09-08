@@ -1,6 +1,7 @@
 package cmu.isr.robustify.supervisory
 
-import cmu.isr.lts.asLTS
+import cmu.isr.supervisory.asSupDFA
+import cmu.isr.ts.lts.asLTS
 import net.automatalib.serialization.aut.AUTWriter
 import net.automatalib.util.automata.Automata
 import net.automatalib.util.automata.builders.AutomatonBuilders

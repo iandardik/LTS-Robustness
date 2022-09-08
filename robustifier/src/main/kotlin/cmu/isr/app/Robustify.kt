@@ -1,16 +1,17 @@
 package cmu.isr.app
 
-import cmu.isr.desops.DESopsRunner
-import cmu.isr.dfa.parallelComposition
-import cmu.isr.ltsa.LTSACall
-import cmu.isr.ltsa.LTSACall.asDetLTS
-import cmu.isr.ltsa.LTSACall.compose
 import cmu.isr.robustify.oasis.OASISRobustifier
 import cmu.isr.robustify.simple.SimpleRobustifier
 import cmu.isr.robustify.supervisory.Algorithms
 import cmu.isr.robustify.supervisory.Priority
 import cmu.isr.robustify.supervisory.SupervisoryRobustifier
-import cmu.isr.supremica.SupremicaRunner
+import cmu.isr.supervisory.desops.DESopsRunner
+import cmu.isr.supervisory.supremica.SupremicaRunner
+import cmu.isr.ts.dfa.parallelComposition
+import cmu.isr.ts.lts.ltsa.LTSACall
+import cmu.isr.ts.lts.ltsa.LTSACall.asDetLTS
+import cmu.isr.ts.lts.ltsa.LTSACall.compose
+import cmu.isr.ts.lts.ltsa.write
 import cmu.isr.utils.pretty
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.ajalt.clikt.core.CliktCommand
@@ -93,7 +94,7 @@ class Robustify : CliktCommand(help = "Robustify a system design using superviso
     val f = File(path)
     return when (f.extension) {
       "lts" -> LTSACall.compile(f.readText()).compose().asDetLTS()
-      "fsm" -> cmu.isr.desops.parse(f.bufferedReader())
+      "fsm" -> cmu.isr.supervisory.desops.parse(f.bufferedReader())
       else -> error("Unsupported file type '.${f.extension}'")
     }
   }
@@ -135,7 +136,7 @@ class Robustify : CliktCommand(help = "Robustify a system design using superviso
       val f = File("./solutions/sol${i+1}.lts")
       f.createNewFile()
       val out = f.outputStream()
-      cmu.isr.ltsa.write(out, dfas[i], dfas[i].inputAlphabet)
+      write(out, dfas[i], dfas[i].inputAlphabet)
       out.close()
     }
   }

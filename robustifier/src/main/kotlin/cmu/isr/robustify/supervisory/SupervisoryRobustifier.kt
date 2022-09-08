@@ -1,7 +1,10 @@
 package cmu.isr.robustify.supervisory
 
-import cmu.isr.dfa.parallelComposition
 import cmu.isr.robustify.BaseRobustifier
+import cmu.isr.supervisory.CompactSupDFA
+import cmu.isr.supervisory.SupervisorySynthesizer
+import cmu.isr.supervisory.asSupDFA
+import cmu.isr.ts.dfa.parallelComposition
 import cmu.isr.utils.LRUCache
 import net.automatalib.automata.fsa.DFA
 import net.automatalib.automata.fsa.impl.compact.CompactDFA

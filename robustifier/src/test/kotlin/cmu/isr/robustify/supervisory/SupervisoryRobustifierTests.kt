@@ -1,10 +1,11 @@
 package cmu.isr.robustify.supervisory
 
-import cmu.isr.dfa.parallelComposition
-import cmu.isr.ltsa.LTSACall
-import cmu.isr.ltsa.LTSACall.asDetLTS
-import cmu.isr.ltsa.LTSACall.compose
-import cmu.isr.supremica.SupremicaRunner
+import cmu.isr.supervisory.CompactSupDFA
+import cmu.isr.supervisory.supremica.SupremicaRunner
+import cmu.isr.ts.dfa.parallelComposition
+import cmu.isr.ts.lts.ltsa.LTSACall
+import cmu.isr.ts.lts.ltsa.LTSACall.asDetLTS
+import cmu.isr.ts.lts.ltsa.LTSACall.compose
 import net.automatalib.words.Word
 import org.junit.jupiter.api.Test
 import kotlin.test.assertContentEquals

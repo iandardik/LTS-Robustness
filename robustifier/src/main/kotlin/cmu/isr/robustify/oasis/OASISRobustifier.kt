@@ -1,12 +1,12 @@
 package cmu.isr.robustify.oasis
 
-import cmu.isr.dfa.hide
-import cmu.isr.dfa.parallelComposition
 import cmu.isr.robustify.BaseRobustifier
 import cmu.isr.robustify.supervisory.acceptsSubWord
-import cmu.isr.robustify.supervisory.asSupDFA
 import cmu.isr.robustify.supervisory.makeProgress
-import cmu.isr.supremica.SupremicaRunner
+import cmu.isr.supervisory.asSupDFA
+import cmu.isr.supervisory.supremica.SupremicaRunner
+import cmu.isr.ts.dfa.hide
+import cmu.isr.ts.dfa.parallelComposition
 import cmu.isr.utils.combinations
 import cmu.isr.utils.pretty
 import net.automatalib.automata.fsa.DFA
