@@ -1,5 +1,8 @@
 package cmu.isr.robustify.desops
 
+import cmu.isr.desops.DESopsRunner
+import cmu.isr.desops.parse
+import cmu.isr.desops.write
 import cmu.isr.robustify.supervisory.SupervisorySynthesizer
 import cmu.isr.robustify.supervisory.SynthesisTests
 import cmu.isr.robustify.supervisory.asSupDFA
