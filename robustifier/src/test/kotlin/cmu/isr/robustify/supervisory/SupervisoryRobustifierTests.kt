@@ -1,12 +1,12 @@
 package cmu.isr.robustify.supervisory
 
 import cmu.isr.robustify.RobustifierTests
-import cmu.isr.supervisory.CompactSupDFA
+import cmu.isr.supervisory.SupervisoryDFA
 import cmu.isr.supervisory.supremica.SupremicaRunner
-import cmu.isr.ts.dfa.parallelComposition
 import cmu.isr.ts.lts.ltsa.LTSACall
 import cmu.isr.ts.lts.ltsa.LTSACall.asDetLTS
 import cmu.isr.ts.lts.ltsa.LTSACall.compose
+import cmu.isr.ts.parallel
 import net.automatalib.words.Word
 import org.junit.jupiter.api.Test
 import kotlin.test.assertContentEquals
@@ -14,7 +14,7 @@ import kotlin.test.assertEquals
 
 class SupervisoryRobustifierTests : RobustifierTests() {
 
-  private fun loadVoting(): SupervisoryRobustifier {
+  private fun loadVoting(): SupervisoryRobustifier<String> {
     val sysSpec =
       ClassLoader.getSystemResource("specs/voting/sys.lts")?.readText() ?: error("Cannot find voting/sys.lts")
     val envSpec =
@@ -29,9 +29,9 @@ class SupervisoryRobustifierTests : RobustifierTests() {
 //    val back2 = Word.fromSymbols("select", "vote", "back", "back", "select")
 
     return SupervisoryRobustifier(
-      sys, sys.inputAlphabet,
-      env, env.inputAlphabet,
-      safety, safety.inputAlphabet,
+      sys,
+      env,
+      safety,
       progress = listOf("confirm"),
       preferredMap = mapOf(Priority.P3 to listOf(back)),
       controllableMap = mapOf(
@@ -47,7 +47,7 @@ class SupervisoryRobustifierTests : RobustifierTests() {
     )
   }
 
-  private fun loadTherac(): SupervisoryRobustifier {
+  private fun loadTherac(): SupervisoryRobustifier<String> {
     val sysSpec =
       ClassLoader.getSystemResource("specs/therac25/sys.lts")?.readText() ?: error("Cannot find therac25/sys.lts")
     val envSpec =
@@ -63,9 +63,9 @@ class SupervisoryRobustifierTests : RobustifierTests() {
     val safety = LTSACall.compile(pSpec).compose().asDetLTS()
 
     return SupervisoryRobustifier(
-      sys, sys.inputAlphabet,
-      env, env.inputAlphabet,
-      safety, safety.inputAlphabet,
+      sys,
+      env,
+      safety,
       progress = listOf("fire_xray", "fire_ebeam"),
       preferredMap = mapOf(Priority.P3 to listOf(back1, back2), Priority.P2 to listOf(back3, back4)),
       controllableMap = mapOf(
@@ -80,7 +80,7 @@ class SupervisoryRobustifierTests : RobustifierTests() {
     )
   }
 
-  private fun loadPump(): SupervisoryRobustifier {
+  private fun loadPump(): SupervisoryRobustifier<String> {
     val powerSpec =
       ClassLoader.getSystemResource("specs/pump/power.lts")?.readText() ?: error("Cannot find pump/power.lts")
     val linesSpec =
@@ -95,8 +95,7 @@ class SupervisoryRobustifierTests : RobustifierTests() {
     val power = LTSACall.compile(powerSpec).compose().asDetLTS()
     val lines = LTSACall.compile(linesSpec).compose().asDetLTS()
     val alarm = LTSACall.compile(alarmSpec).compose().asDetLTS()
-    var sys = parallelComposition(power, power.inputAlphabet, lines, lines.inputAlphabet)
-    sys = parallelComposition(sys, sys.inputAlphabet, alarm, alarm.inputAlphabet)
+    val sys = parallel(power, lines, alarm)
     val env = LTSACall.compile(envSepc).compose().asDetLTS()
     val safety = LTSACall.compile(pSpec).compose().asDetLTS()
 
@@ -105,9 +104,9 @@ class SupervisoryRobustifierTests : RobustifierTests() {
       "power_failure", "plug_in", "line.1.start_dispense", "line.1.dispense_main_med_flow")
 
     return SupervisoryRobustifier(
-      sys, sys.inputAlphabet,
-      env, env.inputAlphabet,
-      safety, safety.inputAlphabet,
+      sys,
+      env,
+      safety,
       progress = listOf("line.1.flow_complete"),
       preferredMap = mapOf(Priority.P3 to listOf(ideal, recover)),
       controllableMap = mapOf(
@@ -283,7 +282,7 @@ class SupervisoryRobustifierTests : RobustifierTests() {
       )
       assertSynthesisResults(
         paretoExpected,
-        it.synthesize(Algorithms.Pareto).map { r -> Pair((r as CompactSupDFA).controllable, r.observable) }
+        it.synthesize(Algorithms.Pareto).map { r -> Pair((r as SupervisoryDFA).controllable, r.observable) }
       )
 
       val fastExpected = listOf(
@@ -294,7 +293,7 @@ class SupervisoryRobustifierTests : RobustifierTests() {
       )
       assertSynthesisResults(
         fastExpected,
-        it.synthesize(Algorithms.Fast).map { r -> Pair((r as CompactSupDFA).controllable, r.observable) }
+        it.synthesize(Algorithms.Fast).map { r -> Pair((r as SupervisoryDFA).controllable, r.observable) }
       )
     }
   }
@@ -316,7 +315,7 @@ class SupervisoryRobustifierTests : RobustifierTests() {
       )
       assertSynthesisResults(
         paretoExpected,
-        it.synthesize(Algorithms.Pareto).map { r -> Pair((r as CompactSupDFA).controllable, r.observable) }
+        it.synthesize(Algorithms.Pareto).map { r -> Pair((r as SupervisoryDFA).controllable, r.observable) }
       )
 
       val fastExpected = listOf(
@@ -327,7 +326,7 @@ class SupervisoryRobustifierTests : RobustifierTests() {
       )
       assertSynthesisResults(
         fastExpected,
-        it.synthesize(Algorithms.Fast).map { r -> Pair((r as CompactSupDFA).controllable, r.observable) }
+        it.synthesize(Algorithms.Fast).map { r -> Pair((r as SupervisoryDFA).controllable, r.observable) }
       )
     }
   }
@@ -345,7 +344,7 @@ class SupervisoryRobustifierTests : RobustifierTests() {
       )
       assertSynthesisResults(
         paretoExpected,
-        it.synthesize(Algorithms.Pareto).map { r -> Pair((r as CompactSupDFA).controllable, r.observable) }
+        it.synthesize(Algorithms.Pareto).map { r -> Pair((r as SupervisoryDFA).controllable, r.observable) }
       )
 
       val fastExpected = listOf(
@@ -356,7 +355,7 @@ class SupervisoryRobustifierTests : RobustifierTests() {
       )
       assertSynthesisResults(
         fastExpected,
-        it.synthesize(Algorithms.Fast).map { r -> Pair((r as CompactSupDFA).controllable, r.observable) }
+        it.synthesize(Algorithms.Fast).map { r -> Pair((r as SupervisoryDFA).controllable, r.observable) }
       )
     }
   }

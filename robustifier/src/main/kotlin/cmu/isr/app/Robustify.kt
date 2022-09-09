@@ -5,14 +5,15 @@ import cmu.isr.robustify.simple.SimpleRobustifier
 import cmu.isr.robustify.supervisory.Algorithms
 import cmu.isr.robustify.supervisory.Priority
 import cmu.isr.robustify.supervisory.SupervisoryRobustifier
-import cmu.isr.supervisory.CompactSupDFA
+import cmu.isr.supervisory.SupervisoryDFA
 import cmu.isr.supervisory.desops.DESopsRunner
 import cmu.isr.supervisory.supremica.SupremicaRunner
-import cmu.isr.ts.dfa.parallelComposition
+import cmu.isr.ts.alphabet
 import cmu.isr.ts.lts.ltsa.LTSACall
 import cmu.isr.ts.lts.ltsa.LTSACall.asDetLTS
 import cmu.isr.ts.lts.ltsa.LTSACall.compose
 import cmu.isr.ts.lts.ltsa.write
+import cmu.isr.ts.parallel
 import cmu.isr.utils.pretty
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.ajalt.clikt.core.CliktCommand
@@ -20,7 +21,7 @@ import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
-import net.automatalib.automata.fsa.impl.compact.CompactDFA
+import net.automatalib.automata.fsa.DFA
 import net.automatalib.serialization.aut.AUTWriter
 import net.automatalib.words.Word
 import org.apache.logging.log4j.Level
@@ -91,27 +92,24 @@ class Robustify : CliktCommand(help = "Robustify a system design using superviso
     logger.info("Robustification completes, total time: ${Duration.ofMillis(System.currentTimeMillis() - startTime).pretty()}")
   }
 
-  private fun parseSpecFile(path: String): CompactDFA<String> {
+  private fun parseSpecFile(path: String): DFA<*, String> {
     val f = File(path)
     return when (f.extension) {
       "lts" -> LTSACall.compile(f.readText()).compose().asDetLTS()
-      "fsm" -> cmu.isr.supervisory.desops.parse(f.bufferedReader()) as? CompactSupDFA ?: error("Does not support NFA at '${f.name}'")
+      "fsm" -> cmu.isr.supervisory.desops.parse(f.bufferedReader()) as SupervisoryDFA
       else -> error("Unsupported file type '.${f.extension}'")
     }
   }
 
-  private fun parseSpecFiles(paths: List<String>): CompactDFA<String> {
-    var c = parseSpecFile(paths[0])
-    if (paths.size > 1) {
-      for (i in 1 until paths.size) {
-        val a = parseSpecFile(paths[i])
-        c = parallelComposition(c, c.inputAlphabet, a, a.inputAlphabet)
-      }
-    }
-    return c
+  private fun parseSpecFiles(paths: List<String>): DFA<*, String> {
+    if (paths.isEmpty())
+      error("Should provide at least one model file")
+    if (paths.size == 1)
+      return parseSpecFile(paths[0])
+    return parallel(*paths.map { parseSpecFile(it) }.toTypedArray())
   }
 
-  private fun saveSolutions(dfas: List<CompactDFA<String>>) {
+  private fun saveSolutions(dfas: List<DFA<*, String>>) {
     val dir = File("./solutions")
     if (dir.exists())
       dir.deleteRecursively()
@@ -122,34 +120,34 @@ class Robustify : CliktCommand(help = "Robustify a system design using superviso
     }
   }
 
-  private fun saveSolutionsAUT(dfas: List<CompactDFA<String>>) {
+  private fun saveSolutionsAUT(dfas: List<DFA<*, String>>) {
     for (i in dfas.indices) {
       val f = File("./solutions/sol${i+1}.aut")
       f.createNewFile()
       val out = f.outputStream()
-      AUTWriter.writeAutomaton(dfas[i], dfas[i].inputAlphabet, out)
+      AUTWriter.writeAutomaton(dfas[i], dfas[i].alphabet(), out)
       out.close()
     }
   }
 
-  private fun saveSolutionsFSP(dfas: List<CompactDFA<String>>) {
+  private fun saveSolutionsFSP(dfas: List<DFA<*, String>>) {
     for (i in dfas.indices) {
       val f = File("./solutions/sol${i+1}.lts")
       f.createNewFile()
       val out = f.outputStream()
-      write(out, dfas[i], dfas[i].inputAlphabet)
+      write(out, dfas[i], dfas[i].alphabet())
       out.close()
     }
   }
 
-  fun buildSupervisory(config: RobustifyConfigJSON): SupervisoryRobustifier {
+  fun buildSupervisory(config: RobustifyConfigJSON): SupervisoryRobustifier<String> {
     val sys = parseSpecFiles(config.sys)
     val dev = parseSpecFiles(config.dev)
     val safety = parseSpecFiles(config.safety)
     return SupervisoryRobustifier(
-      sys, sys.inputAlphabet,
-      dev, dev.inputAlphabet,
-      safety, safety.inputAlphabet,
+      sys,
+      dev,
+      safety,
       progress = config.options.progress,
       preferredMap = config.options.preferredMap.map { entry ->
         when (entry.key) {
@@ -186,29 +184,31 @@ class Robustify : CliktCommand(help = "Robustify a system design using superviso
     )
   }
 
-  fun buildOASIS(config: RobustifyConfigJSON): OASISRobustifier {
+  fun buildOASIS(config: RobustifyConfigJSON): OASISRobustifier<Int, String> {
     val sys = parseSpecFiles(config.sys)
     val dev = parseSpecFiles(config.dev)
     val safety = parseSpecFiles(config.safety)
     return OASISRobustifier(
-      sys, sys.inputAlphabet,
-      dev, dev.inputAlphabet,
-      safety, safety.inputAlphabet,
+      sys,
+      dev,
+      safety,
       progress = config.options.progress,
-      preferred = config.options.preferred.map { Word.fromList(it) }
+      preferred = config.options.preferred.map { Word.fromList(it) },
+      synthesizer = SupremicaRunner()
     )
   }
 
-  fun buildSimple(config: RobustifyConfigJSON): SimpleRobustifier {
+  fun buildSimple(config: RobustifyConfigJSON): SimpleRobustifier<Int, String> {
     val sys = parseSpecFiles(config.sys)
     val dev = parseSpecFiles(config.dev)
     val safety = parseSpecFiles(config.safety)
     return SimpleRobustifier(
-      sys, sys.inputAlphabet,
-      dev, dev.inputAlphabet,
-      safety, safety.inputAlphabet,
+      sys,
+      dev,
+      safety,
       progress = config.options.progress,
-      preferred = config.options.preferred.map { Word.fromList(it) }
+      preferred = config.options.preferred.map { Word.fromList(it) },
+      synthesizer = SupremicaRunner()
     )
   }
 }

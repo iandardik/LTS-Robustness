@@ -3,6 +3,7 @@ package cmu.isr.supervisory.supremica
 import cmu.isr.supervisory.SupervisorySynthesizer
 import cmu.isr.supervisory.SynthesisTests
 import cmu.isr.supervisory.asSupDFA
+import cmu.isr.ts.alphabet
 import net.automatalib.util.automata.Automata
 import net.automatalib.util.automata.builders.AutomatonBuilders
 import net.automatalib.words.impl.Alphabets
@@ -29,9 +30,9 @@ class SupremicaTests : SynthesisTests() {
       .create()
       .asSupDFA(controllable, observable)
 
-    val b = read(write(a, inputs, ""))
+    val b = read(write(a, ""))
 
-    assertContentEquals(inputs, b.inputAlphabet)
+    assertContentEquals(inputs, b.alphabet())
     assertContentEquals(controllable, b.controllable)
     assertContentEquals(observable, b.observable)
     assert(Automata.testEquivalence(a, b, inputs))
@@ -51,9 +52,9 @@ class SupremicaTests : SynthesisTests() {
       .create()
       .asSupDFA(controllable, observable)
 
-    val b = read(write(a, inputs, ""))
+    val b = read(write(a, ""))
 
-    assertContentEquals(inputs, b.inputAlphabet)
+    assertContentEquals(inputs, b.alphabet())
     assertContentEquals(controllable, b.controllable)
     assertContentEquals(observable, b.observable)
     assert(Automata.testEquivalence(a, b, inputs))

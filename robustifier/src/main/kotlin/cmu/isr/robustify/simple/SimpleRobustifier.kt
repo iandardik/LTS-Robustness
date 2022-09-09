@@ -4,50 +4,42 @@ import cmu.isr.robustify.BaseRobustifier
 import cmu.isr.robustify.oasis.controlledEvents
 import cmu.isr.robustify.supervisory.acceptsSubWord
 import cmu.isr.robustify.supervisory.makeProgress
+import cmu.isr.supervisory.SupervisorySynthesizer
 import cmu.isr.supervisory.asSupDFA
-import cmu.isr.supervisory.supremica.SupremicaRunner
-import cmu.isr.ts.dfa.parallelComposition
+import cmu.isr.ts.alphabet
+import cmu.isr.ts.parallel
 import cmu.isr.utils.pretty
 import net.automatalib.automata.fsa.DFA
-import net.automatalib.automata.fsa.impl.compact.CompactDFA
-import net.automatalib.words.Alphabet
 import net.automatalib.words.Word
 import org.slf4j.LoggerFactory
 import java.time.Duration
 
-class SimpleRobustifier(
-  sys: DFA<*, String>,
-  sysInputs: Alphabet<String>,
-  devEnv: DFA<*, String>,
-  envInputs: Alphabet<String>,
-  safety: DFA<*, String>,
-  safetyInputs: Alphabet<String>,
-  progress: Collection<String>,
-  val preferred: Collection<Word<String>>
-) : BaseRobustifier<Int, String>(sys, sysInputs, devEnv, envInputs, safety, safetyInputs)
+class SimpleRobustifier<S, I>(
+  sys: DFA<*, I>,
+  devEnv: DFA<*, I>,
+  safety: DFA<*, I>,
+  progress: Collection<I>,
+  val preferred: Collection<Word<I>>,
+  val synthesizer: SupervisorySynthesizer<S, I>
+) : BaseRobustifier<S, I>(sys, devEnv, safety)
 {
-
   private val logger = LoggerFactory.getLogger(javaClass)
-  private val plant = parallelComposition(sys, sysInputs, devEnv, envInputs)
-  private val prop: CompactDFA<String>
-  private val synthesizer = SupremicaRunner()
+  private val plant = parallel(sys, devEnv)
+  private val prop: DFA<*, I>
+
 
   override var numberOfSynthesis: Int = 0
 
   init {
     val progressProp = progress.map { makeProgress(it) }
-    var c = safety as CompactDFA<String>
-    for (p in progressProp) {
-      c = parallelComposition(c, c.inputAlphabet, p, p.inputAlphabet)
-    }
-    prop = c
+    prop = parallel(safety, *progressProp.toTypedArray())
   }
 
-  override fun synthesize(): CompactDFA<String>? {
-    return synthesize(sysInputs, sysInputs)
+  override fun synthesize(): DFA<S, I>? {
+    return synthesize(sys.alphabet(), sys.alphabet())
   }
 
-  fun synthesize(controllable: Collection<String>, observable: Collection<String>): CompactDFA<String>? {
+  fun synthesize(controllable: Collection<I>, observable: Collection<I>): DFA<S, I>? {
     if (!observable.containsAll(controllable))
       error("The controllable events should be a subset of the observable events.")
 
@@ -59,21 +51,20 @@ class SimpleRobustifier(
     val startTime = System.currentTimeMillis()
     val g = plant.asSupDFA(controllable, observable)
     val p = prop.asSupDFA(
-      prop.inputAlphabet intersect controllable.toSet(),
-      prop.inputAlphabet intersect observable.toSet()
+      prop.alphabet() intersect controllable.toSet(),
+      prop.alphabet() intersect observable.toSet()
     )
-    val sup = synthesizer.synthesize(g, g.inputAlphabet, p, p.inputAlphabet)
+    val sup = synthesizer.synthesize(g, p)
 
     numberOfSynthesis++
     if (sup != null) {
-      val ctrlPlant = parallelComposition(g, g.inputAlphabet, sup, sup.inputAlphabet)
-        .asSupDFA(sup.controllable, sup.observable)
+      val ctrlPlant = parallel(g, sup).asSupDFA(sup.controllable, sup.observable)
 
       logger.info("Found solution!")
-      logger.info("Controlled events: ${controlledEvents(g, ctrlPlant, g.inputAlphabet)}")
+      logger.info("Controlled events: ${controlledEvents(g, ctrlPlant, g.alphabet())}")
 
       val satisfiedPreferred = preferred.filter {
-        val (r, how) = acceptsSubWord(ctrlPlant, ctrlPlant.inputAlphabet, it)
+        val (r, how) = acceptsSubWord(ctrlPlant, it)
         logger.debug("Preferred behavior [$it] is satisfied by $how")
         r
       }

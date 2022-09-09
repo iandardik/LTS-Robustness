@@ -1,9 +1,10 @@
 package cmu.isr.robustify.supervisory
 
-import cmu.isr.supervisory.CompactSupDFA
 import cmu.isr.supervisory.SupervisoryDFA
 import cmu.isr.supervisory.asSupDFA
-import cmu.isr.ts.dfa.hide
+import cmu.isr.ts.alphabet
+import cmu.isr.ts.nfa.hide
+import net.automatalib.automata.fsa.DFA
 import net.automatalib.automata.fsa.impl.compact.CompactDFA
 import net.automatalib.commons.util.Holder
 import net.automatalib.ts.UniversalDTS
@@ -45,22 +46,22 @@ fun <I> makeProgress(input: I): CompactDFA<I> {
  * @param dfa the DFA to be observed
  * @param inputs the alphabet of the DFA
  */
-fun <S, I> observer(dfa: SupervisoryDFA<S, I>, inputs: Alphabet<I>): CompactSupDFA<I> {
-  val out = hide(dfa, inputs, inputs - dfa.observable.toSet())
+fun <S, I> observer(dfa: SupervisoryDFA<S, I>, inputs: Alphabet<I>): SupervisoryDFA<Int, I> {
+  val out = hide(dfa, inputs - dfa.observable.toSet())
   return out.asSupDFA(dfa.controllable intersect dfa.observable.toSet(), dfa.observable)
 }
 
 
-fun <I> CompactDFA<I>.numOfTransitions(): Int {
+fun <S, I> DFA<S, I>.numOfTransitions(): Int {
 
-  class TransitionVisitor(val result: Array<Int>): TSTraversalVisitor<Int, I, Int, Void?> {
-    private val visited = mutableSetOf<Int>()
-    override fun processInitial(state: Int, outData: Holder<Void?>): TSTraversalAction {
+  class TransitionVisitor(val result: Array<Int>): TSTraversalVisitor<S, I, S, Void?> {
+    private val visited = mutableSetOf<S>()
+    override fun processInitial(state: S, outData: Holder<Void?>): TSTraversalAction {
       result[0] = 0
       return TSTraversalAction.EXPLORE
     }
 
-    override fun startExploration(state: Int, data: Void?): Boolean {
+    override fun startExploration(state: S, data: Void?): Boolean {
       return if (state !in visited) {
         visited.add(state)
         true
@@ -70,11 +71,11 @@ fun <I> CompactDFA<I>.numOfTransitions(): Int {
     }
 
     override fun processTransition(
-      source: Int,
+      source: S,
       srcData: Void?,
       input: I,
-      transition: Int,
-      succ: Int,
+      transition: S,
+      succ: S,
       outData: Holder<Void?>
     ): TSTraversalAction {
       result[0]++
@@ -84,6 +85,6 @@ fun <I> CompactDFA<I>.numOfTransitions(): Int {
   }
 
   val result = arrayOf(0)
-  TSTraversal.depthFirst(this, this.inputAlphabet, TransitionVisitor(result))
+  TSTraversal.depthFirst(this, this.alphabet(), TransitionVisitor(result))
   return result[0]
 }

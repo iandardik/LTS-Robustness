@@ -32,7 +32,7 @@ class DESopsTests : SynthesisTests() {
       .asSupDFA(Alphabets.fromArray('a', 'c'), Alphabets.fromArray('b', 'c'))
 
     val output = ByteArrayOutputStream()
-    write(output, a, alphabets)
+    write(output, a)
     assertEquals("3\n\n" +
         "0\t1\t1\n" +
         "a\t1\tc\tuo\n\n" +
@@ -61,7 +61,7 @@ class DESopsTests : SynthesisTests() {
       .asSupNFA(Alphabets.fromArray('a', 'c'), Alphabets.fromArray('b', 'c'))
 
     val output = ByteArrayOutputStream()
-    write(output, a, alphabets)
+    write(output, a)
     assertEquals("3\n\n" +
         "0\t1\t1\n" +
         "a\t1\tc\tuo\n\n" +
@@ -87,7 +87,7 @@ class DESopsTests : SynthesisTests() {
         "b\t2\tuc\to\n\n" +
         "2\t0\t1\n" +
         "c\t0\tc\to\n\n"
-    val a = parse(fsm.byteInputStream().bufferedReader(), alphabets, controllable, observable) as CompactSupDFA
+    val a = parse(fsm.byteInputStream().bufferedReader(), alphabets, controllable, observable) as SupervisoryDFA
 
     val b = AutomatonBuilders.newDFA(alphabets)
       .withInitial(0)

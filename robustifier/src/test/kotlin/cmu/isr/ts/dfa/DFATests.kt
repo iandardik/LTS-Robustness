@@ -1,6 +1,8 @@
 package cmu.isr.ts.dfa
 
 import cmu.isr.supervisory.asSupDFA
+import cmu.isr.ts.alphabet
+import cmu.isr.ts.nfa.reachableSet
 import net.automatalib.util.automata.Automata
 import net.automatalib.util.automata.builders.AutomatonBuilders
 import net.automatalib.words.impl.Alphabets
@@ -26,7 +28,7 @@ class DFATests {
       .withAccepting(1)
       .create()
 
-    val c = parallelComposition(a, a.inputAlphabet, b, b.inputAlphabet)
+    val c = parallelComposition(a, b)
 
     val d = AutomatonBuilders.newDFA(Alphabets.fromArray('a', 'b', 'c'))
       .withInitial(0)
@@ -37,7 +39,7 @@ class DFATests {
       .withAccepting(1, 2)
       .create()
 
-    assertEquals(Alphabets.fromArray('a', 'b', 'c'), c.inputAlphabet)
+    assertEquals(Alphabets.fromArray('a', 'b', 'c'), c.alphabet())
     assert(Automata.testEquivalence(c, d, d.inputAlphabet))
   }
 
@@ -52,7 +54,7 @@ class DFATests {
       .create()
       .asSupDFA(listOf('a', 'b', 'c'), listOf('a', 'b'))
 
-    val reachable = reachableSet(a, a.inputAlphabet - a.observable.toSet())
+    val reachable = reachableSet(a, a.alphabet() - a.observable.toSet())
     assertEquals(BitSet(), reachable[0])
     assertEquals(BitSet(), reachable[1])
     assertEquals(let { val s = BitSet(); s.set(0); s }, reachable[2])
@@ -69,7 +71,7 @@ class DFATests {
       .create()
       .asSupDFA(listOf('a', 'b', 'c'), listOf('a', 'c'))
 
-    val reachable = reachableSet(a, a.inputAlphabet - a.observable.toSet())
+    val reachable = reachableSet(a, a.alphabet() - a.observable.toSet())
     assertEquals(BitSet(), reachable[0])
     assertEquals(let { val s = BitSet(); s.set(2); s.set(1); s }, reachable[1])
     assertEquals(let { val s = BitSet(); s.set(1); s.set(2); s }, reachable[2])

@@ -1,5 +1,6 @@
 package cmu.isr.robustify.supervisory
 
+import cmu.isr.ts.alphabet
 import cmu.isr.ts.nfa.NFAParallelComposition
 import net.automatalib.automata.fsa.DFA
 import net.automatalib.commons.util.Holder
@@ -7,7 +8,6 @@ import net.automatalib.util.automata.builders.AutomatonBuilders
 import net.automatalib.util.ts.traversal.TSTraversal
 import net.automatalib.util.ts.traversal.TSTraversalAction
 import net.automatalib.util.ts.traversal.TSTraversalVisitor
-import net.automatalib.words.Alphabet
 import net.automatalib.words.Word
 import net.automatalib.words.impl.Alphabets
 
@@ -15,7 +15,7 @@ import net.automatalib.words.impl.Alphabets
 /**
  *
  */
-fun <I> acceptsSubWord(sup: DFA<*, I>, inputs: Alphabet<I>, word: Word<I>): Pair<Boolean, List<I>> {
+fun <I> acceptsSubWord(sup: DFA<*, I>, word: Word<I>): Pair<Boolean, List<I>> {
   // build automata from the word
   val builder = AutomatonBuilders.newDFA(Alphabets.fromCollection(word.distinct()))
     .withInitial(0)
@@ -26,10 +26,10 @@ fun <I> acceptsSubWord(sup: DFA<*, I>, inputs: Alphabet<I>, word: Word<I>): Pair
   }
   val wordDFA = builder.create()
 
-  val composition = NFAParallelComposition(sup, inputs, wordDFA, wordDFA.inputAlphabet)
+  val composition = NFAParallelComposition(sup, wordDFA)
   val result = booleanArrayOf(false)
   val trace = mutableListOf<I>()
-  TSTraversal.depthFirst(composition, inputs union wordDFA.inputAlphabet,
+  TSTraversal.depthFirst(composition, sup.alphabet() union wordDFA.inputAlphabet,
     AcceptsSubWordVisitor(wordDFA, result, trace))
 
   return Pair(result[0], trace)

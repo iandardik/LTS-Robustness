@@ -1,15 +1,13 @@
 package cmu.isr.robustify.supervisory
 
 import cmu.isr.robustify.BaseRobustifier
-import cmu.isr.supervisory.CompactSupDFA
+import cmu.isr.supervisory.SupervisoryDFA
 import cmu.isr.supervisory.SupervisorySynthesizer
 import cmu.isr.supervisory.asSupDFA
-import cmu.isr.ts.dfa.parallelComposition
-import cmu.isr.utils.LRUCache
+import cmu.isr.ts.alphabet
+import cmu.isr.ts.parallel
 import net.automatalib.automata.fsa.DFA
 import net.automatalib.automata.fsa.impl.compact.CompactDFA
-import net.automatalib.automata.simple.SimpleDeterministicAutomaton
-import net.automatalib.words.Alphabet
 import net.automatalib.words.Word
 import org.slf4j.LoggerFactory
 import java.io.Closeable
@@ -18,77 +16,70 @@ enum class Priority { P0, P1, P2, P3 }
 
 enum class Algorithms { Pareto, Fast }
 
-class WeightsMap(
-  val preferred: Map<Word<String>, Int>,
-  val controllable: Map<String, Int>,
-  val observable: Map<String, Int>
+class WeightsMap<I>(
+  val preferred: Map<Word<I>, Int>,
+  val controllable: Map<I, Int>,
+  val observable: Map<I, Int>
   )
 
 
-class SupervisoryRobustifier(
-  sys: DFA<*, String>,
-  sysInputs: Alphabet<String>,
-  devEnv: DFA<*, String>,
-  envInputs: Alphabet<String>,
-  safety: DFA<*, String>,
-  safetyInputs: Alphabet<String>,
-  progress: Collection<String>,
-  val preferredMap: Map<Priority, Collection<Word<String>>>,
-  val controllableMap: Map<Priority, Collection<String>>,
-  val observableMap: Map<Priority, Collection<String>>,
-  val synthesizer: SupervisorySynthesizer<Int, String>,
+class SupervisoryRobustifier<I: Comparable<I>>(
+  sys: DFA<*, I>,
+  devEnv: DFA<*, I>,
+  safety: DFA<*, I>,
+  progress: Collection<I>,
+  val preferredMap: Map<Priority, Collection<Word<I>>>,
+  val controllableMap: Map<Priority, Collection<I>>,
+  val observableMap: Map<Priority, Collection<I>>,
+  val synthesizer: SupervisorySynthesizer<Int, I>,
   val maxIter: Int = 1
-) : BaseRobustifier<Int, String>(sys, sysInputs, devEnv, envInputs, safety, safetyInputs),
+) : BaseRobustifier<Int, I>(sys, devEnv, safety),
     Closeable
 {
   var optimization: Boolean = true
 
   private val logger = LoggerFactory.getLogger(javaClass)
-  private val plant = parallelComposition(sys, sysInputs, devEnv, envInputs)
-  private val prop: CompactDFA<String>
-  private val synthesisCache = LRUCache<Pair<Collection<String>, Collection<String>>, CompactSupDFA<String>?>(100)
-  private val checkPreferredCache = LRUCache<Triple<Collection<String>, Collection<String>, Word<String>>, Boolean>(100)
+  private val plant = parallel(sys, devEnv)
+  private val prop: DFA<*, I>
+  private val synthesisCache = mutableMapOf<Pair<Collection<I>, Collection<I>>, SupervisoryDFA<Int, I>?>()
+  private val checkPreferredCache = mutableMapOf<Triple<Collection<I>, Collection<I>, Word<I>>, Boolean>()
 
   override var numberOfSynthesis: Int = 0
 
   init {
-    val extendedSafety = extendAlphabet(safety, safetyInputs, plant.inputAlphabet)
+    val extendedSafety = extendAlphabet(safety, safety.alphabet(), plant.alphabet())
     val progressProp = progress.map { makeProgress(it) }
-    var c = extendedSafety
-    for (p in progressProp) {
-      c = parallelComposition(c, c.inputAlphabet, p, p.inputAlphabet)
-    }
-    prop = c
+    prop = parallel(extendedSafety, *progressProp.toTypedArray())
   }
 
   override fun close() {
     synthesizer.close()
   }
 
-  override fun synthesize(): CompactDFA<String>? {
+  override fun synthesize(): DFA<Int, I>? {
     return synthesize(Algorithms.Pareto).firstOrNull()
   }
 
-  fun synthesize(alg: Algorithms, deadlockFree: Boolean = false): Iterable<CompactDFA<String>> {
+  fun synthesize(alg: Algorithms): Iterable<DFA<Int, I>> {
     logger.info("Number of states of the system: ${sys.states.size}")
     logger.info("Number of states of the environment: ${devEnv.states.size}")
     logger.info("Number of states of the plant (S || E): ${plant.states.size}")
     logger.info("Number of transitions of the plant: ${plant.numOfTransitions()}")
 
-    return SolutionIterator(this, alg, deadlockFree, maxIter)
+    return SolutionIterator(this, alg, maxIter)
   }
 
   /**
    * @return the observed(Sup || G) model
    */
-  fun supervisorySynthesize(controllable: Collection<String>, observable: Collection<String>): CompactSupDFA<String>? {
+  fun supervisorySynthesize(controllable: Collection<I>, observable: Collection<I>): SupervisoryDFA<Int, I>? {
     val key = Pair(controllable, observable)
     if (!optimization || key !in synthesisCache) {
       val g = plant.asSupDFA(controllable, observable)
       val p = prop.asSupDFA(controllable, observable)
 
       logger.debug("Start supervisory controller synthesis...")
-      synthesisCache[key] = synthesizer.synthesize(g, g.inputAlphabet, p, p.inputAlphabet) as CompactSupDFA<String>?
+      synthesisCache[key] = synthesizer.synthesize(g, p)
       numberOfSynthesis++
       logger.debug("Controller synthesis completed.")
     } else {
@@ -102,10 +93,10 @@ class SupervisoryRobustifier(
    * and the negative cost for making certain events controllable and/or observable.
    * @return dictionary with this information.
    */
-  fun computeWeights(): WeightsMap {
-    val preferred = mutableMapOf<Word<String>, Int>()
-    val controllable = mutableMapOf<String, Int>()
-    val observable = mutableMapOf<String, Int>()
+  fun computeWeights(): WeightsMap<I> {
+    val preferred = mutableMapOf<Word<I>, Int>()
+    val controllable = mutableMapOf<I, Int>()
+    val observable = mutableMapOf<I, Int>()
 
     var totalWeight = 0
     // compute new weight in order to maintain hierarchy by sorting absolute value sum of previous weights
@@ -149,18 +140,16 @@ class SupervisoryRobustifier(
   /**
    * @param sup the observed(Sup || G) model from the DESops output
    */
-  fun checkPreferred(sup: CompactSupDFA<String>, preferred: Collection<Word<String>>): Collection<Word<String>> {
-    val ctrlPlant = parallelComposition(plant, plant.inputAlphabet, sup, sup.inputAlphabet)
-      .asSupDFA(sup.controllable, sup.observable)
+  fun checkPreferred(sup: SupervisoryDFA<Int, I>, preferred: Collection<Word<I>>): Collection<Word<I>> {
+    val ctrlPlant = parallel(plant, sup).asSupDFA(sup.controllable, sup.observable)
     return preferred.filter { checkPreferred(ctrlPlant, it) }
   }
 
   /**
    * @param sup the observed(Sup || G) model from the DESops output
    */
-  fun satisfyPreferred(sup: CompactSupDFA<String>, preferred: Collection<Word<String>>): Boolean {
-    val ctrlPlant = parallelComposition(plant, plant.inputAlphabet, sup, sup.inputAlphabet)
-      .asSupDFA(sup.controllable, sup.observable)
+  fun satisfyPreferred(sup: SupervisoryDFA<Int, I>, preferred: Collection<Word<I>>): Boolean {
+    val ctrlPlant = parallel(plant, sup).asSupDFA(sup.controllable, sup.observable)
     for (p in preferred) {
       if (!checkPreferred(ctrlPlant, p)) {
         return false
@@ -169,32 +158,32 @@ class SupervisoryRobustifier(
     return true
   }
 
-  private fun checkPreferred(sup: CompactSupDFA<String>, p: Word<String>): Boolean {
+  private fun checkPreferred(sup: SupervisoryDFA<Int, I>, p: Word<I>): Boolean {
     val key = Triple(sup.controllable, sup.observable, p)
     if (key !in checkPreferredCache) {
       logger.debug("Start checking preferred behavior: [$p]")
-      val (r, how) = acceptsSubWord(sup, sup.inputAlphabet, p)
+      val (r, how) = acceptsSubWord(sup, p)
       logger.debug("It is satisfied by $how")
       checkPreferredCache[key] = r
       logger.debug("Preferred behavior check completed: ${checkPreferredCache[key]}.")
     } else {
       logger.debug("CheckPreferred cache hit: $key")
     }
-    return checkPreferredCache[key]
+    return checkPreferredCache[key]!!
   }
 
   /**
    * @param sup the observed(Sup || G) model from the DESops output
    */
-  fun constructSupervisor(sup: CompactSupDFA<String>): CompactSupDFA<String> {
+  fun constructSupervisor(sup: SupervisoryDFA<Int, I>): SupervisoryDFA<Int, I> {
+    val observedPlant = observer(plant.asSupDFA(sup.controllable, sup.observable), plant.alphabet())
+    val out = CompactDFA(sup.asDFA() as CompactDFA<I>)
     val supQueue = java.util.ArrayDeque<Int>()
-    val plantQueue = java.util.ArrayDeque<Int>()
-    val observedPlant = observer(plant.asSupDFA(sup.controllable, sup.observable), plant.inputAlphabet)
-    val out = CompactDFA(sup).asSupDFA(sup.controllable, sup.observable)
     val visited = mutableSetOf<Int>()
+    val plantQueue = java.util.ArrayDeque<Int>()
 
     supQueue.offer(sup.initialState!!)
-    plantQueue.offer(plant.initialState!!)
+    plantQueue.offer(observedPlant.initialState!!)
 
     while (supQueue.isNotEmpty()) {
       val supState = supQueue.poll()
@@ -204,32 +193,31 @@ class SupervisoryRobustifier(
         continue
       visited.add(supState)
 
-      assert(sup.observable.toSet() == sup.inputAlphabet.toSet())
+      assert(sup.observable.toSet() == sup.alphabet().toSet())
       for (a in sup.observable) {
         val supSucc = sup.getSuccessor(supState, a)
         val plantSucc = observedPlant.getSuccessor(plantState, a)
-        if (supSucc != SimpleDeterministicAutomaton.IntAbstraction.INVALID_STATE &&
-            plantSucc != SimpleDeterministicAutomaton.IntAbstraction.INVALID_STATE) {
+        if (supSucc != null && plantSucc != null) {
           supQueue.offer(supSucc)
           plantQueue.offer(plantSucc)
-        } else if (supSucc != SimpleDeterministicAutomaton.IntAbstraction.INVALID_STATE) {
+        } else if (supSucc != null) {
           // sup has more transitions meaning that this sup is probably constructed.
           continue
         } else if (a !in sup.controllable) { // uncontrollable event, make admissible
           out.addTransition(supState, a, supState, null)
-        } else if (plantSucc == SimpleDeterministicAutomaton.IntAbstraction.INVALID_STATE) {
+        } else if (plantSucc == null) {
           // controllable but not defined in plant, make redundant
           out.addTransition(supState, a, supState, null)
         }
       }
     }
 
-    return out
+    return out.asSupDFA(sup.controllable, sup.observable)
   }
 
-  fun buildSys(sup: CompactSupDFA<String>): CompactDFA<String> {
+  fun buildSys(sup: SupervisoryDFA<Int, I>): DFA<Int, I> {
     logger.info("Build new design from controller...")
     logger.info("Size of the controller: ${sup.size()} states and ${sup.numOfTransitions()} transitions")
-    return parallelComposition(sys, sysInputs, sup, sup.inputAlphabet).asSupDFA(sup.controllable, sup.observable)
+    return parallel(sys, sup)
   }
 }

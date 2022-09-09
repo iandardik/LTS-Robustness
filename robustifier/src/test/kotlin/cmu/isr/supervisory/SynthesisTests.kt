@@ -1,5 +1,6 @@
 package cmu.isr.supervisory
 
+import cmu.isr.ts.alphabet
 import net.automatalib.serialization.aut.AUTWriter
 import net.automatalib.util.automata.Automata
 import net.automatalib.util.automata.builders.AutomatonBuilders
@@ -18,16 +19,16 @@ abstract class SynthesisTests {
     synthesizer.close()
   }
 
-  private fun assertSynthesisResult(c: CompactSupDFA<String>, sup: CompactSupDFA<String>) {
+  private fun assertSynthesisResult(c: SupervisoryDFA<Int, String>, sup: SupervisoryDFA<Int, String>) {
     assertNotNull(sup)
-    assertContentEquals(c.inputAlphabet, sup.inputAlphabet)
+    assertContentEquals(c.alphabet(), sup.alphabet())
     assertContentEquals(c.controllable, sup.controllable)
     assertContentEquals(c.observable, sup.observable)
-    assert(Automata.testEquivalence(c, sup, c.inputAlphabet)) {
+    assert(Automata.testEquivalence(c, sup, c.alphabet())) {
       println("Expected:")
-      AUTWriter.writeAutomaton(c, c.inputAlphabet, System.out)
+      AUTWriter.writeAutomaton(c, c.alphabet(), System.out)
       println("\nActual:")
-      AUTWriter.writeAutomaton(sup, sup.inputAlphabet, System.out)
+      AUTWriter.writeAutomaton(sup, sup.alphabet(), System.out)
       "The models are not equivalent"
     }
   }
@@ -58,8 +59,9 @@ abstract class SynthesisTests {
       .create()
       .asSupDFA(listOf("a"), listOf("a"))
 
-    val sup = synthesizer.synthesize(a, a.inputAlphabet, b, b.inputAlphabet) as CompactSupDFA<String>
+    val sup = synthesizer.synthesize(a, b)
 
+    assertNotNull(sup)
     assertSynthesisResult(c, sup)
   }
 
@@ -91,8 +93,9 @@ abstract class SynthesisTests {
       .create()
       .asSupDFA(listOf("a", "b", "c"), listOf("a", "b", "c"))
 
-    val sup = synthesizer.synthesize(a, a.inputAlphabet, b, b.inputAlphabet) as CompactSupDFA<String>
+    val sup = synthesizer.synthesize(a, b)
 
+    assertNotNull(sup)
     assertSynthesisResult(c, sup)
   }
 
@@ -130,8 +133,9 @@ abstract class SynthesisTests {
       .create()
       .asSupDFA(controllable, observable)
 
-    val sup = synthesizer.synthesize(a, a.inputAlphabet, b, b.inputAlphabet) as CompactSupDFA<String>
+    val sup = synthesizer.synthesize(a, b)
 
+    assertNotNull(sup)
     assertSynthesisResult(c, sup)
   }
 }

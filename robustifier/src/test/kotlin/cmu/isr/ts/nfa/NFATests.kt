@@ -1,5 +1,6 @@
 package cmu.isr.ts.nfa
 
+import cmu.isr.ts.alphabet
 import net.automatalib.serialization.aut.AUTWriter
 import net.automatalib.util.automata.Automata
 import net.automatalib.util.automata.builders.AutomatonBuilders
@@ -25,8 +26,8 @@ class NFATests {
       .withAccepting(1)
       .create()
 
-    val c = parallelComposition(a, a.inputAlphabet, b, b.inputAlphabet)
-    val dc = determinise(c, c.inputAlphabet)
+    val c = parallelComposition(a, b)
+    val dc = determinise(c)
 
     val d = AutomatonBuilders.newDFA(Alphabets.fromArray('a', 'b', 'c'))
       .withInitial(0)
@@ -37,12 +38,12 @@ class NFATests {
       .withAccepting(1, 2)
       .create()
 
-    assertEquals(Alphabets.fromArray('a', 'b', 'c'), c.inputAlphabet)
+    assertEquals(Alphabets.fromArray('a', 'b', 'c'), c.alphabet())
     assert(Automata.testEquivalence(dc, d, d.inputAlphabet)) {
       println("Expected:")
       AUTWriter.writeAutomaton(d, d.inputAlphabet, System.out)
       println("Actual:")
-      AUTWriter.writeAutomaton(c, c.inputAlphabet, System.out)
+      AUTWriter.writeAutomaton(c, c.alphabet(), System.out)
       "The two models are not equivalent by [${Automata.findSeparatingWord(dc, d, d.inputAlphabet)}]!"
     }
   }
@@ -63,8 +64,8 @@ class NFATests {
       .withAccepting(1)
       .create()
 
-    val c = parallelComposition(a, a.inputAlphabet, b, b.inputAlphabet)
-    val dc = determinise(c, c.inputAlphabet)
+    val c = parallelComposition(a, b)
+    val dc = determinise(c)
 
     val d = AutomatonBuilders.newNFA(Alphabets.fromArray('a', 'b', 'c'))
       .withInitial(0)
@@ -74,14 +75,14 @@ class NFATests {
       .from(3).on('a').to(2).on('c').to(0)
       .withAccepting(2, 3)
       .create()
-    val dd = determinise(d, d.inputAlphabet)
+    val dd = determinise(d)
 
-    assertEquals(Alphabets.fromArray('a', 'b', 'c'), c.inputAlphabet)
+    assertEquals(Alphabets.fromArray('a', 'b', 'c'), c.alphabet())
     assert(Automata.testEquivalence(dc, dd, d.inputAlphabet)) {
       println("Expected:")
       AUTWriter.writeAutomaton(dd, d.inputAlphabet, System.out)
       println("Actual:")
-      AUTWriter.writeAutomaton(dc, c.inputAlphabet, System.out)
+      AUTWriter.writeAutomaton(dc, c.alphabet(), System.out)
       "The two models are not equivalent by [${Automata.findSeparatingWord(dc, dd, d.inputAlphabet)}]!"
     }
   }

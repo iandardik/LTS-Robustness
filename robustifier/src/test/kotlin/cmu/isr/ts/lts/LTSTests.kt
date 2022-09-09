@@ -1,5 +1,6 @@
 package cmu.isr.ts.lts
 
+import cmu.isr.ts.alphabet
 import net.automatalib.util.automata.Automata
 import net.automatalib.util.automata.builders.AutomatonBuilders
 import net.automatalib.words.Word
@@ -32,7 +33,7 @@ class LTSTests {
       .create()
       .asLTS()
 
-    val c = parallelComposition(a, a.inputAlphabet, b, b.inputAlphabet)
+    val c = parallelComposition(a, b)
 
     val d = AutomatonBuilders.newDFA(Alphabets.fromArray('a', 'b', 'c'))
       .withInitial(0)
@@ -47,7 +48,7 @@ class LTSTests {
     assertEquals(true, c.isAccepting(0))
     assertEquals(true, c.isAccepting(1))
     assertEquals(false, c.isAccepting(2))
-    assert(Automata.testEquivalence(c, d, c.inputAlphabet))
+    assert(Automata.testEquivalence(c, d, c.alphabet()))
   }
 
   @Test
@@ -68,7 +69,7 @@ class LTSTests {
       .create()
       .asLTS()
 
-    val c = parallelComposition(a, a.inputAlphabet, b, b.inputAlphabet)
+    val c = parallelComposition(a, b)
 
     val d = AutomatonBuilders.newDFA(Alphabets.fromArray('a', 'b', 'c'))
       .withInitial(0)
@@ -82,8 +83,8 @@ class LTSTests {
       .create()
       .asLTS()
 
-    assertEquals(c.inputAlphabet, d.inputAlphabet)
-    assert(Automata.testEquivalence(c, d, d.inputAlphabet))
+    assertEquals(c.alphabet(), d.alphabet())
+    assert(Automata.testEquivalence(c, d, d.alphabet()))
   }
 
   @Test
@@ -108,11 +109,11 @@ class LTSTests {
       .asLTS()
 
 //    AUTWriter.writeAutomaton(p, p.inputAlphabet, System.out)
-    val p_err = makeErrorState(p, p.inputAlphabet)
+    val p_err = makeErrorState(p)
 //    AUTWriter.writeAutomaton(p_err, p.inputAlphabet, System.out)
 
-    val c = parallelComposition(a, a.inputAlphabet, p_err, p.inputAlphabet)
-    val res = checkDeadlock(c, c.inputAlphabet)
+    val c = parallelComposition(a, p_err)
+    val res = checkDeadlock(c)
     assertEquals(false, res.violation)
   }
 
@@ -138,11 +139,11 @@ class LTSTests {
       .asLTS()
 
 //    AUTWriter.writeAutomaton(p, p.inputAlphabet, System.out)
-    val p_err = makeErrorState(p, p.inputAlphabet)
+    val p_err = makeErrorState(p)
 //    AUTWriter.writeAutomaton(p_err, p.inputAlphabet, System.out)
 
-    val c = parallelComposition(a, a.inputAlphabet, p_err, p.inputAlphabet)
-    val res = checkDeadlock(c, c.inputAlphabet)
+    val c = parallelComposition(a, p_err)
+    val res = checkDeadlock(c)
     assertEquals(true, res.violation)
     assertEquals(Word.fromSymbols('a', 'b', 'c'), res.trace)
   }
@@ -168,8 +169,8 @@ class LTSTests {
       .create()
       .asLTS()
 
-    val p_err = makeErrorState(p, p.inputAlphabet)
-    val res = checkSafety(a, a.inputAlphabet, p_err, p.inputAlphabet)
+    val p_err = makeErrorState(p)
+    val res = checkSafety(a, p_err)
     assertEquals(true, res.violation)
     assertEquals(Word.fromSymbols('a', 'a'), res.trace)
   }
