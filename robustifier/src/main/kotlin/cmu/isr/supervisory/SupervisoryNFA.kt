@@ -1,34 +1,18 @@
 package cmu.isr.supervisory
 
+import cmu.isr.ts.alphabet
 import net.automatalib.automata.fsa.NFA
-import net.automatalib.automata.fsa.impl.compact.CompactNFA
 
-interface SupervisoryNFA<S, I> : NFA<S, I> {
-
-  val controllable: Collection<I>
-
+open class SupervisoryNFA<S, I>(
+  private val nfa: NFA<S, I>,
+  val controllable: Collection<I>,
   val observable: Collection<I>
-
+) : NFA<S, I> by nfa {
+  fun asNFA(): NFA<S, I> = nfa
 }
 
-class CompactSupNFA<I>(
-  nfa: CompactNFA<I>,
-  override val controllable: Collection<I>,
-  override val observable: Collection<I>
-) : CompactNFA<I>(nfa.inputAlphabet, nfa), SupervisoryNFA<Int, I> {
-
-  override fun getSuccessor(transition: Int?): Int {
-    return super<CompactNFA>.getSuccessor(transition)
-  }
-
-  override fun getTransitionProperty(transition: Int?): Void? {
-    return super<CompactNFA>.getTransitionProperty(transition)
-  }
-
-}
-
-fun <I> CompactNFA<I>.asSupNFA(controllable: Collection<I>, observable: Collection<I>): CompactSupNFA<I> {
-  if (!inputAlphabet.containsAll(controllable) || !inputAlphabet.containsAll(observable))
+fun <S, I> NFA<S, I>.asSupNFA(controllable: Collection<I>, observable: Collection<I>): SupervisoryNFA<S, I> {
+  if (!alphabet().containsAll(controllable) || !alphabet().containsAll(observable))
     error("controllable and observable should be subsets of the alphabet")
-  return CompactSupNFA(this, controllable, observable)
+  return SupervisoryNFA(this, controllable, observable)
 }

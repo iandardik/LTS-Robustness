@@ -3,12 +3,11 @@ package cmu.isr.supervisory.desops
 
 import cmu.isr.robustify.supervisory.extendAlphabet
 import cmu.isr.robustify.supervisory.observer
-import cmu.isr.supervisory.CompactSupDFA
 import cmu.isr.supervisory.SupervisoryDFA
 import cmu.isr.supervisory.SupervisorySynthesizer
 import cmu.isr.supervisory.asSupDFA
+import cmu.isr.ts.alphabet
 import cmu.isr.utils.pretty
-import net.automatalib.words.Alphabet
 import org.slf4j.LoggerFactory
 import java.io.BufferedReader
 import java.io.FileOutputStream
@@ -36,14 +35,13 @@ class DESopsRunner : SupervisorySynthesizer<Int, String> {
     Thread.sleep(500) // Wait the DESops process to start
   }
 
-  private fun synthesizeRaw(
-    plant: SupervisoryDFA<*, String>, inputs1: Alphabet<String>,
-    prop: SupervisoryDFA<*, String>, inputs2: Alphabet<String>
-  ): CompactSupDFA<String>? {
+  private fun synthesizeRaw(plant: SupervisoryDFA<*, String>, prop: SupervisoryDFA<*, String>): SupervisoryDFA<Int, String>? {
+    val inputs1 = plant.alphabet()
+    val inputs2 = prop.alphabet()
     // check alphabets
     if (inputs1 != inputs2)
       error("The plant and the property should have the same alphabet")
-    checkAlphabets(plant, inputs1, prop, inputs2)
+    checkAlphabets(plant, prop)
 
     if (!process.isAlive) {
       error("The DESops process has terminated. Caused by: ${processStdErr.readText()}")
@@ -51,21 +49,21 @@ class DESopsRunner : SupervisorySynthesizer<Int, String> {
 
     val startTime = System.currentTimeMillis()
     val socket = Socket("127.0.0.1", port)
-    var sup: CompactSupDFA<String>? = null
+    var sup: SupervisoryDFA<Int, String>? = null
 
     socket.use {
       val outStream = it.getOutputStream()
-      write(outStream, plant, inputs1)
-      write(outStream, prop, inputs2)
+      write(outStream, plant)
+      write(outStream, prop)
 
       val inStream = it.getInputStream()
       val reader = inStream.bufferedReader()
       sup = when (reader.readLine()) {
         "0" -> {
           val dfa = parse(reader, inputs1, plant.controllable, plant.observable)
-          if (dfa is CompactSupDFA) {
+          if (dfa is SupervisoryDFA<*, *>) {
             logger.debug("Synthesis spent ${Duration.ofMillis(System.currentTimeMillis() - startTime).pretty()}")
-            observer(dfa, dfa.inputAlphabet)
+            observer(dfa as SupervisoryDFA<Int, String>, dfa.alphabet())
           } else {
             error("Does not support NFA synthesis!")
           }
@@ -78,17 +76,16 @@ class DESopsRunner : SupervisorySynthesizer<Int, String> {
     return sup
   }
 
-  override fun synthesize(
-    plant: SupervisoryDFA<*, String>, inputs1: Alphabet<String>,
-    prop: SupervisoryDFA<*, String>, inputs2: Alphabet<String>
-  ): CompactSupDFA<String>? {
+  override fun synthesize(plant: SupervisoryDFA<*, String>, prop: SupervisoryDFA<*, String>): SupervisoryDFA<Int, String>? {
+    val inputs1 = plant.alphabet()
+    val inputs2 = prop.alphabet()
     // DESops requires the prop to have the same alphabet as the plant
     if (inputs1 != inputs2) {
       val extendedProp = extendAlphabet(prop, inputs2, inputs1).asSupDFA(
         prop.controllable union plant.controllable, prop.observable union plant.observable)
-      return synthesizeRaw(plant, inputs1, extendedProp, extendedProp.inputAlphabet)
+      return synthesizeRaw(plant, extendedProp)
     }
-    return synthesizeRaw(plant, inputs1, prop, inputs2)
+    return synthesizeRaw(plant, prop)
   }
 
   override fun close() {

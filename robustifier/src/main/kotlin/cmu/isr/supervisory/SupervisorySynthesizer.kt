@@ -1,17 +1,13 @@
 package cmu.isr.supervisory
 
-import net.automatalib.words.Alphabet
+import cmu.isr.ts.alphabet
 import java.io.Closeable
 
 interface SupervisorySynthesizer<S, I> : Closeable {
-  fun synthesize(
-    plant: SupervisoryDFA<*, I>, inputs1: Alphabet<I>,
-    prop: SupervisoryDFA<*, I>, inputs2: Alphabet<I>
-  ): SupervisoryDFA<S, I>?
+  fun synthesize(plant: SupervisoryDFA<*, I>, prop: SupervisoryDFA<*, I>): SupervisoryDFA<S, I>?
 
-  fun checkAlphabets(plant: SupervisoryDFA<*, I>, inputs1: Alphabet<I>,
-                     prop: SupervisoryDFA<*, I>, inputs2: Alphabet<I>) {
-    val common = inputs1 intersect inputs2
+  fun checkAlphabets(plant: SupervisoryDFA<*, I>, prop: SupervisoryDFA<*, I>) {
+    val common = plant.alphabet() intersect prop.alphabet()
     for (input in common) {
       if (!((input !in plant.controllable || input in prop.controllable) && // plant => prop
           (input !in prop.controllable || input in plant.controllable))) // prop => plant

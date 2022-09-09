@@ -1,6 +1,9 @@
 package cmu.isr.supervisory.desops
 
-import cmu.isr.supervisory.*
+import cmu.isr.supervisory.SupervisoryNFA
+import cmu.isr.supervisory.asSupDFA
+import cmu.isr.supervisory.asSupNFA
+import cmu.isr.ts.alphabet
 import net.automatalib.util.automata.builders.AutomatonBuilders
 import net.automatalib.words.Alphabet
 import net.automatalib.words.impl.Alphabets
@@ -9,9 +12,7 @@ import java.io.BufferedReader
 fun parse(reader: BufferedReader, alphabets: Alphabet<String>, controllable: Collection<String>,
           observable: Collection<String>): SupervisoryNFA<Int, String> {
   val nfa = parse(reader)
-  if (nfa is CompactSupNFA && nfa.inputAlphabet.toSet() != alphabets.toSet())
-    error("The specified alphabet does not match the FSM file.")
-  if (nfa is CompactSupDFA && nfa.inputAlphabet.toSet() != alphabets.toSet())
+  if (nfa.alphabet().toSet() != alphabets.toSet())
     error("The specified alphabet does not match the FSM file.")
   if (nfa.controllable.toSet() != controllable.toSet() || nfa.observable.toSet() != observable.toSet())
     error("The specified controllable/observable events do not match the FSM file.")

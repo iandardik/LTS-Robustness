@@ -2,14 +2,14 @@ package cmu.isr.supervisory.desops
 
 import cmu.isr.supervisory.SupervisoryDFA
 import cmu.isr.supervisory.SupervisoryNFA
-import net.automatalib.words.Alphabet
+import cmu.isr.ts.alphabet
 import java.io.OutputStream
 
-fun <S, I> write(output: OutputStream, dfa: SupervisoryDFA<S, I>, inputs: Alphabet<I>) {
-  write(output, dfa as SupervisoryNFA<S, I>, inputs)
+fun <S, I> write(output: OutputStream, dfa: SupervisoryDFA<S, I>) {
+  write(output, dfa as SupervisoryNFA<S, I>)
 }
 
-fun <S, I> write(output: OutputStream, nfa: SupervisoryNFA<S, I>, inputs: Alphabet<I>) {
+fun <S, I> write(output: OutputStream, nfa: SupervisoryNFA<S, I>) {
   val writer = output.bufferedWriter()
   val states = nfa.states.toMutableList()
   // assume that the NFA should have only one initial state
@@ -29,7 +29,7 @@ fun <S, I> write(output: OutputStream, nfa: SupervisoryNFA<S, I>, inputs: Alphab
       .append('\t')
     val builder = StringBuilder()
     var counter = 0
-    for (input in inputs) {
+    for (input in nfa.alphabet()) {
       for (trans in nfa.getTransitions(state, input)) {
         counter++
         builder

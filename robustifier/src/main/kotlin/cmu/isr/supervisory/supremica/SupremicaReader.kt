@@ -1,13 +1,13 @@
 package cmu.isr.supervisory.supremica
 
-import cmu.isr.supervisory.CompactSupDFA
+import cmu.isr.supervisory.SupervisoryDFA
 import cmu.isr.supervisory.asSupDFA
 import net.automatalib.util.automata.builders.AutomatonBuilders
 import net.automatalib.words.impl.Alphabets
 import org.supremica.automata.Automaton
 
 
-fun read(automaton: Automaton): CompactSupDFA<String> {
+fun read(automaton: Automaton): SupervisoryDFA<Int, String> {
   val inputs = Alphabets.fromCollection(automaton.alphabet.map { it.label })
   val controllable = automaton.alphabet.controllableAlphabet.map { it.label }
   val observable = automaton.observableAlphabet.map { it.label }

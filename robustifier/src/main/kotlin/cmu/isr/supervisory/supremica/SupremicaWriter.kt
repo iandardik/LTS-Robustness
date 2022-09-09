@@ -1,14 +1,13 @@
 package cmu.isr.supervisory.supremica
 
 import cmu.isr.supervisory.SupervisoryDFA
-import net.automatalib.words.Alphabet
+import cmu.isr.ts.alphabet
 import org.supremica.automata.Arc
 import org.supremica.automata.Automaton
 import org.supremica.automata.LabeledEvent
 import org.supremica.automata.State
 
-
-fun <S, I> write(dfa: SupervisoryDFA<S, I>, inputs: Alphabet<I>, name: String): Automaton {
+fun <S, I> write(dfa: SupervisoryDFA<S, I>, name: String): Automaton {
   val automaton = Automaton(name)
   val alphabetMap = mutableMapOf<I, LabeledEvent>()
   val stateMap = mutableMapOf<S, State>()
@@ -27,7 +26,7 @@ fun <S, I> write(dfa: SupervisoryDFA<S, I>, inputs: Alphabet<I>, name: String): 
     return s
   }
 
-  for (input in inputs) {
+  for (input in dfa.alphabet()) {
     val label = LabeledEvent(input.toString())
     label.isControllable = input in dfa.controllable
     label.isObservable = input in dfa.observable
@@ -37,7 +36,7 @@ fun <S, I> write(dfa: SupervisoryDFA<S, I>, inputs: Alphabet<I>, name: String): 
   }
 
   for (state in dfa) {
-    for (input in inputs) {
+    for (input in dfa.alphabet()) {
       val succ = dfa.getSuccessor(state, input)
       if (succ != null) {
         val arc = Arc(getSupremicaState(state), getSupremicaState(succ), alphabetMap[input])
