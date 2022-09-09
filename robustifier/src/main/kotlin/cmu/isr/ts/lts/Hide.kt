@@ -27,7 +27,7 @@ fun <S, I, SO> hide(lts: LTS<S, I>, hidden: Collection<I>,
   val errId = stateIDs.getStateId(lts.errorState)
   val errBs = BitSet()
   errBs.set(errId)
-  outStateMap[errBs] = out.addState(false)
+  outStateMap[errBs] = out.errorState
 
   // create initial bitset
   val initBs = BitSet()
