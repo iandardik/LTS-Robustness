@@ -1,10 +1,11 @@
 package cmu.isr.ts.nfa
 
+import cmu.isr.ts.alphabet
 import cmu.isr.utils.forEachSetBit
-import net.automatalib.automata.fsa.MutableFSA
+import net.automatalib.automata.fsa.DFA
+import net.automatalib.automata.fsa.MutableDFA
 import net.automatalib.automata.fsa.NFA
-import net.automatalib.automata.fsa.impl.compact.CompactNFA
-import net.automatalib.words.Alphabet
+import net.automatalib.automata.fsa.impl.compact.CompactDFA
 import net.automatalib.words.impl.Alphabets
 import java.util.*
 
@@ -39,14 +40,14 @@ fun <S, I> reachableSet(nfa: NFA<S, I>, hidden: Collection<I>): Map<Int, BitSet>
   return reachable
 }
 
-fun <S, I> hide(nfa: NFA<S, I>, inputs: Alphabet<I>, hidden: Collection<I>): CompactNFA<I> {
-  val observable = inputs - hidden.toSet()
-  return tauElimination(nfa, hidden, observable, CompactNFA(Alphabets.fromCollection(observable))) as CompactNFA<I>
+fun <S, I> hide(nfa: NFA<S, I>, hidden: Collection<I>): DFA<Int, I> {
+  return hide(nfa, hidden) { CompactDFA(Alphabets.fromCollection(it)) }
 }
 
-fun <S, I> tauElimination(nfa: NFA<S, I>, hidden: Collection<I>, observable: Collection<I>,
-                          out: MutableFSA<Int, I>): MutableFSA<Int, I> {
-  val outStateMap = mutableMapOf<BitSet, Int>()
+fun <S, I, SO> hide(nfa: NFA<S, I>, hidden: Collection<I>, builder: (Collection<I>) -> MutableDFA<SO, I>): DFA<SO, I> {
+  val observable = nfa.alphabet() - hidden.toSet()
+  val out = builder(observable)
+  val outStateMap = mutableMapOf<BitSet, SO>()
   val reachable = reachableSet(nfa, hidden)
   val stateIDs = nfa.stateIDs()
   val stack = ArrayDeque<BitSet>()

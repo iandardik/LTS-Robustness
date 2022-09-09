@@ -1,10 +1,13 @@
 package cmu.isr.ts.lts
 
+import cmu.isr.ts.DetLTS
+import cmu.isr.ts.LTS
+import cmu.isr.ts.MutableDetLTS
+import cmu.isr.ts.alphabet
 import net.automatalib.commons.util.Holder
 import net.automatalib.util.ts.traversal.TSTraversal
 import net.automatalib.util.ts.traversal.TSTraversalAction
 import net.automatalib.util.ts.traversal.TSTraversalVisitor
-import net.automatalib.words.Alphabet
 import net.automatalib.words.Word
 
 
@@ -18,9 +21,10 @@ class SafetyResult<I> {
 }
 
 
-private class SafetyVisitor<S, I, T>(private val lts: DetLTS<S, I, T>,
-                                     private val result: SafetyResult<I>
-) : TSTraversalVisitor<S, I, T, Word<I>> {
+private class SafetyVisitor<S, I>(
+  private val lts: LTS<S, I>,
+  private val result: SafetyResult<I>
+) : TSTraversalVisitor<S, I, S, Word<I>> {
   private val visited = mutableSetOf<S>()
 
   override fun processInitial(state: S, outData: Holder<Word<I>>?): TSTraversalAction {
@@ -41,7 +45,7 @@ private class SafetyVisitor<S, I, T>(private val lts: DetLTS<S, I, T>,
     source: S,
     srcData: Word<I>?,
     input: I,
-    transition: T,
+    transition: S,
     succ: S,
     outData: Holder<Word<I>>?
   ): TSTraversalAction {
@@ -61,13 +65,11 @@ private class SafetyVisitor<S, I, T>(private val lts: DetLTS<S, I, T>,
  * Check the safety property of an LTS. The safety property is modeled as a complete LTS where unsafe transitions
  * lead to the error state.
  */
-fun <I> checkSafety(lts: DetLTS<*, I, *>, inputs1: Alphabet<I>,
-                    prop: DetLTS<*, I, *>, inputs2: Alphabet<I>): SafetyResult<I>
-{
-  val c = parallelComposition(lts, inputs1, prop, inputs2)
+fun <I> checkSafety(lts: LTS<*, I>, prop: DetLTS<*, I>): SafetyResult<I> {
+  val c = parallelComposition(lts, prop)
   val result = SafetyResult<I>()
   val vis = SafetyVisitor(c, result)
-  TSTraversal.breadthFirst(c, c.inputAlphabet, vis)
+  TSTraversal.breadthFirst(c, c.alphabet(), vis)
   return result
 }
 
@@ -75,11 +77,11 @@ fun <I> checkSafety(lts: DetLTS<*, I, *>, inputs1: Alphabet<I>,
 /**
  * Given a safety property LTS, make it into a complete LTS where all unsafe transitions lead to the error state.
  */
-fun <S, I> makeErrorState(prop: MutableDetLTS<S, I, *>, inputs: Alphabet<I>): MutableDetLTS<S, I, *> {
+fun <S, I> makeErrorState(prop: MutableDetLTS<S, I>): DetLTS<S, I> {
   for (s in prop.states) {
     if (prop.isErrorState(s))
       continue
-    for (a in inputs) {
+    for (a in prop.alphabet()) {
       if (prop.getTransition(s, a) == null) {
         prop.addTransition(s, a, prop.errorState, null)
       }

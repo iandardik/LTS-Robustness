@@ -1,10 +1,11 @@
 package cmu.isr.ts.lts
 
+import cmu.isr.ts.LTS
+import cmu.isr.ts.alphabet
 import net.automatalib.commons.util.Holder
 import net.automatalib.util.ts.traversal.TSTraversal
 import net.automatalib.util.ts.traversal.TSTraversalAction
 import net.automatalib.util.ts.traversal.TSTraversalVisitor
-import net.automatalib.words.Alphabet
 import net.automatalib.words.Word
 
 
@@ -17,11 +18,10 @@ class DeadlockResult<I> {
   }
 }
 
-
-private class DeadlockVisitor<S, I, T>(private val lts: DetLTS<S, I, T>,
-                                       private val inputs: Alphabet<I>,
-                                       private val result: DeadlockResult<I>
-) : TSTraversalVisitor<S, I, T, Word<I>> {
+private class DeadlockVisitor<S, I>(
+  private val lts: LTS<S, I>,
+  private val result: DeadlockResult<I>
+) : TSTraversalVisitor<S, I, S, Word<I>> {
   private val visited = mutableSetOf<S>()
 
   override fun processInitial(state: S, outData: Holder<Word<I>>?): TSTraversalAction {
@@ -42,7 +42,7 @@ private class DeadlockVisitor<S, I, T>(private val lts: DetLTS<S, I, T>,
     source: S,
     srcData: Word<I>?,
     input: I,
-    transition: T,
+    transition: S,
     succ: S,
     outData: Holder<Word<I>>?
   ): TSTraversalAction {
@@ -57,8 +57,8 @@ private class DeadlockVisitor<S, I, T>(private val lts: DetLTS<S, I, T>,
 
   private fun noOutputTransition(state: S): Boolean {
     val res = true
-    for (a in inputs) {
-      if (lts.getTransition(state, a) != null)
+    for (a in lts.alphabet()) {
+      if (lts.getTransitions(state, a).isNotEmpty())
         return false
     }
     return res
@@ -66,14 +66,12 @@ private class DeadlockVisitor<S, I, T>(private val lts: DetLTS<S, I, T>,
 
 }
 
-
 /**
  * Check the deadlock of a given LTS.
  */
-fun <S, I, T> checkDeadlock(lts: DetLTS<S, I, T>, inputs: Alphabet<I>): DeadlockResult<I>
-{
+fun <S, I> checkDeadlock(lts: LTS<S, I>): DeadlockResult<I> {
   val result = DeadlockResult<I>()
-  val vis = DeadlockVisitor(lts, inputs, result)
-  TSTraversal.breadthFirst(lts, inputs, vis)
+  val vis = DeadlockVisitor(lts, result)
+  TSTraversal.breadthFirst(lts, lts.alphabet(), vis)
   return result
 }

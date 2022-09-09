@@ -1,6 +1,7 @@
 package cmu.isr.ts.lts.ltsa
 
-import cmu.isr.ts.lts.CompactDetLTS
+import cmu.isr.ts.DetLTS
+import cmu.isr.ts.LTS
 import cmu.isr.ts.lts.asLTS
 import lts.*
 import net.automatalib.util.automata.builders.AutomatonBuilders
@@ -71,6 +72,11 @@ object LTSACall {
     return if (escape) alphabet.map(LTSACall::escapeEvent) else alphabet
   }
 
+  fun CompositeState.alphabet(escape: Boolean = false): Collection<String> {
+    val alphabet = this.composition.alphabet.toSet()
+    return if (escape) alphabet.map(LTSACall::escapeEvent) else alphabet
+  }
+
   /**
    * Rename the events:
    * if e == "tau" then e' = "_tau_"
@@ -93,8 +99,7 @@ object LTSACall {
     }
   }
 
-  // TODO: add support for non-determinism
-  fun CompositeState.asDetLTS(): CompactDetLTS<String> {
+  fun CompositeState.asDetLTS(): DetLTS<Int, String> {
     // check there's no tau transition
     if (this.composition.hasTau() || this.composition.isNonDeterministic)
       error("The given LTS is non-deterministic")
@@ -108,6 +113,25 @@ object LTSACall {
         val succ = EventState.nextState(state, a)
         if (succ != null) {
           builder.from(s).on(input).to(succ[0])
+        }
+      }
+      if (!EventState.hasState(state, -1))
+        builder.withAccepting(s)
+    }
+    return builder.create().asLTS()
+  }
+
+  fun CompositeState.asLTS(): LTS<Int, String> {
+    val alphabet = Alphabets.fromCollection(alphabet())
+    val builder = AutomatonBuilders.newNFA(alphabet).withInitial(0)
+    for (s in this.composition.states.indices) {
+      val state = this.composition.states[s]
+      for (a in this.composition.alphabet.indices) {
+        val input = this.composition.alphabet[a]
+        val succs = EventState.nextState(state, a)
+        if (succs != null) {
+          for (succ in succs)
+            builder.from(s).on(input).to(succ)
         }
       }
       if (!EventState.hasState(state, -1))

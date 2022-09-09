@@ -1,19 +1,17 @@
 package cmu.isr.ts.nfa
 
+import cmu.isr.ts.alphabet
 import net.automatalib.automata.fsa.NFA
 import net.automatalib.automata.fsa.impl.compact.CompactNFA
 import net.automatalib.ts.UniversalTransitionSystem
 import net.automatalib.util.ts.copy.TSCopy
 import net.automatalib.util.ts.traversal.TSTraversal
 import net.automatalib.util.ts.traversal.TSTraversalMethod
-import net.automatalib.words.Alphabet
 import net.automatalib.words.impl.Alphabets
 
-class NFAParallelComposition<S1, S2, I>(
+open class NFAParallelComposition<S1, S2, I>(
   private val nfa1: NFA<S1, I>,
-  private val inputs1: Alphabet<I>,
-  private val nfa2: NFA<S2, I>,
-  private val inputs2: Alphabet<I>
+  private val nfa2: NFA<S2, I>
 ) : UniversalTransitionSystem<Pair<S1, S2>, I, Pair<S1, S2>, Boolean, Void?> {
 
   override fun getInitialStates(): Set<Pair<S1, S2>> {
@@ -35,6 +33,8 @@ class NFAParallelComposition<S1, S2, I>(
   override fun getTransitions(state: Pair<S1, S2>, input: I): Collection<Pair<S1, S2>> {
     val s1 = state.first
     val s2 = state.second
+    val inputs1 = nfa1.alphabet()
+    val inputs2 = nfa2.alphabet()
     return when {
       (input in inputs1 && input in inputs2) -> {
         val t1s = nfa1.getTransitions(s1, input)
@@ -63,23 +63,11 @@ class NFAParallelComposition<S1, S2, I>(
 
 }
 
-fun <S1, S2, I> parallelComposition(nfa1: NFA<S1, I>, inputs1: Alphabet<I>,
-                                    nfa2: NFA<S2, I>, inputs2: Alphabet<I>): CompactNFA<I> {
-  val inputs = Alphabets.fromCollection(inputs1 union inputs2)
+fun <I> parallelComposition(nfa1: NFA<*, I>, nfa2: NFA<*, I>): NFA<Int, I> {
+  val inputs = Alphabets.fromCollection(nfa1.alphabet() union nfa2.alphabet())
   val out = CompactNFA(inputs)
-  val composition = NFAParallelComposition(nfa1, inputs1, nfa2, inputs2)
+  val composition = NFAParallelComposition(nfa1, nfa2)
 
   TSCopy.copy(TSTraversalMethod.DEPTH_FIRST, composition, TSTraversal.NO_LIMIT, inputs, out)
   return out
-}
-
-fun <I> parallelComposition(vararg nfas: CompactNFA<I>): CompactNFA<I> {
-  if (nfas.isEmpty())
-    error("Should provide at least one model")
-  if (nfas.size == 1)
-    return nfas[0]
-  var c = nfas[0]
-  for (i in 1 until nfas.size)
-    c = parallelComposition(c, c.inputAlphabet, nfas[i], nfas[i].inputAlphabet)
-  return c
 }

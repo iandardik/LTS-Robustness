@@ -1,15 +1,20 @@
 package cmu.isr.ts.nfa
 
+import cmu.isr.ts.alphabet
 import cmu.isr.utils.forEachSetBit
+import net.automatalib.automata.fsa.DFA
+import net.automatalib.automata.fsa.MutableDFA
 import net.automatalib.automata.fsa.NFA
 import net.automatalib.automata.fsa.impl.compact.CompactDFA
-import net.automatalib.words.Alphabet
 import java.util.*
 
 // TODO: unit tests for this function
-fun <S, I> determinise(nfa: NFA<S, I>, inputs: Alphabet<I>): CompactDFA<I> {
-  val out = CompactDFA(inputs)
-  val outStateMap = mutableMapOf<BitSet, Int>()
+fun <S, I> determinise(nfa: NFA<S, I>): DFA<Int, I> {
+  return determinise(nfa, CompactDFA(nfa.alphabet()))
+}
+
+fun <S, I, SO> determinise(nfa: NFA<S, I>, out: MutableDFA<SO, I>): DFA<SO, I> {
+  val outStateMap = mutableMapOf<BitSet, SO>()
   val stateIDs = nfa.stateIDs()
   val stack = ArrayDeque<BitSet>()
 
@@ -30,7 +35,7 @@ fun <S, I> determinise(nfa: NFA<S, I>, inputs: Alphabet<I>): CompactDFA<I> {
   while (stack.isNotEmpty()) {
     val currBs = stack.pop()
 
-    for (a in inputs) {
+    for (a in nfa.alphabet()) {
       val succBs = BitSet()
 
       currBs.forEachSetBit {
