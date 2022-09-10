@@ -66,14 +66,14 @@ object LTSACall {
   /**
    * @return The alphabet list of the composed state machine excluding tau.
    */
-  fun CompositeState.alphabetNoTau(escape: Boolean = false): Collection<String> {
-    val alphabet = this.composition.alphabet.toMutableSet()
+  private fun CompositeState.alphabetNoTau(escape: Boolean = false): List<String> {
+    val alphabet = this.composition.alphabet.toMutableList()
     alphabet.remove("tau")
     return if (escape) alphabet.map(LTSACall::escapeEvent) else alphabet
   }
 
-  fun CompositeState.alphabet(escape: Boolean = false): Collection<String> {
-    val alphabet = this.composition.alphabet.toSet()
+  private fun CompositeState.alphabet(escape: Boolean = false): List<String> {
+    val alphabet = this.composition.alphabet.toList()
     return if (escape) alphabet.map(LTSACall::escapeEvent) else alphabet
   }
 
@@ -83,9 +83,8 @@ object LTSACall {
    * if e match abc.123 then e' = abc[123]
    */
   private fun escapeEvent(e: String): String {
-    if (e == "tau")
-      return "_tau_"
-
+//    if (e == "tau")
+//      return "_tau_"
     var escaped = e
     var lastIdx = e.length
     while (true) {
@@ -99,43 +98,41 @@ object LTSACall {
     }
   }
 
-  fun CompositeState.asDetLTS(): DetLTS<Int, String> {
+  fun CompositeState.asDetLTS(escape: Boolean = false): DetLTS<Int, String> {
     // check there's no tau transition
     if (this.composition.hasTau() || this.composition.isNonDeterministic)
       error("The given LTS is non-deterministic")
 
-    val alphabet = Alphabets.fromCollection(alphabetNoTau())
-    val builder = AutomatonBuilders.newDFA(alphabet).withInitial(0)
+    val alphabet = alphabet(escape)
+    val builder = AutomatonBuilders.newDFA(Alphabets.fromCollection(alphabet - "tau")).withInitial(0)
     for (s in this.composition.states.indices) {
       val state = this.composition.states[s]
       for (a in this.composition.alphabet.indices) {
-        val input = this.composition.alphabet[a]
+        val input = alphabet[a]
         val succ = EventState.nextState(state, a)
         if (succ != null) {
           builder.from(s).on(input).to(succ[0])
         }
       }
-      if (!EventState.hasState(state, -1))
-        builder.withAccepting(s)
+      builder.withAccepting(s)
     }
     return builder.create().asLTS()
   }
 
-  fun CompositeState.asLTS(): LTS<Int, String> {
-    val alphabet = Alphabets.fromCollection(alphabet())
-    val builder = AutomatonBuilders.newNFA(alphabet).withInitial(0)
+  fun CompositeState.asLTS(escape: Boolean = false): LTS<Int, String> {
+    val alphabet = alphabet(escape)
+    val builder = AutomatonBuilders.newNFA(Alphabets.fromCollection(alphabet)).withInitial(0)
     for (s in this.composition.states.indices) {
       val state = this.composition.states[s]
       for (a in this.composition.alphabet.indices) {
-        val input = this.composition.alphabet[a]
+        val input = alphabet[a]
         val succs = EventState.nextState(state, a)
         if (succs != null) {
           for (succ in succs)
             builder.from(s).on(input).to(succ)
         }
       }
-      if (!EventState.hasState(state, -1))
-        builder.withAccepting(s)
+      builder.withAccepting(s)
     }
     return builder.create().asLTS()
   }

@@ -2,10 +2,16 @@ package cmu.isr.assumption
 
 import cmu.isr.ts.alphabet
 import cmu.isr.ts.lts.asLTS
+import cmu.isr.ts.lts.ltsa.LTSACall
+import cmu.isr.ts.lts.ltsa.LTSACall.asDetLTS
+import cmu.isr.ts.lts.ltsa.LTSACall.compose
 import cmu.isr.ts.lts.ltsa.write
+import net.automatalib.util.automata.Automata
 import net.automatalib.util.automata.builders.AutomatonBuilders
 import net.automatalib.words.impl.Alphabets
 import org.junit.jupiter.api.Test
+import kotlin.test.assertContentEquals
+import kotlin.test.assertEquals
 
 class SubsetGenTests {
 
@@ -35,8 +41,39 @@ class SubsetGenTests {
       .create()
       .asLTS()
 
-    val w = SubsetConstructionGenerator(a, b, p).generate(true)
-    write(System.out, w, w.alphabet())
+    val w = SubsetConstructionGenerator(a, b, p).generate()
+
+    val c = AutomatonBuilders.newDFA(Alphabets.fromArray("a", "b"))
+      .withInitial(0)
+      .from(0).on("a").to(1)
+      .from(1).on("b").to(0)
+      .withAccepting(0, 1)
+      .create()
+
+    assertContentEquals(c.alphabet(), w.alphabet())
+    assert(Automata.testEquivalence(c, w, c.alphabet())) {
+      write(System.err, w, w.alphabet())
+    }
+  }
+
+  @Test
+  fun testSimpleProtocol() {
+    val sys = LTSACall.compile(ClassLoader.getSystemResource("specs/abp/perfect.lts").readText())
+      .compose().asDetLTS()
+    val env = LTSACall.compile(ClassLoader.getSystemResource("specs/abp/abp_env.lts").readText())
+      .compose().asDetLTS()
+    val safety = LTSACall.compile(ClassLoader.getSystemResource("specs/abp/p.lts").readText())
+      .compose().asDetLTS()
+
+    val w = SubsetConstructionGenerator(sys, env, safety).generate()
+
+    val c = LTSACall.compile(ClassLoader.getSystemResource("specs/abp/perfect_wa.lts").readText())
+      .compose().asDetLTS()
+
+    assertEquals(c.alphabet().toSet(), w.alphabet().toSet())
+    assert(Automata.testEquivalence(c, w, c.alphabet())) {
+      write(System.err, w, w.alphabet())
+    }
   }
 
 }
