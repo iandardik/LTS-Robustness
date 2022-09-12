@@ -30,7 +30,7 @@ class SupremicaTests : SynthesisTests() {
       .create()
       .asSupDFA(controllable, observable)
 
-    val b = read(write(a, ""))
+    val b = parse(write(a, ""))
 
     assertContentEquals(inputs, b.alphabet())
     assertContentEquals(controllable, b.controllable)
@@ -52,7 +52,7 @@ class SupremicaTests : SynthesisTests() {
       .create()
       .asSupDFA(controllable, observable)
 
-    val b = read(write(a, ""))
+    val b = parse(write(a, ""))
 
     assertContentEquals(inputs, b.alphabet())
     assertContentEquals(controllable, b.controllable)

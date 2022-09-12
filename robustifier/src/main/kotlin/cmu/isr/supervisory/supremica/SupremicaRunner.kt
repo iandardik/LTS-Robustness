@@ -41,7 +41,7 @@ class SupremicaRunner : SupervisorySynthesizer<Int, String> {
     val synthesizer = AutomataSynthesizer(theAutomata, syncOptions, synthOptions)
     val sup = synthesizer.execute().firstAutomaton
 
-    return if (sup.nbrOfStates() == 0) null else read(sup)
+    return if (sup.nbrOfStates() == 0) null else parse(sup)
   }
 
   override fun close() {}
