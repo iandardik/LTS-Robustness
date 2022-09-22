@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="ltsa">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/robustifier/lib/ltsa.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
