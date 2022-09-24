@@ -1,14 +1,13 @@
 package cmu.isr.tolerance
 
-import cmu.isr.ts.MutableDetLTS
-import cmu.isr.ts.alphabet
-import cmu.isr.ts.lts.CompactDetLTS
-import cmu.isr.ts.lts.asLTS
-import cmu.isr.ts.lts.checkSafety
+import cmu.isr.ts.*
+import cmu.isr.ts.lts.*
 import cmu.isr.ts.lts.ltsa.write
-import cmu.isr.ts.lts.makeErrorState
-import cmu.isr.ts.parallel
+import cmu.isr.ts.nfa.determinise
+import net.automatalib.automata.fsa.impl.compact.CompactDFA
+import net.automatalib.util.automata.Automata
 import net.automatalib.util.automata.builders.AutomatonBuilders
+import net.automatalib.words.Alphabet
 import net.automatalib.words.impl.Alphabets
 import java.util.*
 
@@ -72,32 +71,258 @@ fun satisfies(m : CompactDetLTS<String>, p : CompactDetLTS<String>) : Boolean {
 }
  */
 
-fun satisfies(m : CompactDetLTS<String>, p : CompactDetLTS<String>) : Boolean {
-    val pFixed = makeErrorState(p as MutableDetLTS<Int, String>)
-    val result = checkSafety(m, pFixed)
+fun satisfies(T : MutableLTS<Int,String>, P : MutableDetLTS<Int,String>) : Boolean {
+    val pFixed = makeErrorState(P)
+    val result = checkSafety(T, pFixed)
     return !result.violation
+}
+
+fun allPerturbations(states : Collection<Int>, alphabet : Alphabet<String>) : Set<Set<Triple<Int, String, Int>>> {
+    fun product(src : Collection<Int>, alphabet : Set<String>, dst : Collection<Int>) : MutableSet<Triple<Int, String, Int>> {
+        val perturbations : MutableSet<Triple<Int,String,Int>> = mutableSetOf()
+        for (s in src) {
+            for (a in alphabet) {
+                for (d in dst) {
+                    perturbations.add(Triple(s,a,d))
+                }
+            }
+        }
+        return perturbations
+    }
+    fun pertHelper(perturbations : MutableSet<MutableSet<Triple<Int,String,Int>>>,
+                   powerset : Set<Triple<Int,String,Int>>) {
+        if (powerset.isNotEmpty()) {
+            val elem = powerset.random()
+            pertHelper(perturbations, powerset - elem)
+
+            val dPlusElems = mutableSetOf<MutableSet<Triple<Int, String, Int>>>()
+            for (d in perturbations) {
+                dPlusElems += (d + elem) as MutableSet<Triple<Int, String, Int>>
+            }
+            perturbations += dPlusElems
+        }
+    }
+    fun alphabetToSet(alphabet: Alphabet<String>) : MutableSet<String> {
+        val set = mutableSetOf<String>()
+        for (a in alphabet) {
+            set.add(a)
+        }
+        return set
+    }
+    val perturbations : MutableSet<MutableSet<Triple<Int,String,Int>>> = mutableSetOf(mutableSetOf())
+    val powerset = product(states, alphabetToSet(alphabet), states)
+    pertHelper(perturbations, powerset)
+    return perturbations
+}
+
+fun ltsTransitions(T : LTS<Int,String>) : Set<Triple<Int,String,Int>> {
+    val init = T.initialStates
+    if (init.isEmpty()) {
+        return emptySet()
+    }
+
+    // BFS for all transitions
+    val transitions = mutableSetOf<Triple<Int,String,Int>>()
+    val visited : MutableSet<Int> = mutableSetOf()
+    val q : Queue<Int> = LinkedList<Int>()
+    q.addAll(init)
+    while (q.isNotEmpty()) {
+        val state = q.remove()
+        if (visited.contains(state)) {
+            continue
+        }
+        visited.add(state)
+        for (a in T.alphabet()) {
+            val adjacent = T.getTransitions(state, a)
+            for (dst in adjacent) {
+                transitions.add(Triple(state, a, dst))
+                q.add(dst)
+            }
+        }
+    }
+
+    return transitions
+}
+
+/**
+ * It's ridiculous how tough they make it to copy.
+ * The algorithm makes a key assumption: that initial states are the lowest state ID's, and will be added to newLTS
+ * with the same lowest state IDs.
+ */
+fun copyLTS(T : CompactDetLTS<String>) : CompactDetLTS<String> {
+    val newLTS = AutomatonBuilders.newDFA(T.inputAlphabet)
+        .withInitial(T.initialStates)
+        .create()
+        .asLTS()
+    for (s in T.states) {
+        if (T.initialStates.contains(s)) {
+            newLTS.setAccepting(s, T.isAccepting(s))
+        }
+        else {
+            newLTS.addState(T.isAccepting(s))
+        }
+    }
+    for (t in ltsTransitions(T)) {
+        newLTS.addTransition(t.first, t.second, t.third)
+    }
+    return newLTS
+}
+
+fun copyLTS(T : CompactLTS<String>) : CompactLTS<String> {
+    val newLTS = AutomatonBuilders.newNFA(T.inputAlphabet)
+        .withInitial(T.initialStates)
+        .create()
+        .asLTS()
+    for (s in T.states) {
+        if (T.initialStates.contains(s)) {
+            newLTS.setAccepting(s, T.isAccepting(s))
+        }
+        else {
+            newLTS.addState(T.isAccepting(s))
+        }
+    }
+    for (t in ltsTransitions(T)) {
+        newLTS.addTransition(t.first, t.second, t.third)
+    }
+    return newLTS
+}
+fun addPerturbations(T : CompactLTS<String>, d : Set<Triple<Int,String,Int>>) : CompactLTS<String> {
+    val Td = copyLTS(T)
+    for (t in d) {
+        Td.addTransition(t.first, t.second, t.third)
+    }
+    return Td
+}
+
+/*
+fun perturbationsToAutomaton(perturbations : Set<Triple<Int,String,Int>>) : CompactLTS<String> {
+    val alphabet = perturbations.map { it.second }.toTypedArray()
+    val aut = AutomatonBuilders.newNFA(Alphabets.fromArray(alphabet)).create().asLTS()
+
+    val srcStates = perturbations.map { it.first }.toSet()
+    val dstStates = perturbations.map { it.first }.toSet()
+    val states = srcStates union dstStates
+    for (s in states) {
+        aut.addState()
+    }
+    for (t in perturbations) {
+        aut.addTransition()
+    }
+}
+ */
+
+fun toDeterministic(T : CompactLTS<String>) : MutableDetLTS<Int,String> {
+    val det = determinise(T) as CompactDFA<String>
+    val detLts = CompactDetLTS(det)
+    return detLts as MutableDetLTS<Int, String>
+}
+
+/**
+ * The order of the args may be a bit misleading, but essentially we're asking:
+ *      is d2 <= d1 ?
+ * Or equivalently,
+ *      is d1 at least as powerful as d2?
+ */
+fun atLeastAsPowerful(T : CompactLTS<String>, d2 : Set<Triple<Int,String,Int>>, d1 : Set<Triple<Int,String,Int>>) : Boolean {
+    //return d1.containsAll(d2)
+
+    val Td2 = addPerturbations(T, d2)
+    val Td1 = addPerturbations(T, d1)
+    val Td1Det = toDeterministic(Td1)
+
+    if (satisfies(Td2, Td1Det)) {
+        val Td2Det = toDeterministic(Td2)
+        return if (satisfies(Td1, Td2Det)) {
+            // Runs(Td2) = Runs(Td1)
+            d1.containsAll(d2)
+        }
+        else {
+            // Runs(Td2) ⊂ Runs(Td1)
+            true
+        }
+    }
+
+    return false
 }
 
 
 fun main() {
-    val m = AutomatonBuilders.newDFA(Alphabets.fromArray("a", "b"))
+    val T = AutomatonBuilders.newNFA(Alphabets.fromArray("a")) //, "b"))
+        .withInitial(0)
+        .from(0).on("a").to(1)
+        //.from(1).on("b").to(0)
+        //.from(0).on("a").to(0)
+        .withAccepting(0, 1, 2)
+        .create()
+        .asLTS()
+    val P = AutomatonBuilders.newDFA(Alphabets.fromArray("a"))
+        .withInitial(0)
+        .from(0).on("a").to(1)
+        .from(1).on("a").to(2)
+        //.from(0).on("b").to(0)
+        .withAccepting(0, 1, 2)
+        .create()
+        .asLTS()
+    /*
+    val P2 = AutomatonBuilders.newDFA(Alphabets.fromArray("a", "b"))
         .withInitial(0)
         .from(0).on("a").to(1)
         .from(1).on("b").to(0)
         .withAccepting(0, 1)
         .create()
         .asLTS()
-    val p = AutomatonBuilders.newDFA(Alphabets.fromArray("a", "b"))
+     */
+
+    //val cp = copyLTS(P2)
+    //println(Automata.testEquivalence(P2, cp, P2.alphabet()))
+    //println("The two models are not equivalent by [${Automata.findSeparatingWord(P2, cp, P2.inputAlphabet)}]!")
+    //write(System.out, P2, P2.alphabet())
+    //println()
+    //write(System.out, cp, cp.alphabet())
+
+    /*
+    val P = AutomatonBuilders.newDFA(Alphabets.fromArray("a", "b"))
         .withInitial(0)
         .from(0).on("a").to(1)
         .from(1).on("b").to(0)
         .withAccepting(0, 1)
         .create()
         .asLTS()
+     */
 
-    val sat = satisfies(m, p)
-    println("M |= P $sat")
+    val delta = mutableSetOf<Set<Triple<Int,String,Int>>>()
+    val QXActXQ = allPerturbations(T.states, T.inputAlphabet)
+    //println("#states: ${m.states.size}")
+    //println("#alph: ${m.inputAlphabet.size}")
+    //println("#prod: ${QXActXQ.size}")
 
+    for (d in QXActXQ) {
+        val Td = addPerturbations(T, d)
+        if (satisfies(Td, P)) {
+            delta += d
+        }
+    }
+    println("#delta before: ${delta.size}")
+
+    val toDelete = mutableSetOf<Set<Triple<Int,String,Int>>>()
+    for (d2 in delta) {
+        for (d1 in delta) {
+            if (d1 != d2 && atLeastAsPowerful(T, d2, d1)) {
+                toDelete.add(d2)
+                break
+            }
+        }
+    }
+    delta.removeAll(toDelete)
+
+    println("#delta: ${delta.size}")
+    for (d in delta) {
+        println("  {${d.joinToString()}}")
+    }
+
+
+    //val sat = satisfies(m, p)
+    //println("M |= P $sat")
 
     /*
     val m = AutomatonBuilders.newDFA(Alphabets.fromArray("a", "b", "c"))
