@@ -47,48 +47,46 @@ fun ltsTransitions(T : LTS<Int, String>) : Set<Triple<Int,String,Int>> {
 
 /**
  * It's ridiculous how tough they make it to copy.
- * The algorithm makes a key assumption: that initial states are the lowest state ID's, and will be added to newLTS
- * with the same lowest state IDs.
+ * The algorithm makes a key assumption: that the initial state in a DFA has the lowest state ID (presumably 0), and it
+ * will be added to newLTS with the same lowest state ID.
  */
 fun copyLTS(T : CompactDetLTS<String>) : CompactDetLTS<String> {
-    val newLTS = AutomatonBuilders.newDFA(T.inputAlphabet)
-        .withInitial(T.initialStates)
+    val newDFA = AutomatonBuilders.newDFA(T.inputAlphabet)
+        .withInitial(T.initialState)
         .create()
-        .asLTS()
     for (s in T.states) {
-        if (T.initialStates.contains(s)) {
-            newLTS.setAccepting(s, T.isAccepting(s))
+        if (T.initialState == s) {
+            newDFA.setAccepting(s, T.isAccepting(s))
         }
         else {
-            newLTS.addState(T.isAccepting(s))
+            newDFA.addState(T.isAccepting(s))
         }
     }
     for (t in ltsTransitions(T)) {
-        newLTS.addTransition(t.first, t.second, t.third)
+        newDFA.addTransition(t.first, t.second, t.third)
     }
-    return newLTS
+    return newDFA.asLTS()
 }
 
 /**
- * See @copyLTS above
+ * Makes a copy of a NFA (in particular, a CompactLTS). This algorithm does not rely on as many assumptions as the
+ * DFA copyLTS, but it does assume that T.states iterates on the state IDs in order, and T.addInitialState() and
+ * T.addState() add new state IDs to T in order.
  */
 fun copyLTS(T : CompactLTS<String>) : CompactLTS<String> {
-    val newLTS = AutomatonBuilders.newNFA(T.inputAlphabet)
-        .withInitial(T.initialStates)
-        .create()
-        .asLTS()
+    val newNFA = AutomatonBuilders.newNFA(T.inputAlphabet).create()
     for (s in T.states) {
         if (T.initialStates.contains(s)) {
-            newLTS.setAccepting(s, T.isAccepting(s))
+            newNFA.addInitialState(T.isAccepting(s))
         }
         else {
-            newLTS.addState(T.isAccepting(s))
+            newNFA.addState(T.isAccepting(s))
         }
     }
     for (t in ltsTransitions(T)) {
-        newLTS.addTransition(t.first, t.second, t.third)
+        newNFA.addTransition(t.first, t.second, t.third)
     }
-    return newLTS
+    return newNFA.asLTS()
 }
 
 /**
@@ -125,15 +123,4 @@ fun product(src : Collection<Int>, alphabet : Set<String>, dst : Collection<Int>
         }
     }
     return perturbations
-}
-
-/**
- * Transforms an Alphabet into a mutable set of strings
- */
-fun alphabetToSet(alphabet: Alphabet<String>) : MutableSet<String> {
-    val set = mutableSetOf<String>()
-    for (a in alphabet) {
-        set.add(a)
-    }
-    return set
 }

@@ -1,7 +1,6 @@
 package cmu.isr.tolerance
 
 import addPerturbations
-import alphabetToSet
 import atLeastAsPowerful
 import cmu.isr.ts.lts.*
 import net.automatalib.util.automata.builders.AutomatonBuilders
@@ -25,12 +24,12 @@ fun allPerturbations(states : Collection<Int>, alphabet : Alphabet<String>) : Se
         }
     }
     val perturbations : MutableSet<MutableSet<Triple<Int,String,Int>>> = mutableSetOf(mutableSetOf())
-    val powerset = product(states, alphabetToSet(alphabet), states)
+    val powerset = product(states, alphabet.toMutableSet(), states)
     pertHelper(perturbations, powerset)
     return perturbations
 }
 
-fun computeDelta(T : CompactLTS<String>, P : CompactDetLTS<String>) : Set<Set<Triple<Int,String,Int>>> {
+fun deltaBruteForce(T : CompactLTS<String>, P : CompactDetLTS<String>) : Set<Set<Triple<Int,String,Int>>> {
     val delta = mutableSetOf<Set<Triple<Int,String,Int>>>()
     val QXActXQ = allPerturbations(T.states, T.inputAlphabet)
 
@@ -84,7 +83,7 @@ fun main() {
         .asLTS()
      */
 
-    val delta = computeDelta(T, P)
+    val delta = deltaBruteForce(T, P)
 
     println("#delta: ${delta.size}")
     for (d in delta) {
