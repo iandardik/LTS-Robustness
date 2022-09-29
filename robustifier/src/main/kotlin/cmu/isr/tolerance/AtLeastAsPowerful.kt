@@ -2,12 +2,13 @@ import cmu.isr.ts.alphabet
 import cmu.isr.ts.lts.CompactLTS
 import net.automatalib.automata.fsa.impl.compact.CompactNFA
 import net.automatalib.util.ts.copy.TSCopy
+import net.automatalib.util.ts.traversal.TSTraversal
 import net.automatalib.util.ts.traversal.TSTraversalMethod
 
 fun addPerturbations(T : CompactLTS<String>, d : Set<Triple<Int,String,Int>>) : CompactLTS<String> {
     /*
     val Td = CompactLTS<String>(CompactNFA(T.alphabet()))
-    val mp = TSCopy.copy(TSTraversalMethod.DEPTH_FIRST, T, -1, listOf(), Td)
+    val mp = TSCopy.copy(TSTraversalMethod.DEPTH_FIRST, T, TSTraversal.NO_LIMIT, T.alphabet(), Td)
     for (k in T.states) {
         val v = mp.get(k)
         if (k != v) {

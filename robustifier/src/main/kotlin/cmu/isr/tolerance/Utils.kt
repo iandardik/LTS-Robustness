@@ -7,16 +7,58 @@ import cmu.isr.ts.lts.asLTS
 import cmu.isr.ts.lts.CompactLTS
 import cmu.isr.ts.lts.checkSafety
 import cmu.isr.ts.lts.makeErrorState
+import cmu.isr.ts.nfa.NFAParallelComposition
 import cmu.isr.ts.nfa.determinise
 import net.automatalib.automata.fsa.impl.compact.CompactDFA
 import net.automatalib.util.automata.builders.AutomatonBuilders
 import net.automatalib.words.Alphabet
 import java.util.*
 
+fun QfProjE(src : Pair<Int, Int>,
+            E : LTS<Int, String>,
+            F : NFAParallelComposition<Int, Int, String>)
+        : Set<Pair<Int,Int>> {
+    val proj = mutableSetOf<Pair<Int,Int>>()
+    for (a in E.alphabet()) {
+        for (dst in F.getStates(E.alphabet())) {
+            if (F.getTransitions(src, a).contains(dst) && E.getTransitions(src.first, a).contains(dst.first))  {
+                proj.add(dst)
+            }
+        }
+    }
+    return proj
+}
+
+fun safe(E : LTS<Int, String>,
+         F : NFAParallelComposition<Int, Int, String>,
+         CPre_iminus1 : Set<Pair<Int, Int>>)
+        : Set<Pair<Int, Int>> {
+    val CPre_i = F.getStates(E.alphabet()).filter { CPre_iminus1.containsAll(QfProjE(it, E, F)) }.toSet()
+    //val CPre_i = CPre_iminus1.filter { CPre_iminus1.containsAll(QfProjE(it, E, F)) }.toSet()
+    return if (CPre_i == CPre_iminus1) {
+        CPre_i
+    }
+    else {
+        safe(E, F, CPre_i).intersect(CPre_iminus1)
+    }
+}
+
 /**
  * Finds all transitions in T
  */
+
 fun ltsTransitions(T : LTS<Int, String>) : Set<Triple<Int,String,Int>> {
+    val transitions = mutableSetOf<Triple<Int,String,Int>>()
+    for (src in T) {
+        for (a in T.alphabet()) {
+            for (dst in T.getTransitions(src, a)) {
+                transitions.add(Triple(src, a, dst))
+            }
+        }
+    }
+    return transitions
+
+    /*
     val init = T.initialStates
     if (init.isEmpty()) {
         return emptySet()
@@ -42,6 +84,19 @@ fun ltsTransitions(T : LTS<Int, String>) : Set<Triple<Int,String,Int>> {
         }
     }
 
+    return transitions
+    */
+}
+
+fun ltsTransitions(T : NFAParallelComposition<Int, Int, String>, alph : Alphabet<String>) : Set<Triple<Pair<Int,Int>,String,Pair<Int,Int>>> {
+    val transitions = mutableSetOf<Triple<Pair<Int,Int>,String,Pair<Int,Int>>>()
+    for (src in T.getStates(alph)) {
+        for (a in alph) {
+            for (dst in T.getTransitions(src, a)) {
+                transitions.add(Triple(src, a, dst))
+            }
+        }
+    }
     return transitions
 }
 
@@ -89,6 +144,26 @@ fun copyLTS(T : CompactLTS<String>) : CompactLTS<String> {
     return newNFA.asLTS()
 }
 
+fun copyLTSFull(T : CompactLTS<String>) : CompactLTS<String> {
+    val newNFA = AutomatonBuilders.newNFA(T.inputAlphabet).create()
+    for (s in T.states) {
+        if (T.initialStates.contains(s)) {
+            newNFA.addInitialState(T.isAccepting(s))
+        }
+        else {
+            newNFA.addState(T.isAccepting(s))
+        }
+    }
+    for (src in T.states) {
+        for (a in T.alphabet()) {
+            for (dst in T.states) {
+                newNFA.addTransition(src, a, dst)
+            }
+        }
+    }
+    return newNFA.asLTS()
+}
+
 /**
  * Turns an NFA (T) into a DFA
  */
@@ -123,4 +198,16 @@ fun product(src : Collection<Int>, alphabet : Set<String>, dst : Collection<Int>
         }
     }
     return perturbations
+}
+
+fun <T> powerset(s : Set<T>) : Set<Set<T>> {
+    val ps = mutableSetOf<Set<T>>(emptySet())
+    for (e in s) {
+        val toAdd = mutableSetOf<Set<T>>()
+        for (p in ps) {
+            toAdd.add(p + e)
+        }
+        ps += toAdd
+    }
+    return ps
 }
