@@ -57,35 +57,6 @@ fun ltsTransitions(T : LTS<Int, String>) : Set<Triple<Int,String,Int>> {
         }
     }
     return transitions
-
-    /*
-    val init = T.initialStates
-    if (init.isEmpty()) {
-        return emptySet()
-    }
-
-    // BFS for all transitions
-    val transitions = mutableSetOf<Triple<Int,String,Int>>()
-    val visited : MutableSet<Int> = mutableSetOf()
-    val q : Queue<Int> = LinkedList()
-    q.addAll(init)
-    while (q.isNotEmpty()) {
-        val state = q.remove()
-        if (visited.contains(state)) {
-            continue
-        }
-        visited.add(state)
-        for (a in T.alphabet()) {
-            val adjacent = T.getTransitions(state, a)
-            for (dst in adjacent) {
-                transitions.add(Triple(state, a, dst))
-                q.add(dst)
-            }
-        }
-    }
-
-    return transitions
-    */
 }
 
 fun ltsTransitions(T : NFAParallelComposition<Int, Int, String>, alph : Alphabet<String>) : Set<Triple<Pair<Int,Int>,String,Pair<Int,Int>>> {
