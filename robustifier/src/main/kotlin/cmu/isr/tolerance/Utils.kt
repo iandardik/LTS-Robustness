@@ -188,8 +188,8 @@ fun satisfies(T : MutableLTS<Int, String>, P : MutableDetLTS<Int,String>) : Bool
  *   Q X αT X Q
  * Presumably T is some LTS whose state space is Q, but this is not required.
  */
-fun product(src : Collection<Int>, alphabet : Set<String>, dst : Collection<Int>) : MutableSet<Triple<Int, String, Int>> {
-    val perturbations : MutableSet<Triple<Int,String,Int>> = mutableSetOf()
+fun <T> product(src : Collection<T>, alphabet : Set<String>, dst : Collection<T>) : MutableSet<Triple<T, String, T>> {
+    val perturbations : MutableSet<Triple<T,String,T>> = mutableSetOf()
     for (s in src) {
         for (a in alphabet) {
             for (d in dst) {

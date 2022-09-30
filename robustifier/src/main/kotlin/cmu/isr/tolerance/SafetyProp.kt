@@ -121,14 +121,23 @@ fun deltaBruteForce(E : CompactLTS<String>, P : CompactDetLTS<String>) : Set<Set
     //println("#W: ${W.size}")
     //println("{${W.joinToString()}}")
 
+    val Rf = ltsTransitions(F, nfaF.alphabet())
     val A = product(E.states, E.inputAlphabet.toSet(), E.states)
     val delta = mutableSetOf<Set<Triple<Int,String,Int>>>()
+    //val deltaDebug = mutableSetOf<Pair<Set<Triple<Int,String,Int>>, Set<Pair<Int,Int>>>>()
     for (S in powerset(W)) {
-        val Rt = trimmedTransitions(F, S, nfaF.alphabet())
+        //val Rt = trimmedTransitions(F, S, nfaF.alphabet())
+        val SxActxS = product(S, nfaF.alphabet().toSet(), S)
+        val Rt = Rf.filter { SxActxS.contains(it) }
         val RtProjE = Rt.map { Triple(it.first.first,it.second,it.third.first) }.toSet()
         if (RtProjE.containsAll(ltsTransitions(E))) {
-            val del = statesToDelete(F, S, Rt, nfaF.alphabet())
+            //val del = statesToDelete(F, S, Rt, nfaF.alphabet())
+            val del = Rf
+                .filter { S.contains(it.first) && !S.contains(it.third) }
+                .map { Triple(it.first.first, it.second, it.third.first) }
+                .toSet()
             delta.add(A - del)
+            //deltaDebug.add(Pair(A - del, S))
         }
     }
 
@@ -143,16 +152,20 @@ fun deltaBruteForce(E : CompactLTS<String>, P : CompactDetLTS<String>) : Set<Set
     }
     delta.removeAll(toDelete)
 
+    //for ((d,S) in deltaDebug.filter { !toDelete.contains(it.first) }) {
+        //println("$d")
+        //println("  -> $S")
+    //}
+    //println()
+
     return delta
 }
 
 
 fun main() {
-    val T = AutomatonBuilders.newNFA(Alphabets.fromArray("a")) //, "b"))
+    val T = AutomatonBuilders.newNFA(Alphabets.fromArray("a"))
         .withInitial(0)
         .from(0).on("a").to(1)
-        //.from(1).on("b").to(0)
-        //.from(0).on("a").to(0)
         .withAccepting(0, 1, 2)
         .create()
         .asLTS()
@@ -165,14 +178,23 @@ fun main() {
         .create()
         .asLTS()
     /*
-    val P2 = AutomatonBuilders.newDFA(Alphabets.fromArray("a", "b"))
+    val T = AutomatonBuilders.newNFA(Alphabets.fromArray("a", "b"))
         .withInitial(0)
         .from(0).on("a").to(1)
-        .from(1).on("b").to(0)
-        .withAccepting(0, 1)
+        .from(1).on("b").to(2)
+        .from(2).on("b").to(2)
+        .withAccepting(0, 1, 2)
         .create()
         .asLTS()
-     */
+    val P = AutomatonBuilders.newDFA(Alphabets.fromArray("a"))
+        .withInitial(0)
+        .from(0).on("a").to(1)
+        .from(1).on("a").to(2)
+        //.from(0).on("b").to(0)
+        .withAccepting(0, 1, 2)
+        .create()
+        .asLTS()
+    */
 
     //val delta = deltaNaiveBruteForce(T, P)
     //deltaBruteForce(T, P)

@@ -30,8 +30,9 @@ fun addPerturbations(T : CompactLTS<String>, d : Set<Triple<Int,String,Int>>) : 
  *      is d1 at least as powerful as d2?
  */
 fun atLeastAsPowerful(T : CompactLTS<String>, d2 : Set<Triple<Int,String,Int>>, d1 : Set<Triple<Int,String,Int>>) : Boolean {
-    //return d1.containsAll(d2)
+    return d1.containsAll(d2)
 
+    /*
     val Td2 = addPerturbations(T, d2)
     val Td1 = addPerturbations(T, d1)
     val Td1Det = toDeterministic(Td1)
@@ -49,4 +50,5 @@ fun atLeastAsPowerful(T : CompactLTS<String>, d2 : Set<Triple<Int,String,Int>>, 
     }
 
     return false
+     */
 }
