@@ -70,6 +70,27 @@
 
     <dependencies>
         <dependency>
+            <groupId>org.supremica</groupId>
+            <artifactId>Supremica</artifactId>
+            <version>2.7</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/waters-linux/Supremica.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>org.supremica</groupId>
+            <artifactId>SupremicaLib</artifactId>
+            <version>2.7</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/waters-linux/SupremicaLib.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>ltsa</groupId>
+            <artifactId>LTSA</artifactId>
+            <version>1.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/ltsa.jar</systemPath>
+        </dependency>
+        <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-test-junit5</artifactId>
             <version>1.7.0</version>
