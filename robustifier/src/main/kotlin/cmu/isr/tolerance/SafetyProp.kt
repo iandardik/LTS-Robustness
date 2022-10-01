@@ -2,6 +2,7 @@ package cmu.isr.tolerance
 
 import addPerturbations
 import atLeastAsPowerful
+import cmu.isr.supervisory.supremica.write
 import cmu.isr.ts.LTS
 import cmu.isr.ts.alphabet
 import cmu.isr.ts.lts.*
@@ -110,6 +111,53 @@ fun deltaBruteForce(E : CompactLTS<String>, P : CompactDetLTS<String>) : Set<Set
     return delta
 }
 
+/**
+ * Cuts down on the exponential in the runtime by |Re X Rc X Rp|. Produces the right answers for our simple example,
+ * I'm not sure if it's correct in general though.
+ */
+fun deltaBruteForceShortcut(E : CompactLTS<String>, P : CompactDetLTS<String>) : Set<Set<Triple<Int,String,Int>>> {
+    val Efull = copyLTSFull(E)
+    val nfaF = parallel(Efull, P)
+    val F = NFAParallelComposition(Efull, P)
+    val QfMinusErr = acceptingStates(F, nfaF, E, P)
+    val W = safe(E, F, QfMinusErr)
+
+    val Rf = ltsTransitions(F, nfaF.alphabet())
+    val A = product(E.states, E.inputAlphabet.toSet(), E.states)
+    val delta = mutableSetOf<Set<Triple<Int,String,Int>>>()
+
+    val QeInF = parallel(E, P).states
+
+    for (partialS in powerset(W - QeInF)) {
+        val S = partialS + QeInF
+        //val S = partialS // this shouldn't be correct in general, and it's fishy that it works in our example...
+
+        val SxActxS = product(S, nfaF.alphabet().toSet(), S)
+        val Rt = Rf.filter { SxActxS.contains(it) }
+        val RtProjE = Rt.map { Triple(it.first.first,it.second,it.third.first) }.toSet()
+        if (RtProjE.containsAll(ltsTransitions(E))) {
+            val del = Rf
+                .filter { S.contains(it.first) && !S.contains(it.third) }
+                .map { Triple(it.first.first, it.second, it.third.first) }
+                .toSet()
+            delta.add(A - del)
+        }
+    }
+
+    val toDelete = mutableSetOf<Set<Triple<Int,String,Int>>>()
+    for (d2 in delta) {
+        for (d1 in delta) {
+            if (d1 != d2 && atLeastAsPowerful(E, d2, d1)) {
+                toDelete.add(d2)
+                break
+            }
+        }
+    }
+    delta.removeAll(toDelete)
+
+    return delta
+}
+
 
 fun main() {
     val T = AutomatonBuilders.newNFA(Alphabets.fromArray("a"))
@@ -127,8 +175,11 @@ fun main() {
         .create()
         .asLTS()
 
+    //write(System.out, T, T.alphabet())
+
     //val delta = deltaNaiveBruteForce(T, P)
-    val delta = deltaBruteForce(T, makeErrorState(P) as CompactDetLTS<String>)
+    //val delta = deltaBruteForce(T, makeErrorState(P) as CompactDetLTS<String>)
+    val delta = deltaBruteForceShortcut(T, makeErrorState(P) as CompactDetLTS<String>)
 
     println("#delta: ${delta.size}")
     for (d in delta) {
