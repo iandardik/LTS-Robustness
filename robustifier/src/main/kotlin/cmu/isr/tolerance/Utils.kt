@@ -1,17 +1,19 @@
-import cmu.isr.ts.LTS
-import cmu.isr.ts.MutableDetLTS
-import cmu.isr.ts.MutableLTS
-import cmu.isr.ts.alphabet
+import cmu.isr.ts.*
 import cmu.isr.ts.lts.CompactDetLTS
 import cmu.isr.ts.lts.asLTS
 import cmu.isr.ts.lts.CompactLTS
 import cmu.isr.ts.lts.checkSafety
+import cmu.isr.ts.lts.ltsa.LTSACall
+import cmu.isr.ts.lts.ltsa.LTSACall.asDetLTS
+import cmu.isr.ts.lts.ltsa.LTSACall.asLTS
+import cmu.isr.ts.lts.ltsa.LTSACall.compose
 import cmu.isr.ts.lts.makeErrorState
 import cmu.isr.ts.nfa.NFAParallelComposition
 import cmu.isr.ts.nfa.determinise
 import net.automatalib.automata.fsa.impl.compact.CompactDFA
 import net.automatalib.util.automata.builders.AutomatonBuilders
 import net.automatalib.words.Alphabet
+import java.io.File
 import java.util.*
 
 fun QfProjE(src : Pair<Int, Int>,
@@ -181,4 +183,18 @@ fun <T> powerset(s : Set<T>) : Set<Set<T>> {
         ps += toAdd
     }
     return ps
+}
+
+fun fspToDFA(path: String) : CompactDetLTS<String> {
+    val spec = File(path).readText()
+    val composite = LTSACall.compile(spec).compose()
+
+    return composite.asDetLTS() as CompactDetLTS
+}
+
+fun fspToNFA(path: String) : CompactLTS<String> {
+    val spec = File(path).readText()
+    val composite = LTSACall.compile(spec).compose()
+
+    return composite.asLTS() as CompactLTS
 }

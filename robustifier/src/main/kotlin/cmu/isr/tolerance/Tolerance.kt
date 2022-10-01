@@ -2,13 +2,15 @@ package cmu.isr.tolerance
 
 import addPerturbations
 import atLeastAsPowerful
-import cmu.isr.supervisory.supremica.write
 import cmu.isr.ts.LTS
 import cmu.isr.ts.alphabet
 import cmu.isr.ts.lts.*
+import cmu.isr.ts.lts.ltsa.write
 import cmu.isr.ts.nfa.NFAParallelComposition
 import cmu.isr.ts.parallel
 import copyLTSFull
+import fspToDFA
+import fspToNFA
 import ltsTransitions
 import net.automatalib.util.automata.builders.AutomatonBuilders
 import net.automatalib.words.Alphabet
@@ -159,7 +161,8 @@ fun deltaBruteForceShortcut(E : CompactLTS<String>, P : CompactDetLTS<String>) :
 }
 
 
-fun main() {
+fun main(args : Array<String>) {
+    /*
     val T = AutomatonBuilders.newNFA(Alphabets.fromArray("a"))
         .withInitial(0)
         .from(0).on("a").to(1)
@@ -174,12 +177,20 @@ fun main() {
         .withAccepting(0, 1, 2)
         .create()
         .asLTS()
+    write(System.out, P, P.alphabet())
+    */
 
-    //write(System.out, T, T.alphabet())
+    if (args.size < 3) {
+        println("usage: tolerance <env> <ctrl> <prop>")
+        return
+    }
+
+    val T = fspToNFA(args[0])
+    val P = fspToDFA(args[2])
 
     //val delta = deltaNaiveBruteForce(T, P)
-    //val delta = deltaBruteForce(T, makeErrorState(P) as CompactDetLTS<String>)
-    val delta = deltaBruteForceShortcut(T, makeErrorState(P) as CompactDetLTS<String>)
+    val delta = deltaBruteForce(T, makeErrorState(P) as CompactDetLTS<String>)
+    //val delta = deltaBruteForceShortcut(T, makeErrorState(P) as CompactDetLTS<String>)
 
     println("#delta: ${delta.size}")
     for (d in delta) {
