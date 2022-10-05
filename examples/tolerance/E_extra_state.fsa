@@ -1,0 +1,2 @@
+S0 = (a -> STOP),
+S1 = STOP.

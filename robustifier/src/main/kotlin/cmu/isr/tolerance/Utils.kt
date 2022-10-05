@@ -13,6 +13,7 @@ import cmu.isr.ts.nfa.determinise
 import net.automatalib.automata.fsa.impl.compact.CompactDFA
 import net.automatalib.util.automata.builders.AutomatonBuilders
 import net.automatalib.words.Alphabet
+import net.automatalib.words.impl.Alphabets
 import java.io.File
 import java.util.*
 
@@ -185,16 +186,41 @@ fun <T> powerset(s : Set<T>) : Set<Set<T>> {
     return ps
 }
 
+fun stripTauTransitions(T : CompactLTS<String>) : CompactLTS<String> {
+    val newAlphabet = Alphabets.fromCollection(T.inputAlphabet.toSet() - "tau")
+    val newNFA = AutomatonBuilders.newNFA(newAlphabet).create()
+    for (s in T.states) {
+        if (T.initialStates.contains(s)) {
+            newNFA.addInitialState(T.isAccepting(s))
+        }
+        else {
+            newNFA.addState(T.isAccepting(s))
+        }
+    }
+    for (t in ltsTransitions(T)) {
+        if (t.second != "tau") {
+            newNFA.addTransition(t.first, t.second, t.third)
+        }
+    }
+    return newNFA.asLTS()
+
+    /*
+    for (src in T.states) {
+        for (dst in T.getTransitions(src, "tau")) {
+            T.removeTransition(src, "tau", dst)
+        }
+    }
+     */
+}
+
 fun fspToDFA(path: String) : CompactDetLTS<String> {
     val spec = File(path).readText()
     val composite = LTSACall.compile(spec).compose()
-
     return composite.asDetLTS() as CompactDetLTS
 }
 
 fun fspToNFA(path: String) : CompactLTS<String> {
     val spec = File(path).readText()
     val composite = LTSACall.compile(spec).compose()
-
     return composite.asLTS() as CompactLTS
 }

@@ -19,6 +19,7 @@ import powerset
 import product
 import safe
 import satisfies
+import stripTauTransitions
 
 fun allPerturbations(states : Collection<Int>, alphabet : Alphabet<String>) : Set<Set<Triple<Int, String, Int>>> {
     fun pertHelper(perturbations : MutableSet<MutableSet<Triple<Int,String,Int>>>,
@@ -90,13 +91,32 @@ fun deltaBruteForce(E : CompactLTS<String>, P : CompactDetLTS<String>) : Set<Set
         val SxActxS = product(S, nfaF.alphabet().toSet(), S)
         val Rt = Rf.filter { SxActxS.contains(it) }
         val RtProjE = Rt.map { Triple(it.first.first,it.second,it.third.first) }.toSet()
+
+        val del = Rf
+            .filter { S.contains(it.first) && !S.contains(it.third) }
+            .map { Triple(it.first.first, it.second, it.third.first) }
+            .toSet()
+        val deltaCandidate = A - del
+        if (RtProjE.containsAll(ltsTransitions(E)) && deltaCandidate.containsAll(ltsTransitions(E))) {
+            delta.add(deltaCandidate)
+        }
+        /*
         if (RtProjE.containsAll(ltsTransitions(E))) {
             val del = Rf
                 .filter { S.contains(it.first) && !S.contains(it.third) }
                 .map { Triple(it.first.first, it.second, it.third.first) }
                 .toSet()
             delta.add(A - del)
+
+            if (!(A - del).containsAll(ltsTransitions(E))) {
+                println("A - del: ${A - del}")
+                println("Re: ${ltsTransitions(E)}")
+                println("S: $S")
+                println("RtProjE: $RtProjE")
+                println()
+            }
         }
+         */
     }
 
     val toDelete = mutableSetOf<Set<Triple<Int,String,Int>>>()
@@ -137,12 +157,14 @@ fun deltaBruteForceShortcut(E : CompactLTS<String>, P : CompactDetLTS<String>) :
         val SxActxS = product(S, nfaF.alphabet().toSet(), S)
         val Rt = Rf.filter { SxActxS.contains(it) }
         val RtProjE = Rt.map { Triple(it.first.first,it.second,it.third.first) }.toSet()
-        if (RtProjE.containsAll(ltsTransitions(E))) {
-            val del = Rf
-                .filter { S.contains(it.first) && !S.contains(it.third) }
-                .map { Triple(it.first.first, it.second, it.third.first) }
-                .toSet()
-            delta.add(A - del)
+
+        val del = Rf
+            .filter { S.contains(it.first) && !S.contains(it.third) }
+            .map { Triple(it.first.first, it.second, it.third.first) }
+            .toSet()
+        val deltaCandidate = A - del
+        if (RtProjE.containsAll(ltsTransitions(E)) && deltaCandidate.containsAll(ltsTransitions(E))) {
+            delta.add(deltaCandidate)
         }
     }
 
@@ -180,20 +202,49 @@ fun main(args : Array<String>) {
     write(System.out, P, P.alphabet())
     */
 
-    if (args.size < 3) {
-        println("usage: tolerance <env> <ctrl> <prop>")
+    if (args.size < 4) {
+        println("usage: tolerance <alg> <env> <ctrl> <prop>")
         return
     }
 
-    val T = fspToNFA(args[0])
-    val P = fspToDFA(args[2])
+    val alg = args[0]
+    val T = fspToNFA(args[1])
+    //val T = stripTauTransitions(fspToNFA(args[1]))
+    val P = fspToDFA(args[3])
 
     //val delta = deltaNaiveBruteForce(T, P)
-    val delta = deltaBruteForce(T, makeErrorState(P) as CompactDetLTS<String>)
+    //val delta = deltaBruteForce(T, makeErrorState(P) as CompactDetLTS<String>)
     //val delta = deltaBruteForceShortcut(T, makeErrorState(P) as CompactDetLTS<String>)
+
+    val delta =
+        if (alg == "0") {
+            deltaNaiveBruteForce(T, P)
+        }
+        else if (alg == "1") {
+            deltaBruteForce(T, P)
+        }
+        else if (alg == "2") {
+            deltaBruteForceShortcut(T, P)
+        }
+        else {
+            println("Invalid algorithm")
+            return
+        }
 
     println("#delta: ${delta.size}")
     for (d in delta) {
-        println("  {${d.joinToString()}}")
+        val sortedD = d.sortedWith { a, b ->
+            if (a.first != b.first) {
+                a.first - b.first
+            }
+            else if (a.second != b.second) {
+                a.second.compareTo(b.second)
+            }
+            else {
+                a.third - b.third
+            }
+        }
+        println("  {${sortedD.joinToString()}}")
+        //println("  {${d.joinToString()}}")
     }
 }
