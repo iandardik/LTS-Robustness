@@ -151,7 +151,7 @@ fun toDeterministic(T : CompactLTS<String>) : MutableDetLTS<Int, String> {
  * returns whether:
  * T |= P
  */
-fun satisfies(T : MutableLTS<Int, String>, P : MutableDetLTS<Int,String>) : Boolean {
+fun satisfies(T : LTS<Int, String>, P : MutableDetLTS<Int,String>) : Boolean {
     val pFixed = makeErrorState(P)
     val result = checkSafety(T, pFixed)
     return !result.violation

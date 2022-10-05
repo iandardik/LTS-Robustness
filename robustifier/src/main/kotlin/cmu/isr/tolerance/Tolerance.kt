@@ -8,6 +8,7 @@ import cmu.isr.ts.lts.*
 import cmu.isr.ts.lts.ltsa.write
 import cmu.isr.ts.nfa.NFAParallelComposition
 import cmu.isr.ts.parallel
+import copyLTS
 import copyLTSFull
 import fspToDFA
 import fspToNFA
@@ -21,33 +22,37 @@ import safe
 import satisfies
 import stripTauTransitions
 
-fun allPerturbations(states : Collection<Int>, alphabet : Alphabet<String>) : Set<Set<Triple<Int, String, Int>>> {
-    fun pertHelper(perturbations : MutableSet<MutableSet<Triple<Int,String,Int>>>,
-                   powerset : Set<Triple<Int,String,Int>>) {
+fun <T> allPerturbations(states : Collection<T>, alphabet : Alphabet<String>) : Set<Set<Triple<T, String, T>>> {
+    fun pertHelper(perturbations : MutableSet<MutableSet<Triple<T,String,T>>>,
+                   powerset : Set<Triple<T,String,T>>) {
         if (powerset.isNotEmpty()) {
             val elem = powerset.first()
             pertHelper(perturbations, powerset - elem)
 
-            val dPlusElems = mutableSetOf<MutableSet<Triple<Int, String, Int>>>()
+            val dPlusElems = mutableSetOf<MutableSet<Triple<T, String, T>>>()
             for (d in perturbations) {
-                dPlusElems += (d + elem) as MutableSet<Triple<Int, String, Int>>
+                dPlusElems += (d + elem) as MutableSet<Triple<T, String, T>>
             }
             perturbations += dPlusElems
         }
     }
-    val perturbations : MutableSet<MutableSet<Triple<Int,String,Int>>> = mutableSetOf(mutableSetOf())
+    val perturbations : MutableSet<MutableSet<Triple<T,String,T>>> = mutableSetOf(mutableSetOf())
     val powerset = product(states, alphabet.toMutableSet(), states)
     pertHelper(perturbations, powerset)
     return perturbations
 }
 
-fun deltaNaiveBruteForce(T : CompactLTS<String>, P : CompactDetLTS<String>) : Set<Set<Triple<Int,String,Int>>> {
+fun deltaNaiveBruteForce(E : CompactLTS<String>,
+                         C : CompactLTS<String>,
+                         P : CompactDetLTS<String>)
+                        : Set<Set<Triple<Int,String,Int>>> {
     val delta = mutableSetOf<Set<Triple<Int,String,Int>>>()
-    val QXActXQ = allPerturbations(T.states, T.inputAlphabet)
+    val QXActXQ = allPerturbations(E.states, E.alphabet())
 
     for (d in QXActXQ) {
-        val Td = addPerturbations(T, d)
-        if (satisfies(Td, P)) {
+        val Ed = addPerturbations(E, d)
+        val EdCompC = parallel(Ed, C)
+        if (satisfies(EdCompC, P)) {
             delta += d
         }
     }
@@ -56,7 +61,7 @@ fun deltaNaiveBruteForce(T : CompactLTS<String>, P : CompactDetLTS<String>) : Se
     val toDelete = mutableSetOf<Set<Triple<Int,String,Int>>>()
     for (d2 in delta) {
         for (d1 in delta) {
-            if (d1 != d2 && atLeastAsPowerful(T, d2, d1)) {
+            if (d1 != d2 && atLeastAsPowerful(E, d2, d1)) {
                 toDelete.add(d2)
                 break
             }
@@ -70,20 +75,27 @@ fun deltaNaiveBruteForce(T : CompactLTS<String>, P : CompactDetLTS<String>) : Se
 fun acceptingStates(F : NFAParallelComposition<Int, Int, String>,
                     nfaF : LTS<Int, String>,
                     E : CompactLTS<String>,
-                    P : CompactDetLTS<String>)
+                    P : LTS<Int, String>)
                     : Set<Pair<Int, Int>> {
     return F.getStates(nfaF.alphabet())
         .filter { E.isAccepting(it.first) && P.isAccepting(it.second) }
         .toSet()
 }
 
-fun deltaBruteForce(E : CompactLTS<String>, P : CompactDetLTS<String>) : Set<Set<Triple<Int,String,Int>>> {
+fun deltaBruteForce(E : CompactLTS<String>, C : CompactLTS<String>, P : CompactDetLTS<String>) : Set<Set<Triple<Int,String,Int>>> {
     val Efull = copyLTSFull(E)
-    val nfaF = parallel(Efull, P)
-    val F = NFAParallelComposition(Efull, P)
-    val QfMinusErr = acceptingStates(F, nfaF, E, P)
+    val ltsCCompP = parallel(C, P)
+    val nfaF = parallel(Efull, ltsCCompP)
+    val F = NFAParallelComposition(Efull, ltsCCompP)
+    val QfMinusErr = acceptingStates(F, nfaF, E, ltsCCompP)
     val W = safe(E, F, QfMinusErr)
 
+    //val Re = ltsTransitions(E)
+    val ltsECompC = parallel(E, C)
+    val ECompC = NFAParallelComposition(E, C)
+    val Re = ltsTransitions(ECompC, ltsECompC.alphabet())
+        .map { Triple(it.first.first, it.second, it.third.first) }
+        .toSet()
     val Rf = ltsTransitions(F, nfaF.alphabet())
     val A = product(E.states, E.inputAlphabet.toSet(), E.states)
     val delta = mutableSetOf<Set<Triple<Int,String,Int>>>()
@@ -97,26 +109,9 @@ fun deltaBruteForce(E : CompactLTS<String>, P : CompactDetLTS<String>) : Set<Set
             .map { Triple(it.first.first, it.second, it.third.first) }
             .toSet()
         val deltaCandidate = A - del
-        if (RtProjE.containsAll(ltsTransitions(E)) && deltaCandidate.containsAll(ltsTransitions(E))) {
+        if (RtProjE.containsAll(Re) && deltaCandidate.containsAll(Re)) {
             delta.add(deltaCandidate)
         }
-        /*
-        if (RtProjE.containsAll(ltsTransitions(E))) {
-            val del = Rf
-                .filter { S.contains(it.first) && !S.contains(it.third) }
-                .map { Triple(it.first.first, it.second, it.third.first) }
-                .toSet()
-            delta.add(A - del)
-
-            if (!(A - del).containsAll(ltsTransitions(E))) {
-                println("A - del: ${A - del}")
-                println("Re: ${ltsTransitions(E)}")
-                println("S: $S")
-                println("RtProjE: $RtProjE")
-                println()
-            }
-        }
-         */
     }
 
     val toDelete = mutableSetOf<Set<Triple<Int,String,Int>>>()
@@ -208,37 +203,29 @@ fun main(args : Array<String>) {
     }
 
     val alg = args[0]
-    val T = fspToNFA(args[1])
-    //val T = stripTauTransitions(fspToNFA(args[1]))
+    val E = stripTauTransitions(fspToNFA(args[1]))
+    val C = stripTauTransitions(fspToNFA(args[2]))
     val P = fspToDFA(args[3])
 
-    //val delta = deltaNaiveBruteForce(T, P)
-    //val delta = deltaBruteForce(T, makeErrorState(P) as CompactDetLTS<String>)
-    //val delta = deltaBruteForceShortcut(T, makeErrorState(P) as CompactDetLTS<String>)
-
     val delta =
-        if (alg == "0") {
-            deltaNaiveBruteForce(T, P)
-        }
-        else if (alg == "1") {
-            deltaBruteForce(T, P)
-        }
-        else if (alg == "2") {
-            deltaBruteForceShortcut(T, P)
-        }
-        else {
-            println("Invalid algorithm")
-            return
+        when (alg) {
+            "0" -> deltaNaiveBruteForce(E, C, P)
+            "1" -> deltaBruteForce(E, C, P)
+            "2" -> deltaBruteForceShortcut(E, P)
+            else -> {
+                println("Invalid algorithm")
+                return
+            }
         }
 
     println("#delta: ${delta.size}")
     for (d in delta) {
         val sortedD = d.sortedWith { a, b ->
-            if (a.first != b.first) {
-                a.first - b.first
-            }
-            else if (a.second != b.second) {
+            if (a.second != b.second) {
                 a.second.compareTo(b.second)
+            }
+            else if (a.first != b.first) {
+                a.first - b.first
             }
             else {
                 a.third - b.third
