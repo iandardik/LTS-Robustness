@@ -9,6 +9,7 @@ import cmu.isr.ts.lts.ltsa.write
 import cmu.isr.ts.nfa.NFAParallelComposition
 import cmu.isr.ts.parallel
 import copyLTS
+import copyLTSAcceptingOnly
 import copyLTSFull
 import fspToDFA
 import fspToNFA
@@ -46,7 +47,7 @@ fun deltaNaiveBruteForce(E : CompactLTS<String>,
                          C : CompactLTS<String>,
                          P : CompactDetLTS<String>)
                         : Set<Set<Triple<Int,String,Int>>> {
-    val delta = mutableSetOf<Set<Triple<Int,String,Int>>>()
+    val delta = DeltaBuilder()
     val QXActXQ = allPerturbations(E.states, E.alphabet())
 
     for (d in QXActXQ) {
@@ -58,18 +59,7 @@ fun deltaNaiveBruteForce(E : CompactLTS<String>,
     }
     //println("#delta before: ${delta.size}")
 
-    val toDelete = mutableSetOf<Set<Triple<Int,String,Int>>>()
-    for (d2 in delta) {
-        for (d1 in delta) {
-            if (d1 != d2 && atLeastAsPowerful(E, d2, d1)) {
-                toDelete.add(d2)
-                break
-            }
-        }
-    }
-    delta.removeAll(toDelete)
-
-    return delta
+    return delta.toSet()
 }
 
 fun acceptingStates(F : NFAParallelComposition<Int, Int, String>,
@@ -98,7 +88,7 @@ fun deltaBruteForce(E : CompactLTS<String>, C : CompactLTS<String>, P : CompactD
         .toSet()
     val Rf = ltsTransitions(F, nfaF.alphabet())
     val A = product(E.states, E.inputAlphabet.toSet(), E.states)
-    val delta = mutableSetOf<Set<Triple<Int,String,Int>>>()
+    val delta = DeltaBuilder()
     for (S in powerset(W)) {
         val SxActxS = product(S, nfaF.alphabet().toSet(), S)
         val Rt = Rf.filter { SxActxS.contains(it) }
@@ -114,18 +104,7 @@ fun deltaBruteForce(E : CompactLTS<String>, C : CompactLTS<String>, P : CompactD
         }
     }
 
-    val toDelete = mutableSetOf<Set<Triple<Int,String,Int>>>()
-    for (d2 in delta) {
-        for (d1 in delta) {
-            if (d1 != d2 && atLeastAsPowerful(E, d2, d1)) {
-                toDelete.add(d2)
-                break
-            }
-        }
-    }
-    delta.removeAll(toDelete)
-
-    return delta
+    return delta.toSet()
 }
 
 /**
@@ -218,6 +197,7 @@ fun main(args : Array<String>) {
             }
         }
 
+    // prints delta
     println("#delta: ${delta.size}")
     for (d in delta) {
         val sortedD = d.sortedWith { a, b ->
@@ -233,5 +213,27 @@ fun main(args : Array<String>) {
         }
         println("  {${sortedD.joinToString()}}")
         //println("  {${d.joinToString()}}")
+    }
+
+    // print the FSP for each Ed
+    for (d in delta) {
+        println()
+        val Ed = copyLTSAcceptingOnly(addPerturbations(E, d))
+        write(System.out, Ed, Ed.alphabet())
+    }
+
+    // checks to make sure the solution is sound
+    var sound = true
+    for (d in delta) {
+        val Ed = addPerturbations(E, d)
+        val EdComposeC = parallel(Ed, C)
+        if (!satisfies(EdComposeC, P)) {
+            sound = false
+            println("Violation for Ed||P |= P: $d")
+        }
+    }
+    if (sound) {
+        println()
+        println("Solution is sound")
     }
 }

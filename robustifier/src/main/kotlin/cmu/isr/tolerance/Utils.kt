@@ -10,6 +10,7 @@ import cmu.isr.ts.lts.ltsa.LTSACall.compose
 import cmu.isr.ts.lts.makeErrorState
 import cmu.isr.ts.nfa.NFAParallelComposition
 import cmu.isr.ts.nfa.determinise
+import net.automatalib.automata.fsa.NFA
 import net.automatalib.automata.fsa.impl.compact.CompactDFA
 import net.automatalib.util.automata.builders.AutomatonBuilders
 import net.automatalib.words.Alphabet
@@ -138,6 +139,24 @@ fun copyLTSFull(T : CompactLTS<String>) : CompactLTS<String> {
     return newNFA.asLTS()
 }
 
+fun copyLTSAcceptingOnly(T : CompactLTS<String>) : NFA<Int, String> {
+    val newNFA = AutomatonBuilders.newNFA(T.inputAlphabet).create()
+    for (s in T.states) {
+        if (T.isAccepting(s)) {
+            if (T.initialStates.contains(s)) {
+                newNFA.addInitialState(T.isAccepting(s))
+            } else {
+                newNFA.addState(T.isAccepting(s))
+            }
+        }
+    }
+    for (t in ltsTransitions(T)) {
+        if (newNFA.states.contains(t.first) && newNFA.states.contains(t.third))
+        newNFA.addTransition(t.first, t.second, t.third)
+    }
+    return newNFA
+}
+
 /**
  * Turns an NFA (T) into a DFA
  */
@@ -152,6 +171,7 @@ fun toDeterministic(T : CompactLTS<String>) : MutableDetLTS<Int, String> {
  * T |= P
  */
 fun satisfies(T : LTS<Int, String>, P : MutableDetLTS<Int,String>) : Boolean {
+    // TODO really should make a copy of P
     val pFixed = makeErrorState(P)
     val result = checkSafety(T, pFixed)
     return !result.violation
