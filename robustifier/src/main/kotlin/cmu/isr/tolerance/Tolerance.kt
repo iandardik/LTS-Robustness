@@ -17,8 +17,10 @@ import ltsTransitions
 import net.automatalib.util.automata.builders.AutomatonBuilders
 import net.automatalib.words.Alphabet
 import net.automatalib.words.impl.Alphabets
+import outgoingStates
 import powerset
 import product
+import reachableStates
 import safe
 import satisfies
 import stripTauTransitions
@@ -98,6 +100,7 @@ fun deltaBruteForce(E : CompactLTS<String>, C : CompactLTS<String>, P : CompactD
 
         val del = Rf
             .filter { S.contains(it.first) && !S.contains(it.third) }
+            //.filter { S.contains(it.first) && (Rf - Rt).contains(it) }
             .map { Triple(it.first.first, it.second, it.third.first) }
             .toSet()
         val deltaCandidate = A - del
@@ -109,16 +112,6 @@ fun deltaBruteForce(E : CompactLTS<String>, C : CompactLTS<String>, P : CompactD
     return delta.toSet()
 }
 
-fun outgoingStates(S : Set<Pair<Int,Int>>, F : NFAParallelComposition<Int,Int,String>, nfaF : LTS<Int,String>) : Set<Pair<Int,Int>> {
-    val outgoing = mutableSetOf<Pair<Int,Int>>()
-    for (src in S) {
-        for (a in nfaF.alphabet()) {
-            outgoing.addAll(F.getTransitions(src, a))
-        }
-    }
-    return outgoing
-}
-
 fun heuristicSubsets(W : Set<Pair<Int, Int>>,
                      F : NFAParallelComposition<Int,Int,String>,
                      nfaF : LTS<Int,String>,
@@ -127,8 +120,10 @@ fun heuristicSubsets(W : Set<Pair<Int, Int>>,
                      : Set<Set<Pair<Int, Int>>> {
     val Rfnf = ltsTransitions(F_notfull, nfaF_notfull.alphabet())
     val nec = W intersect (Rfnf.map { it.first } union Rfnf.map { it.third })
+    val init = nec intersect reachableStates(F_notfull, nfaF_notfull)
+    //println("nec: $nec")
     val queue : Queue<Set<Pair<Int, Int>>> = LinkedList()
-    queue.add(nec)
+    queue.add(init)
 
     val subsets = mutableSetOf<Set<Pair<Int, Int>>>()
     while (queue.isNotEmpty()) {
@@ -136,6 +131,8 @@ fun heuristicSubsets(W : Set<Pair<Int, Int>>,
         if (!subsets.contains(S)) {
             subsets.add(S)
             val dstStates = (outgoingStates(S, F, nfaF) - S) intersect W
+            //val dstNec = emptySet<Pair<Int,Int>>()
+            //val dstNec = dstStates intersect nec
             for (additionalStates in powerset(dstStates)) {
                 val Sprime = S union additionalStates
                 queue.add(Sprime)
@@ -167,10 +164,10 @@ fun deltaHeuristic(E : CompactLTS<String>, C : CompactLTS<String>, P : CompactDe
 
     val F_notfull = NFAParallelComposition(E, ltsCCompP)
     val nfaF_notfull = parallel(E, ltsCCompP)
-    //val subsets = heuristicSubsets(W, F, nfaF, F_notfull, nfaF_notfull)
-    val subsets = powerset(W)
-    println("#subsets: ${subsets.size}")
-    //println("subsets: $subsets")
+    val subsets = heuristicSubsets(W, F, nfaF, F_notfull, nfaF_notfull)
+    //val subsets = powerset(W)
+    println("#subsets/2^n: ${subsets.size} / ${Math.pow(2.0, W.size.toDouble())}")
+    println("subsets: $subsets")
 
     //println("Rf: ${Rf.joinToString { "$it\n" }}")
     //println()
@@ -179,23 +176,84 @@ fun deltaHeuristic(E : CompactLTS<String>, C : CompactLTS<String>, P : CompactDe
         val Rt = Rf.filter { SxActxS.contains(it) }
         val RtProjE = Rt.map { Triple(it.first.first,it.second,it.third.first) }.toSet()
 
-        //val del = Rf
-        val del = (Rf - Rt)
+        val del = (Rf - Rt) //Rf
             .filter { S.contains(it.first) && !S.contains(it.third) }
             .map { Triple(it.first.first, it.second, it.third.first) }
             .toSet()
         val deltaCandidate = A - del
-        //delta.add(deltaCandidate)
         if (RtProjE.containsAll(RecProjE) && deltaCandidate.containsAll(RecProjE)) {
             delta.add(deltaCandidate)
-            if (deltaCandidate.contains(Triple(1,"a",2))) {
-                println("subset: $S")
-                println("Rt: $Rt")
-                println("deltaCandidate: $deltaCandidate")
-                println()
+        }
+    }
+
+    return delta.toSet()
+}
+
+fun deltaHeuristicMonolith(E : CompactLTS<String>, C : CompactLTS<String>, P : CompactDetLTS<String>) : Set<Set<Triple<Int,String,Int>>> {
+    val Efull = copyLTSFull(E)
+    val ltsCCompP = parallel(C, P)
+    val nfaF = parallel(Efull, ltsCCompP)
+    val F = NFAParallelComposition(Efull, ltsCCompP)
+    val QfMinusErr = acceptingStates(F, nfaF, E, ltsCCompP)
+    val W = safe(E, F, QfMinusErr)
+    println("#W: ${W.size}")
+
+    //val Re = ltsTransitions(E)
+    val ltsECompC = parallel(E, C)
+    val ECompC = NFAParallelComposition(E, C)
+    val RecProjE = ltsTransitions(ECompC, ltsECompC.alphabet())
+        .map { Triple(it.first.first, it.second, it.third.first) }
+        .toSet()
+    val Rf = ltsTransitions(F, nfaF.alphabet())
+    val A = product(E.states, E.inputAlphabet.toSet(), E.states)
+    val delta = DeltaBuilder()
+
+    val F_notfull = NFAParallelComposition(E, ltsCCompP)
+    val nfaF_notfull = parallel(E, ltsCCompP)
+    //val subsets = heuristicSubsets(W, F, nfaF, F_notfull, nfaF_notfull)
+    //val subsets = powerset(W)
+    //println("#subsets/2^n: ${subsets.size} / ${Math.pow(2.0, W.size.toDouble())}")
+    //println("subsets: $subsets")
+
+    val Rfnf = ltsTransitions(F_notfull, nfaF_notfull.alphabet())
+    val nec = W intersect (Rfnf.map { it.first } union Rfnf.map { it.third })
+    val init = nec intersect reachableStates(F_notfull, nfaF_notfull)
+    //println("nec: $nec")
+    val queue : Queue<Set<Pair<Int, Int>>> = LinkedList()
+    queue.add(init)
+
+    val subsets = mutableSetOf<Set<Pair<Int, Int>>>()
+    while (queue.isNotEmpty()) {
+        val S = queue.remove()
+        if (!subsets.contains(S)) {
+            subsets.add(S)
+
+            //////////////// begin S code ////////////////
+            val SxActxS = product(S, nfaF.alphabet().toSet(), S)
+            val Rt = Rf.filter { SxActxS.contains(it) }
+            val RtProjE = Rt.map { Triple(it.first.first,it.second,it.third.first) }.toSet()
+
+            val del = (Rf - Rt) //Rf
+                .filter { S.contains(it.first) && !S.contains(it.third) }
+                .map { Triple(it.first.first, it.second, it.third.first) }
+                .toSet()
+            val deltaCandidate = A - del
+            if (RtProjE.containsAll(RecProjE) && deltaCandidate.containsAll(RecProjE)) {
+                delta.add(deltaCandidate)
+            }
+            //////////////// end S code ////////////////
+
+            val dstStates = (outgoingStates(S, F, nfaF) - S) intersect W
+            //val dstNec = emptySet<Pair<Int,Int>>()
+            //val dstNec = dstStates intersect nec
+            for (additionalStates in powerset(dstStates)) {
+                val Sprime = S union additionalStates
+                queue.add(Sprime)
             }
         }
     }
+    //println("Rf: ${Rf.joinToString { "$it\n" }}")
+    //println()
 
     return delta.toSet()
 }
@@ -234,7 +292,8 @@ fun main(args : Array<String>) {
         when (alg) {
             "0" -> deltaNaiveBruteForce(E, C, P)
             "1" -> deltaBruteForce(E, C, P)
-            "2" -> deltaHeuristic(E, C, P)
+            //"2" -> deltaHeuristic(E, C, P)
+            "2" -> deltaHeuristicMonolith(E, C, P)
             else -> {
                 println("Invalid algorithm")
                 return

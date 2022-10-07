@@ -244,3 +244,31 @@ fun fspToNFA(path: String) : CompactLTS<String> {
     val composite = LTSACall.compile(spec).compose()
     return composite.asLTS() as CompactLTS
 }
+
+fun outgoingStates(S : Set<Pair<Int,Int>>, F : NFAParallelComposition<Int,Int,String>, nfaF : LTS<Int,String>) : Set<Pair<Int,Int>> {
+    val outgoing = mutableSetOf<Pair<Int,Int>>()
+    for (src in S) {
+        for (a in nfaF.alphabet()) {
+            outgoing.addAll(F.getTransitions(src, a))
+        }
+    }
+    return outgoing
+}
+
+fun reachableStates(F : NFAParallelComposition<Int,Int,String>, nfaF : LTS<Int,String>) : Set<Pair<Int,Int>> {
+    val reach = mutableSetOf<Pair<Int,Int>>()
+    val queue : Queue<Pair<Int, Int>> = LinkedList()
+    queue.addAll(F.initialStates)
+    while (queue.isNotEmpty()) {
+        val src = queue.remove()
+        if (!reach.contains(src)) {
+            reach.add(src)
+            for (a in nfaF.alphabet()) {
+                for (dst in F.getTransitions(src, a)) {
+                    queue.add(dst)
+                }
+            }
+        }
+    }
+    return reach
+}
