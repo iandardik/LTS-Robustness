@@ -1,0 +1,25 @@
+4
+
+s0	0	2
+eo.enter	s3	uc	uo
+v.enter	s1	uc	uo
+
+s1	0	5
+v.exit	s0	uc	uo
+pw	s2	uc	o
+sel	s1	uc	o
+cfm	s1	uc	o
+vote	s1	uc	o
+
+s2	0	4
+cfm	s1	uc	uo
+pw	s2	uc	uo
+sel	s2	uc	uo
+vote	s2	uc	uo
+
+
+s3	0	4
+eo.exit	s0	uc	uo
+sel	s3	uc	o
+cfm	s3	uc	o
+vote	s3	uc	o

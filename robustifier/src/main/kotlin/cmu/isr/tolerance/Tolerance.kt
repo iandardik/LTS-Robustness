@@ -8,15 +8,23 @@ import cmu.isr.ts.lts.*
 import cmu.isr.ts.lts.ltsa.write
 import cmu.isr.ts.nfa.NFAParallelComposition
 import cmu.isr.ts.parallel
+import containsSubsetOf
 import copyLTS
 import copyLTSAcceptingOnly
 import copyLTSFull
+import divide
+import elementwiseComplement
+import errorStates
 import fspToDFA
 import fspToNFA
+import incomingStates
+import isClosedWithRespectToTable
+import isMaximal
 import ltsTransitions
 import net.automatalib.util.automata.builders.AutomatonBuilders
 import net.automatalib.words.Alphabet
 import net.automatalib.words.impl.Alphabets
+import outgoingEdges
 import outgoingStates
 import powerset
 import product
@@ -24,6 +32,8 @@ import reachableStates
 import safe
 import satisfies
 import stripTauTransitions
+import subsetOfAMaximalStateSubset
+import transClosureTable
 import java.util.*
 
 fun <T> allPerturbations(states : Collection<T>, alphabet : Alphabet<String>) : Set<Set<Triple<T, String, T>>> {
@@ -50,7 +60,7 @@ fun deltaNaiveBruteForce(E : CompactLTS<String>,
                          C : CompactLTS<String>,
                          P : CompactDetLTS<String>)
                         : Set<Set<Triple<Int,String,Int>>> {
-    val delta = DeltaBuilder()
+    val delta = DeltaBuilder(E, C, P)
     val QXActXQ = allPerturbations(E.states, E.alphabet())
 
     for (d in QXActXQ) {
@@ -81,7 +91,10 @@ fun deltaBruteForce(E : CompactLTS<String>, C : CompactLTS<String>, P : CompactD
     val nfaF = parallel(Efull, ltsCCompP)
     val F = NFAParallelComposition(Efull, ltsCCompP)
     val QfMinusErr = acceptingStates(F, nfaF, E, ltsCCompP)
-    val W = safe(E, F, QfMinusErr)
+
+    // small optimization to W
+    //val W = safe(E, F, QfMinusErr)
+    val W = safe(E, F, QfMinusErr) intersect reachableStates(F, nfaF)
     println("#W: ${W.size}")
 
     //val Re = ltsTransitions(E)
@@ -92,7 +105,7 @@ fun deltaBruteForce(E : CompactLTS<String>, C : CompactLTS<String>, P : CompactD
         .toSet()
     val Rf = ltsTransitions(F, nfaF.alphabet())
     val A = product(E.states, E.inputAlphabet.toSet(), E.states)
-    val delta = DeltaBuilder()
+    val delta = DeltaBuilder(E, C, P)
     for (S in powerset(W)) {
         val SxActxS = product(S, nfaF.alphabet().toSet(), S)
         val Rt = Rf.filter { SxActxS.contains(it) }
@@ -149,7 +162,10 @@ fun deltaHeuristic(E : CompactLTS<String>, C : CompactLTS<String>, P : CompactDe
     val nfaF = parallel(Efull, ltsCCompP)
     val F = NFAParallelComposition(Efull, ltsCCompP)
     val QfMinusErr = acceptingStates(F, nfaF, E, ltsCCompP)
-    val W = safe(E, F, QfMinusErr)
+
+    // small optimization to W
+    //val W = safe(E, F, QfMinusErr)
+    val W = safe(E, F, QfMinusErr) intersect reachableStates(F, nfaF)
     println("#W: ${W.size}")
 
     //val Re = ltsTransitions(E)
@@ -160,14 +176,13 @@ fun deltaHeuristic(E : CompactLTS<String>, C : CompactLTS<String>, P : CompactDe
         .toSet()
     val Rf = ltsTransitions(F, nfaF.alphabet())
     val A = product(E.states, E.inputAlphabet.toSet(), E.states)
-    val delta = DeltaBuilder()
+    val delta = DeltaBuilder(E, C, P)
 
     val F_notfull = NFAParallelComposition(E, ltsCCompP)
     val nfaF_notfull = parallel(E, ltsCCompP)
     val subsets = heuristicSubsets(W, F, nfaF, F_notfull, nfaF_notfull)
     //val subsets = powerset(W)
     println("#subsets/2^n: ${subsets.size} / ${Math.pow(2.0, W.size.toDouble())}")
-    println("subsets: $subsets")
 
     //println("Rf: ${Rf.joinToString { "$it\n" }}")
     //println()
@@ -176,7 +191,7 @@ fun deltaHeuristic(E : CompactLTS<String>, C : CompactLTS<String>, P : CompactDe
         val Rt = Rf.filter { SxActxS.contains(it) }
         val RtProjE = Rt.map { Triple(it.first.first,it.second,it.third.first) }.toSet()
 
-        val del = (Rf - Rt) //Rf
+        val del = Rf //(Rf - Rt)
             .filter { S.contains(it.first) && !S.contains(it.third) }
             .map { Triple(it.first.first, it.second, it.third.first) }
             .toSet()
@@ -195,8 +210,79 @@ fun deltaHeuristicMonolith(E : CompactLTS<String>, C : CompactLTS<String>, P : C
     val nfaF = parallel(Efull, ltsCCompP)
     val F = NFAParallelComposition(Efull, ltsCCompP)
     val QfMinusErr = acceptingStates(F, nfaF, E, ltsCCompP)
-    val W = safe(E, F, QfMinusErr)
+
+    val W = safe(E, F, QfMinusErr) intersect reachableStates(F, nfaF)
+
+    val ltsECompC = parallel(E, C)
+    val ECompC = NFAParallelComposition(E, C)
+    val RecProjE = ltsTransitions(ECompC, ltsECompC.alphabet())
+        .map { Triple(it.first.first, it.second, it.third.first) }
+        .toSet()
+    val Rf = ltsTransitions(F, nfaF.alphabet())
+    val A = product(E.states, E.inputAlphabet.toSet(), E.states)
+    val delta = mutableSetOf<Set<Triple<Int,String,Int>>>()
+
+    val F_notfull = NFAParallelComposition(E, ltsCCompP)
+    val nfaF_notfull = parallel(E, ltsCCompP)
+    val transClosures = transClosureTable(F_notfull, nfaF_notfull)
+
+    val Rfnf = ltsTransitions(F_notfull, nfaF_notfull.alphabet())
+    val nec = W intersect (Rfnf.map { it.first } union Rfnf.map { it.third })
+    val init = nec intersect reachableStates(F_notfull, nfaF_notfull)
+    val queue : Queue<Set<Pair<Int, Int>>> = LinkedList()
+    queue.add(init)
+
     println("#W: ${W.size}")
+    val visited = mutableSetOf(init)
+    val maximumSubsets = mutableSetOf<Set<Pair<Int, Int>>>()
+    while (queue.isNotEmpty()) {
+        val S = queue.remove()
+        if (!subsetOfAMaximalStateSubset(S, maximumSubsets)) {
+
+            //////////////// begin S code ////////////////
+            val SxActxS = product(S, nfaF.alphabet().toSet(), S)
+            val Rt = Rf.filter { SxActxS.contains(it) }
+            val RtProjE = Rt.map { Triple(it.first.first,it.second,it.third.first) }.toSet()
+
+            val del = Rf
+                .filter { S.contains(it.first) && !S.contains(it.third) }
+                .map { Triple(it.first.first, it.second, it.third.first) }
+                .toSet()
+            val deltaCandidate = A - del
+            if (RtProjE.containsAll(RecProjE) && deltaCandidate.containsAll(RecProjE)) {
+                if (isMaximal(E, deltaCandidate, C, P, A)) {
+                    delta.add(deltaCandidate)
+                    maximumSubsets.add(S)
+                }
+            }
+            //////////////// end S code ////////////////
+
+            val dstStates = (outgoingStates(S, F, nfaF) - S) intersect W
+            println("Computing powerset size: ${dstStates.size}")
+            for (additionalStates in powerset(dstStates)) {
+                val Sprime = S union additionalStates
+                if (!visited.contains(Sprime) && isClosedWithRespectToTable(Sprime, transClosures)) {
+                    queue.add(Sprime)
+                    visited.add(Sprime)
+                }
+            }
+        }
+    }
+
+    return delta
+}
+
+fun deltaBackwardsHeuristicMonolith(E : CompactLTS<String>, C : CompactLTS<String>, P : CompactDetLTS<String>) : Set<Set<Triple<Int,String,Int>>> {
+    val Efull = copyLTSFull(E)
+    val ltsCCompP = parallel(C, P)
+    val nfaF = parallel(Efull, ltsCCompP)
+    val F = NFAParallelComposition(Efull, ltsCCompP)
+    val QfMinusErr = acceptingStates(F, nfaF, E, ltsCCompP)
+
+    // small optimization to W
+    //val W = safe(E, F, QfMinusErr)
+    val Freach = reachableStates(F, nfaF)
+    val W = safe(E, F, QfMinusErr) intersect Freach
 
     //val Re = ltsTransitions(E)
     val ltsECompC = parallel(E, C)
@@ -206,10 +292,12 @@ fun deltaHeuristicMonolith(E : CompactLTS<String>, C : CompactLTS<String>, P : C
         .toSet()
     val Rf = ltsTransitions(F, nfaF.alphabet())
     val A = product(E.states, E.inputAlphabet.toSet(), E.states)
-    val delta = DeltaBuilder()
+    //val delta = DeltaBuilder(E, C, P)
+    val delta = mutableSetOf<Set<Triple<Int,String,Int>>>()
 
     val F_notfull = NFAParallelComposition(E, ltsCCompP)
     val nfaF_notfull = parallel(E, ltsCCompP)
+    val transClosures = transClosureTable(F_notfull, nfaF_notfull)
     //val subsets = heuristicSubsets(W, F, nfaF, F_notfull, nfaF_notfull)
     //val subsets = powerset(W)
     //println("#subsets/2^n: ${subsets.size} / ${Math.pow(2.0, W.size.toDouble())}")
@@ -218,42 +306,324 @@ fun deltaHeuristicMonolith(E : CompactLTS<String>, C : CompactLTS<String>, P : C
     val Rfnf = ltsTransitions(F_notfull, nfaF_notfull.alphabet())
     val nec = W intersect (Rfnf.map { it.first } union Rfnf.map { it.third })
     val init = nec intersect reachableStates(F_notfull, nfaF_notfull)
-    //println("nec: $nec")
+    //val err = errorStates(F, nfaF) // TODO add ALL error states, i.e. search thru F_notfull to make sure we get the closure of err states
+    val err = Freach - W
     val queue : Queue<Set<Pair<Int, Int>>> = LinkedList()
-    queue.add(init)
+    queue.add(err)
+    val visited = mutableSetOf(err)
+    val maximalStateSubets = mutableSetOf<Set<Pair<Int, Int>>>()
 
-    val subsets = mutableSetOf<Set<Pair<Int, Int>>>()
+    println("#W: ${W.size}")
+    //println("err: $err")
     while (queue.isNotEmpty()) {
-        val S = queue.remove()
-        if (!subsets.contains(S)) {
-            subsets.add(S)
-
+        val Sneg = queue.remove()
+        val S = W - Sneg
+        if (!subsetOfAMaximalStateSubset(S, maximalStateSubets)) {
             //////////////// begin S code ////////////////
             val SxActxS = product(S, nfaF.alphabet().toSet(), S)
             val Rt = Rf.filter { SxActxS.contains(it) }
             val RtProjE = Rt.map { Triple(it.first.first,it.second,it.third.first) }.toSet()
 
-            val del = (Rf - Rt) //Rf
+            val del = Rf
                 .filter { S.contains(it.first) && !S.contains(it.third) }
                 .map { Triple(it.first.first, it.second, it.third.first) }
                 .toSet()
             val deltaCandidate = A - del
             if (RtProjE.containsAll(RecProjE) && deltaCandidate.containsAll(RecProjE)) {
-                delta.add(deltaCandidate)
+                if (isMaximal(E, deltaCandidate, C, P, A)) {
+                    delta.add(deltaCandidate)
+                    maximalStateSubets.add(S)
+                }
             }
             //////////////// end S code ////////////////
 
-            val dstStates = (outgoingStates(S, F, nfaF) - S) intersect W
-            //val dstNec = emptySet<Pair<Int,Int>>()
-            //val dstNec = dstStates intersect nec
-            for (additionalStates in powerset(dstStates)) {
-                val Sprime = S union additionalStates
-                queue.add(Sprime)
+            val srcStates = (incomingStates(Sneg, F, nfaF) - Sneg) intersect W
+            println("powerset size: ${srcStates.size}")
+            for (additionalStates in powerset(srcStates)) {
+                val SnegPrime = Sneg union additionalStates
+                val Sprime = W - SnegPrime
+                //println("SnegPrime: $SnegPrime")
+                //println("Sprime: $Sprime")
+                if (!visited.contains(SnegPrime) && isClosedWithRespectToTable(Sprime, transClosures)) {
+                    queue.add(SnegPrime)
+                    visited.add(SnegPrime)
+                }
             }
         }
     }
     //println("Rf: ${Rf.joinToString { "$it\n" }}")
     //println()
+
+    //return delta.toSet()
+    return delta
+}
+
+/*
+fun deltaDivideAndConquer(E : CompactLTS<String>, C : CompactLTS<String>, P : CompactDetLTS<String>) : Set<Set<Triple<Int,String,Int>>> {
+    val Efull = copyLTSFull(E)
+    val ltsCCompP = parallel(C, P)
+    val nfaF = parallel(Efull, ltsCCompP)
+    val F = NFAParallelComposition(Efull, ltsCCompP)
+    val Qf = F.getStates(nfaF.alphabet())
+    val QfMinusErr = acceptingStates(F, nfaF, E, ltsCCompP)
+
+    val W = safe(E, F, QfMinusErr) intersect reachableStates(F, nfaF)
+    println("#W: ${W.size}")
+
+    val ltsECompC = parallel(E, C)
+    val ECompC = NFAParallelComposition(E, C)
+    val RecProjE = ltsTransitions(ECompC, ltsECompC.alphabet())
+        .map { Triple(it.first.first, it.second, it.third.first) }
+        .toSet()
+    val Rf = ltsTransitions(F, nfaF.alphabet())
+    val A = product(E.states, E.inputAlphabet.toSet(), E.states)
+
+    val F_notfull = NFAParallelComposition(E, ltsCCompP)
+    val nfaF_notfull = parallel(E, ltsCCompP)
+    val transClosures = transClosureTable(F_notfull, nfaF_notfull)
+
+    val Rfnf = ltsTransitions(F_notfull, nfaF_notfull.alphabet())
+    val nec = W intersect (Rfnf.map { it.first } union Rfnf.map { it.third })
+    val init = nec intersect reachableStates(F_notfull, nfaF_notfull)
+
+    fun dac(scope : Set<Pair<Int, Int>>) : Set<Set<Triple<Int,String,Int>>> {
+        // base case
+        if (scope.isEmpty()) {
+            return emptySet()
+        }
+
+        // divide
+        val (lS, rS) = divide(scope)
+        val lDelta = dac(lS)
+        val rDelta = dac(rS)
+        val lDeltaC = elementwiseComplement(lDelta, A)
+        val rDeltaC = elementwiseComplement(rDelta, A)
+
+        // the rest is conquer
+
+        val outsideScope = Qf - scope
+        val queue : Queue<Set<Pair<Int, Int>>> = LinkedList()
+        queue.add(init)
+
+        val visited = mutableSetOf(init)
+        val maximumSubsets = mutableSetOf<Set<Pair<Int, Int>>>()
+        val delta = mutableSetOf<Set<Triple<Int,String,Int>>>()
+        while (queue.isNotEmpty()) {
+            val S = queue.remove()
+            if (!subsetOfAMaximalStateSubset(S, maximumSubsets)) {
+                //////////////// begin S code ////////////////
+                val SxActxS = product(S, nfaF.alphabet().toSet(), S)
+                val Rt = Rf.filter { SxActxS.contains(it) }
+                val RtProjE = Rt.map { Triple(it.first.first,it.second,it.third.first) }.toSet()
+
+                val del = Rf
+                    .filter { S.contains(it.first) && !S.contains(it.third) }
+                    .map { Triple(it.first.first, it.second, it.third.first) }
+                    .toSet()
+                val deltaCandidate = A - del
+                if (RtProjE.containsAll(RecProjE) && deltaCandidate.containsAll(RecProjE)) {
+                    if (isMaximal(E, deltaCandidate, C, P, A)) {
+                        delta.add(deltaCandidate)
+                        maximumSubsets.add(S)
+                    }
+                }
+                //////////////// end S code ////////////////
+
+                // continue the BFS
+                val dstStates = (outgoingStates(S, F, nfaF) - S) intersect W
+                val dstStatesInScope = dstStates intersect scope
+                val dstStatesOutsideScope = dstStates intersect outsideScope
+                println("Computing power set size: ${dstStatesInScope.size}")
+                // TODO should we make this function return sets of states (subsets of W) that are valid?
+                // TODO instead, can we filter states are are in the edges that are outside the scope?
+                for (additionalStates in powersetExclude(dstStatesInScope, lDeltaC union rDeltaC)) {
+                    val Sprime = S union additionalStates union dstStatesOutsideScope
+                    if (!visited.contains(Sprime) && isClosedWithRespectToTable(Sprime, transClosures)) {
+                        queue.add(Sprime)
+                        visited.add(Sprime)
+                    }
+                }
+            }
+        }
+
+        return delta
+    }
+
+    return dac(W)
+}
+*/
+
+fun deltaDFSHelper(Sraw : Set<Pair<Int,Int>>,
+                   delta : DeltaBuilder,
+                   visited : MutableSet<Set<Pair<Int,Int>>>,
+                   A : Set<Triple<Int,String,Int>>,
+                   F : NFAParallelComposition<Int,Int,String>,
+                   nfaF : LTS<Int,String>,
+                   Rf : Set<Triple<Pair<Int,Int>, String, Pair<Int,Int>>>,
+                   transClosures : Map<Pair<Int,Int>, Set<Pair<Int,Int>>>,
+                   W : Set<Pair<Int,Int>>) {
+    val S = Sraw
+        .mapNotNull { transClosures[it] }
+        .fold(Sraw) { acc, e -> acc union e }
+        .toSet()
+
+    if (visited.contains(S)) {
+        return
+    }
+    visited.add(S)
+
+    // compute delta
+    val del = Rf
+        .filter { S.contains(it.first) && !S.contains(it.third) }
+        .map { Triple(it.first.first, it.second, it.third.first) }
+        .toSet()
+    val deltaCandidate = A - del
+
+    if (!delta.contains(deltaCandidate)) {
+        delta.add(deltaCandidate)
+
+        val toExplore = (outgoingStates(S, F, nfaF) - S) intersect W
+        if (toExplore.isNotEmpty()) {
+            if (toExplore.size > 15) {
+                println("Exploring set size: ${toExplore.size}")
+            }
+            deltaDFSHelperRec(S, toExplore.toList(), visited, delta, A, F, nfaF, Rf, transClosures, W)
+        }
+    }
+}
+fun deltaDFSHelperRec(S : Set<Pair<Int,Int>>,
+                      toExplore : List<Pair<Int,Int>>,
+                      visited : MutableSet<Set<Pair<Int,Int>>>,
+                      delta : DeltaBuilder,
+                      A : Set<Triple<Int,String,Int>>,
+                      F : NFAParallelComposition<Int,Int,String>,
+                      nfaF : LTS<Int,String>,
+                      Rf : Set<Triple<Pair<Int,Int>, String, Pair<Int,Int>>>,
+                      transClosures : Map<Pair<Int,Int>, Set<Pair<Int,Int>>>,
+                      W : Set<Pair<Int,Int>>) {
+    if (toExplore.isEmpty()) {
+        deltaDFSHelper(S, delta, visited, A, F, nfaF, Rf, transClosures, W)
+    }
+    else {
+        val head = toExplore.first()
+        val tail = toExplore.drop(1)
+        val Skeep = S + head
+        deltaDFSHelperRec(S, tail, visited, delta, A, F, nfaF, Rf, transClosures, W)
+        deltaDFSHelperRec(Skeep, tail, visited, delta, A, F, nfaF, Rf, transClosures, W)
+    }
+}
+
+fun deltaDFS(E : CompactLTS<String>, C : CompactLTS<String>, P : CompactDetLTS<String>) : Set<Set<Triple<Int,String,Int>>> {
+    val Efull = copyLTSFull(E)
+    val ltsCCompP = parallel(C, P)
+    val nfaF = parallel(Efull, ltsCCompP)
+    val F = NFAParallelComposition(Efull, ltsCCompP)
+    val QfMinusErr = acceptingStates(F, nfaF, E, ltsCCompP)
+
+    val W = safe(E, F, QfMinusErr) intersect reachableStates(F, nfaF)
+
+    val Rf = ltsTransitions(F, nfaF.alphabet())
+    val A = product(E.states, E.inputAlphabet.toSet(), E.states)
+
+    val F_notfull = NFAParallelComposition(E, ltsCCompP)
+    val nfaF_notfull = parallel(E, ltsCCompP)
+    val transClosures = transClosureTable(F_notfull, nfaF_notfull)
+
+    val init = F.initialStates
+    val delta = DeltaBuilder(E, C, P)
+    val visited = mutableSetOf<Set<Pair<Int,Int>>>()
+
+    deltaDFSHelper(init, delta, visited, A, F, nfaF, Rf, transClosures, W)
+
+    return delta.toSet()
+}
+
+
+fun deltaBackwardDFSHelper(SerrRaw : Set<Pair<Int,Int>>,
+                   delta : DeltaBuilder,
+                   visited : MutableSet<Set<Pair<Int,Int>>>,
+                   init : Set<Pair<Int,Int>>,
+                   A : Set<Triple<Int,String,Int>>,
+                   F : NFAParallelComposition<Int,Int,String>,
+                   nfaF : LTS<Int,String>,
+                   Rf : Set<Triple<Pair<Int,Int>, String, Pair<Int,Int>>>,
+                   transClosures : Map<Pair<Int,Int>, Set<Pair<Int,Int>>>,
+                   W : Set<Pair<Int,Int>>) {
+    // add the transitive closure in from states outside of SerrRaw
+    val Serr = Rf
+        .filter { !SerrRaw.contains(it.first) }
+        .filter { (transClosures[it.first]?.intersect(SerrRaw))?.isNotEmpty() ?: false }
+        .fold(SerrRaw) { acc,t -> acc + t.first }
+        .toSet()
+
+    if (visited.contains(Serr) || !(W-Serr).containsAll(init)) {
+        return
+    }
+    visited.add(Serr)
+
+    // compute delta
+    val del = Rf
+        .filter { !Serr.contains(it.first) && Serr.contains(it.third) }
+        .map { Triple(it.first.first, it.second, it.third.first) }
+        .toSet()
+    val deltaCandidate = A - del
+
+    if (!delta.contains(deltaCandidate)) {
+        delta.add(deltaCandidate)
+
+        val toExplore = (incomingStates(Serr, F, nfaF) - Serr) intersect W
+        if (toExplore.isNotEmpty()) {
+            if (toExplore.size > 15) {
+                println("Exploring set size: ${toExplore.size}")
+            }
+            deltaBackwardDFSHelperRec(Serr, toExplore.toList(), visited, init, delta, A, F, nfaF, Rf, transClosures, W)
+        }
+    }
+}
+fun deltaBackwardDFSHelperRec(Serr : Set<Pair<Int,Int>>,
+                      toExplore : List<Pair<Int,Int>>,
+                      visited : MutableSet<Set<Pair<Int,Int>>>,
+                      init : Set<Pair<Int,Int>>,
+                      delta : DeltaBuilder,
+                      A : Set<Triple<Int,String,Int>>,
+                      F : NFAParallelComposition<Int,Int,String>,
+                      nfaF : LTS<Int,String>,
+                      Rf : Set<Triple<Pair<Int,Int>, String, Pair<Int,Int>>>,
+                      transClosures : Map<Pair<Int,Int>, Set<Pair<Int,Int>>>,
+                      W : Set<Pair<Int,Int>>) {
+    if (toExplore.isEmpty()) {
+        deltaBackwardDFSHelper(Serr, delta, visited, init, A, F, nfaF, Rf, transClosures, W)
+    }
+    else {
+        val head = toExplore.first()
+        val tail = toExplore.drop(1)
+        val Skeep = Serr + head
+        deltaBackwardDFSHelperRec(Serr, tail, visited, init, delta, A, F, nfaF, Rf, transClosures, W)
+        deltaBackwardDFSHelperRec(Skeep, tail, visited, init, delta, A, F, nfaF, Rf, transClosures, W)
+    }
+}
+
+fun deltaBackwardDFS(E : CompactLTS<String>, C : CompactLTS<String>, P : CompactDetLTS<String>) : Set<Set<Triple<Int,String,Int>>> {
+    val Efull = copyLTSFull(E)
+    val ltsCCompP = parallel(C, P)
+    val nfaF = parallel(Efull, ltsCCompP)
+    val F = NFAParallelComposition(Efull, ltsCCompP)
+    val QfMinusErr = acceptingStates(F, nfaF, E, ltsCCompP)
+
+    val W = safe(E, F, QfMinusErr) intersect reachableStates(F, nfaF)
+
+    val Rf = ltsTransitions(F, nfaF.alphabet())
+    val A = product(E.states, E.inputAlphabet.toSet(), E.states)
+
+    val F_notfull = NFAParallelComposition(E, ltsCCompP)
+    val nfaF_notfull = parallel(E, ltsCCompP)
+    val transClosures = transClosureTable(F_notfull, nfaF_notfull)
+
+    val errorStates = F.getStates(nfaF.alphabet()) - W
+    val delta = DeltaBuilder(E, C, P)
+    val visited = mutableSetOf<Set<Pair<Int,Int>>>()
+
+    deltaBackwardDFSHelper(errorStates, delta, visited, F.initialStates, A, F, nfaF, Rf, transClosures, W)
 
     return delta.toSet()
 }
@@ -288,12 +658,20 @@ fun main(args : Array<String>) {
     val C = stripTauTransitions(fspToNFA(args[2]))
     val P = fspToDFA(args[3])
 
+    if (!satisfies(parallel(E,C), P)) {
+        println("E||C does not satisfy P")
+        return
+    }
+
     val delta =
         when (alg) {
             "0" -> deltaNaiveBruteForce(E, C, P)
             "1" -> deltaBruteForce(E, C, P)
-            //"2" -> deltaHeuristic(E, C, P)
-            "2" -> deltaHeuristicMonolith(E, C, P)
+            "2" -> deltaHeuristic(E, C, P)
+            "3" -> deltaHeuristicMonolith(E, C, P)
+            "4" -> deltaBackwardsHeuristicMonolith(E, C, P)
+            "5" -> deltaDFS(E, C, P)
+            "6" -> deltaBackwardDFS(E, C, P)
             else -> {
                 println("Invalid algorithm")
                 return
@@ -315,14 +693,13 @@ fun main(args : Array<String>) {
             }
         }
         println("  {${sortedD.joinToString()}}")
-        //println("  {${d.joinToString()}}")
     }
 
     // print the FSP for each Ed
     for (d in delta) {
-        println()
         val Ed = copyLTSAcceptingOnly(addPerturbations(E, d))
-        write(System.out, Ed, Ed.alphabet())
+        //println()
+        //write(System.out, Ed, Ed.alphabet())
     }
 
     // checks to make sure the solution is sound
@@ -339,4 +716,26 @@ fun main(args : Array<String>) {
         println()
         println("Solution is sound")
     }
+
+    // checks to make sure every member of delta is maximal
+    var maximal = true
+    for (d in delta) {
+        if (!isMaximal(E, d, C, P)) {
+            maximal = false
+            println("Found non-maximal d: $d")
+        }
+    }
+    if (maximal) {
+        println("All solutions are maximal")
+    }
+
+    /*
+    val oneSol = deltaBruteForce(E, C, P)
+    val correct = delta == oneSol
+    println("Correct compared to 1? $correct")
+    if (!correct) {
+        println("Num missing from choice: ${(delta - oneSol).size}")
+        println("Num missing from one sol: ${(oneSol - delta).size}")
+    }
+     */
 }

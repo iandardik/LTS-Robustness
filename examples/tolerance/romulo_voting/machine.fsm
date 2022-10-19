@@ -1,0 +1,15 @@
+4
+
+0	0	1
+pw	1	c	o
+
+1	0	1
+sel	2	c	o
+
+2	0	2
+vote	3	c	o
+back	1	c	o
+
+3	0	2
+cfm	0	c	o
+back	2	c	o

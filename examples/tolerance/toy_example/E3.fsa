@@ -1,1 +1,1 @@
-S0 = (a -> b -> STOP).
+S0 = (a -> b -> a -> b -> STOP).

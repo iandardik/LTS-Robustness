@@ -16,6 +16,7 @@ import net.automatalib.util.automata.builders.AutomatonBuilders
 import net.automatalib.words.Alphabet
 import net.automatalib.words.impl.Alphabets
 import java.io.File
+import java.lang.RuntimeException
 import java.util.*
 
 fun QfProjE(src : Pair<Int, Int>,
@@ -245,6 +246,25 @@ fun fspToNFA(path: String) : CompactLTS<String> {
     return composite.asLTS() as CompactLTS
 }
 
+fun transClosureTable(F : NFAParallelComposition<Int,Int,String>, nfaF : LTS<Int,String>) : Map<Pair<Int,Int>, Set<Pair<Int,Int>>> {
+    val m = mutableMapOf<Pair<Int,Int>, Set<Pair<Int,Int>>>()
+    for (state in F.getStates(nfaF.alphabet())) {
+        val closure = reachableStates(state, F, nfaF)
+        m.put(state, closure)
+    }
+    return m
+}
+
+fun isClosedWithRespectToTable(S : Set<Pair<Int,Int>>, table : Map<Pair<Int,Int>, Set<Pair<Int,Int>>>) : Boolean {
+    for (s in S) {
+        val sClos = table[s] ?: throw RuntimeException("table error")
+        if (!S.containsAll(sClos)) {
+            return false
+        }
+    }
+    return true
+}
+
 fun outgoingStates(S : Set<Pair<Int,Int>>, F : NFAParallelComposition<Int,Int,String>, nfaF : LTS<Int,String>) : Set<Pair<Int,Int>> {
     val outgoing = mutableSetOf<Pair<Int,Int>>()
     for (src in S) {
@@ -253,6 +273,50 @@ fun outgoingStates(S : Set<Pair<Int,Int>>, F : NFAParallelComposition<Int,Int,St
         }
     }
     return outgoing
+}
+
+fun outgoingEdges(S : Set<Pair<Int,Int>>, F : NFAParallelComposition<Int,Int,String>, nfaF : LTS<Int,String>) : List<Triple<Pair<Int,Int>,String,Pair<Int,Int>>> {
+    val outgoing = mutableListOf<Triple<Pair<Int,Int>,String,Pair<Int,Int>>>()
+    for (src in S) {
+        for (a in nfaF.alphabet()) {
+            for (dst in F.getTransitions(src, a)) {
+                outgoing.add(Triple(src,a,dst))
+            }
+        }
+    }
+    return outgoing
+}
+
+fun incomingStates(S : Set<Pair<Int,Int>>, F : NFAParallelComposition<Int,Int,String>, nfaF : LTS<Int,String>) : Set<Pair<Int,Int>> {
+    val incoming = mutableSetOf<Pair<Int,Int>>()
+    for (src in F.getStates(nfaF.alphabet())) {
+        for (a in nfaF.alphabet()) {
+            for (dst in F.getTransitions(src, a)) {
+                if (S.contains(dst)) {
+                    incoming.add(src)
+                }
+            }
+        }
+    }
+    return incoming
+}
+
+fun reachableStates(init : Pair<Int,Int>, F : NFAParallelComposition<Int,Int,String>, nfaF : LTS<Int,String>) : Set<Pair<Int,Int>> {
+    val reach = mutableSetOf<Pair<Int,Int>>()
+    val queue : Queue<Pair<Int, Int>> = LinkedList()
+    queue.add(init)
+    while (queue.isNotEmpty()) {
+        val src = queue.remove()
+        if (!reach.contains(src)) {
+            reach.add(src)
+            for (a in nfaF.alphabet()) {
+                for (dst in F.getTransitions(src, a)) {
+                    queue.add(dst)
+                }
+            }
+        }
+    }
+    return reach
 }
 
 fun reachableStates(F : NFAParallelComposition<Int,Int,String>, nfaF : LTS<Int,String>) : Set<Pair<Int,Int>> {
@@ -271,4 +335,66 @@ fun reachableStates(F : NFAParallelComposition<Int,Int,String>, nfaF : LTS<Int,S
         }
     }
     return reach
+}
+
+fun errorStates(F : NFAParallelComposition<Int,Int,String>, nfaF : LTS<Int,String>) : Set<Pair<Int,Int>> {
+    return F.getStates(nfaF.alphabet()).filter { !F.isAccepting(it) }.toSet()
+}
+
+fun divide(S : Set<Pair<Int, Int>>) : Pair<Set<Pair<Int,Int>>, Set<Pair<Int,Int>>> {
+    val l = mutableSetOf<Pair<Int,Int>>()
+    val r = mutableSetOf<Pair<Int,Int>>()
+    var i = 0
+    for (e in S) {
+        if (i % 2 == 0) {
+            l.add(e)
+        }
+        else {
+            r.add(e)
+        }
+        ++i
+    }
+    return Pair(l, r)
+}
+
+fun <T> elementwiseComplement(S : Set<Set<T>>, A : Set<T>) : Set<Set<T>> {
+    val complement = mutableSetOf<Set<T>>()
+    for (e in S) {
+        complement.add(A - e)
+    }
+    return complement
+}
+
+fun isMaximal(E : CompactLTS<String>,
+              d : Set<Triple<Int,String,Int>>,
+              C : CompactLTS<String>,
+              P : CompactDetLTS<String>,
+              A : Set<Triple<Int,String,Int>> = product(E.states, E.inputAlphabet.toSet(), E.states))
+              : Boolean {
+    val Ed = addPerturbations(E, d)
+    val unusedEdges = A - ltsTransitions(Ed)
+    for (e in unusedEdges) {
+        if (satisfies(parallel(addPerturbations(Ed,setOf(e)), C), P)) {
+            return false
+        }
+    }
+    return true
+}
+
+fun subsetOfAMaximalStateSubset(S : Set<Pair<Int,Int>>, delta : Set<Set<Pair<Int,Int>>>) : Boolean {
+    for (d in delta) {
+        if (d.containsAll(S)) {
+            return true
+        }
+    }
+    return false
+}
+
+fun <T> containsSubsetOf(container : Set<Set<T>>, e : Set<T>) : Boolean {
+    for (e2 in container) {
+        if (e2.containsAll(e)) {
+            return true
+        }
+    }
+    return false
 }

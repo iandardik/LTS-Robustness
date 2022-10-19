@@ -1,0 +1,15 @@
+3
+
+0	0	4
+eo.enter	1	c	uo
+v.enter	0	c	uo
+v.exit	0	c	uo
+cfm	0	c	o
+
+1	0	4
+eo.exit	0	c	uo
+v.enter	1	c	uo
+v.exit	1	c	uo
+cfm	err	c	o
+
+err	0	0
