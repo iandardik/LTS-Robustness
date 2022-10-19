@@ -358,101 +358,6 @@ fun deltaBackwardsHeuristicMonolith(E : CompactLTS<String>, C : CompactLTS<Strin
     return delta
 }
 
-/*
-fun deltaDivideAndConquer(E : CompactLTS<String>, C : CompactLTS<String>, P : CompactDetLTS<String>) : Set<Set<Triple<Int,String,Int>>> {
-    val Efull = copyLTSFull(E)
-    val ltsCCompP = parallel(C, P)
-    val nfaF = parallel(Efull, ltsCCompP)
-    val F = NFAParallelComposition(Efull, ltsCCompP)
-    val Qf = F.getStates(nfaF.alphabet())
-    val QfMinusErr = acceptingStates(F, nfaF, E, ltsCCompP)
-
-    val W = safe(E, F, QfMinusErr) intersect reachableStates(F, nfaF)
-    println("#W: ${W.size}")
-
-    val ltsECompC = parallel(E, C)
-    val ECompC = NFAParallelComposition(E, C)
-    val RecProjE = ltsTransitions(ECompC, ltsECompC.alphabet())
-        .map { Triple(it.first.first, it.second, it.third.first) }
-        .toSet()
-    val Rf = ltsTransitions(F, nfaF.alphabet())
-    val A = product(E.states, E.inputAlphabet.toSet(), E.states)
-
-    val F_notfull = NFAParallelComposition(E, ltsCCompP)
-    val nfaF_notfull = parallel(E, ltsCCompP)
-    val transClosures = transClosureTable(F_notfull, nfaF_notfull)
-
-    val Rfnf = ltsTransitions(F_notfull, nfaF_notfull.alphabet())
-    val nec = W intersect (Rfnf.map { it.first } union Rfnf.map { it.third })
-    val init = nec intersect reachableStates(F_notfull, nfaF_notfull)
-
-    fun dac(scope : Set<Pair<Int, Int>>) : Set<Set<Triple<Int,String,Int>>> {
-        // base case
-        if (scope.isEmpty()) {
-            return emptySet()
-        }
-
-        // divide
-        val (lS, rS) = divide(scope)
-        val lDelta = dac(lS)
-        val rDelta = dac(rS)
-        val lDeltaC = elementwiseComplement(lDelta, A)
-        val rDeltaC = elementwiseComplement(rDelta, A)
-
-        // the rest is conquer
-
-        val outsideScope = Qf - scope
-        val queue : Queue<Set<Pair<Int, Int>>> = LinkedList()
-        queue.add(init)
-
-        val visited = mutableSetOf(init)
-        val maximumSubsets = mutableSetOf<Set<Pair<Int, Int>>>()
-        val delta = mutableSetOf<Set<Triple<Int,String,Int>>>()
-        while (queue.isNotEmpty()) {
-            val S = queue.remove()
-            if (!subsetOfAMaximalStateSubset(S, maximumSubsets)) {
-                //////////////// begin S code ////////////////
-                val SxActxS = product(S, nfaF.alphabet().toSet(), S)
-                val Rt = Rf.filter { SxActxS.contains(it) }
-                val RtProjE = Rt.map { Triple(it.first.first,it.second,it.third.first) }.toSet()
-
-                val del = Rf
-                    .filter { S.contains(it.first) && !S.contains(it.third) }
-                    .map { Triple(it.first.first, it.second, it.third.first) }
-                    .toSet()
-                val deltaCandidate = A - del
-                if (RtProjE.containsAll(RecProjE) && deltaCandidate.containsAll(RecProjE)) {
-                    if (isMaximal(E, deltaCandidate, C, P, A)) {
-                        delta.add(deltaCandidate)
-                        maximumSubsets.add(S)
-                    }
-                }
-                //////////////// end S code ////////////////
-
-                // continue the BFS
-                val dstStates = (outgoingStates(S, F, nfaF) - S) intersect W
-                val dstStatesInScope = dstStates intersect scope
-                val dstStatesOutsideScope = dstStates intersect outsideScope
-                println("Computing power set size: ${dstStatesInScope.size}")
-                // TODO should we make this function return sets of states (subsets of W) that are valid?
-                // TODO instead, can we filter states are are in the edges that are outside the scope?
-                for (additionalStates in powersetExclude(dstStatesInScope, lDeltaC union rDeltaC)) {
-                    val Sprime = S union additionalStates union dstStatesOutsideScope
-                    if (!visited.contains(Sprime) && isClosedWithRespectToTable(Sprime, transClosures)) {
-                        queue.add(Sprime)
-                        visited.add(Sprime)
-                    }
-                }
-            }
-        }
-
-        return delta
-    }
-
-    return dac(W)
-}
-*/
-
 fun deltaDFSHelper(Sraw : Set<Pair<Int,Int>>,
                    delta : DeltaBuilder,
                    visited : MutableSet<Set<Pair<Int,Int>>>,
@@ -479,6 +384,7 @@ fun deltaDFSHelper(Sraw : Set<Pair<Int,Int>>,
         .toSet()
     val deltaCandidate = A - del
 
+    // TODO the "contains" check should check all subsets in delta, not just equality
     if (!delta.contains(deltaCandidate)) {
         delta.add(deltaCandidate)
 
