@@ -1,0 +1,3 @@
+property S0 = (a -> S1 | b -> S0),
+S1 = (a -> S2 | b -> S1),
+S2 = (a -> STOP | b -> S2).

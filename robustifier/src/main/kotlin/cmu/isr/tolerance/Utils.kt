@@ -49,6 +49,24 @@ fun safe(E : LTS<Int, String>,
 }
 
 /**
+ * Performs a greatest fixpoint computation on S
+ */
+fun gfp(E : LTS<Int, String>,
+        F : NFAParallelComposition<Int, Int, String>,
+        nfaF : LTS<Int,String>,
+        S : Set<Pair<Int, Int>>,
+        accepting : Set<Pair<Int, Int>>)
+        : Set<Pair<Int, Int>> {
+    val Sprime = S.filterTo(HashSet()) { S.containsAll(outgoingStates(setOf(it), F, nfaF)) }
+    return if (Sprime == S) {
+        Sprime
+    }
+    else {
+        gfp(E, F, nfaF, Sprime, accepting)
+    }
+}
+
+/**
  * Finds all transitions in T
  */
 
@@ -99,6 +117,24 @@ fun copyLTS(T : CompactDetLTS<String>) : CompactDetLTS<String> {
     return newDFA.asLTS()
 }
 
+fun dfaToNfa(T : DetLTS<Int, String>) : CompactLTS<String> {
+    val newNFA = AutomatonBuilders.newNFA(T.alphabet())
+        .withInitial(T.initialState)
+        .create()
+    for (s in T.states) {
+        if (T.initialState == s) {
+            newNFA.setAccepting(s, T.isAccepting(s))
+        }
+        else {
+            newNFA.addState(T.isAccepting(s))
+        }
+    }
+    for (t in ltsTransitions(T)) {
+        newNFA.addTransition(t.first, t.second, t.third)
+    }
+    return newNFA.asLTS()
+}
+
 /**
  * Makes a copy of a NFA (in particular, a CompactLTS). This algorithm does not rely on as many assumptions as the
  * DFA copyLTS, but it does assume that T.states iterates on the state IDs in order, and T.addInitialState() and
@@ -125,6 +161,31 @@ fun copyLTSFull(T : CompactLTS<String>) : CompactLTS<String> {
     for (s in T.states) {
         if (T.initialStates.contains(s)) {
             newNFA.addInitialState(T.isAccepting(s))
+        }
+        else {
+            newNFA.addState(T.isAccepting(s))
+        }
+    }
+    for (src in T.states) {
+        for (a in T.alphabet()) {
+            for (dst in T.states) {
+                newNFA.addTransition(src, a, dst)
+            }
+        }
+    }
+    return newNFA.asLTS()
+}
+
+/**
+ * DFAs cant be full, so we return an NFA
+ */
+fun copyLTSFull(T : DetLTS<Int, String>) : CompactLTS<String> {
+    val newNFA = AutomatonBuilders.newNFA(T.alphabet())
+        .withInitial(T.initialState)
+        .create()
+    for (s in T.states) {
+        if (T.initialState == s) {
+            newNFA.setAccepting(s, T.isAccepting(s))
         }
         else {
             newNFA.addState(T.isAccepting(s))
@@ -273,6 +334,14 @@ fun outgoingStates(S : Set<Pair<Int,Int>>, F : NFAParallelComposition<Int,Int,St
         }
     }
     return outgoing
+}
+
+fun outgoingStatesMap(S : Set<Pair<Int,Int>>, F : NFAParallelComposition<Int,Int,String>, nfaF : LTS<Int,String>) : Map<Pair<Int,Int>, Set<Pair<Int,Int>>> {
+    val m = mutableMapOf<Pair<Int,Int>, Set<Pair<Int,Int>>>()
+    for (e in S) {
+        m[e] = S intersect (outgoingStates(setOf(e), F, nfaF) - e)
+    }
+    return m
 }
 
 fun outgoingEdges(S : Set<Pair<Int,Int>>, F : NFAParallelComposition<Int,Int,String>, nfaF : LTS<Int,String>) : List<Triple<Pair<Int,Int>,String,Pair<Int,Int>>> {

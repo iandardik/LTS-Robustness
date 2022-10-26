@@ -2,6 +2,7 @@ package cmu.isr.tolerance
 
 import addPerturbations
 import atLeastAsPowerful
+import cmu.isr.assumption.SubsetConstructionGenerator
 import cmu.isr.ts.LTS
 import cmu.isr.ts.alphabet
 import cmu.isr.ts.lts.*
@@ -12,11 +13,13 @@ import containsSubsetOf
 import copyLTS
 import copyLTSAcceptingOnly
 import copyLTSFull
+import dfaToNfa
 import divide
 import elementwiseComplement
 import errorStates
 import fspToDFA
 import fspToNFA
+import gfp
 import incomingStates
 import isClosedWithRespectToTable
 import isMaximal
@@ -26,6 +29,7 @@ import net.automatalib.words.Alphabet
 import net.automatalib.words.impl.Alphabets
 import outgoingEdges
 import outgoingStates
+import outgoingStatesMap
 import powerset
 import product
 import reachableStates
@@ -77,7 +81,7 @@ fun deltaNaiveBruteForce(E : CompactLTS<String>,
 
 fun acceptingStates(F : NFAParallelComposition<Int, Int, String>,
                     nfaF : LTS<Int, String>,
-                    E : CompactLTS<String>,
+                    E : LTS<Int, String>,
                     P : LTS<Int, String>)
                     : Set<Pair<Int, Int>> {
     return F.getStates(nfaF.alphabet())
@@ -365,12 +369,12 @@ fun deltaDFSHelper(Sraw : Set<Pair<Int,Int>>,
                    F : NFAParallelComposition<Int,Int,String>,
                    nfaF : LTS<Int,String>,
                    Rf : Set<Triple<Pair<Int,Int>, String, Pair<Int,Int>>>,
+                   outgoingStates : Map<Pair<Int,Int>, Set<Pair<Int,Int>>>,
                    transClosures : Map<Pair<Int,Int>, Set<Pair<Int,Int>>>,
                    W : Set<Pair<Int,Int>>) {
     val S = Sraw
         .mapNotNull { transClosures[it] }
         .fold(Sraw) { acc, e -> acc union e }
-        .toSet()
 
     if (visited.contains(S)) {
         return
@@ -379,22 +383,20 @@ fun deltaDFSHelper(Sraw : Set<Pair<Int,Int>>,
 
     // compute delta
     val del = Rf
-        .filter { S.contains(it.first) && !S.contains(it.third) }
+        .filterTo(HashSet()) { S.contains(it.first) && !S.contains(it.third) }
         .map { Triple(it.first.first, it.second, it.third.first) }
-        .toSet()
-    val deltaCandidate = A - del
+    delta.add(A - del)
 
-    // TODO the "contains" check should check all subsets in delta, not just equality
-    if (!delta.contains(deltaCandidate)) {
-        delta.add(deltaCandidate)
-
-        val toExplore = (outgoingStates(S, F, nfaF) - S) intersect W
-        if (toExplore.isNotEmpty()) {
-            if (toExplore.size > 15) {
-                println("Exploring set size: ${toExplore.size}")
-            }
-            deltaDFSHelperRec(S, toExplore.toList(), visited, delta, A, F, nfaF, Rf, transClosures, W)
+    //val toExplore = (outgoingStates(S, F, nfaF) - S) intersect W
+    val toExplore = (S
+        .mapNotNull { outgoingStates[it] }
+        .fold(emptySet<Pair<Int,Int>>()) { acc,outgoing -> acc union outgoing }
+        ) - S
+    if (toExplore.isNotEmpty()) {
+        if (toExplore.size > 15) {
+            println("Exploring set size: ${toExplore.size}")
         }
+        deltaDFSHelperRec(S, toExplore.toList(), visited, delta, A, F, nfaF, Rf, outgoingStates, transClosures, W)
     }
 }
 fun deltaDFSHelperRec(S : Set<Pair<Int,Int>>,
@@ -405,41 +407,44 @@ fun deltaDFSHelperRec(S : Set<Pair<Int,Int>>,
                       F : NFAParallelComposition<Int,Int,String>,
                       nfaF : LTS<Int,String>,
                       Rf : Set<Triple<Pair<Int,Int>, String, Pair<Int,Int>>>,
+                      outgoingStates : Map<Pair<Int,Int>, Set<Pair<Int,Int>>>,
                       transClosures : Map<Pair<Int,Int>, Set<Pair<Int,Int>>>,
                       W : Set<Pair<Int,Int>>) {
     if (toExplore.isEmpty()) {
-        deltaDFSHelper(S, delta, visited, A, F, nfaF, Rf, transClosures, W)
+        deltaDFSHelper(S, delta, visited, A, F, nfaF, Rf, outgoingStates, transClosures, W)
     }
     else {
         val head = toExplore.first()
         val tail = toExplore.drop(1)
         val Skeep = S + head
-        deltaDFSHelperRec(S, tail, visited, delta, A, F, nfaF, Rf, transClosures, W)
-        deltaDFSHelperRec(Skeep, tail, visited, delta, A, F, nfaF, Rf, transClosures, W)
+        deltaDFSHelperRec(S, tail, visited, delta, A, F, nfaF, Rf, outgoingStates, transClosures, W)
+        deltaDFSHelperRec(Skeep, tail, visited, delta, A, F, nfaF, Rf, outgoingStates, transClosures, W)
     }
 }
 
+// there's a bug in here, it's not quite correct
 fun deltaDFS(E : CompactLTS<String>, C : CompactLTS<String>, P : CompactDetLTS<String>) : Set<Set<Triple<Int,String,Int>>> {
     val Efull = copyLTSFull(E)
     val ltsCCompP = parallel(C, P)
     val nfaF = parallel(Efull, ltsCCompP)
     val F = NFAParallelComposition(Efull, ltsCCompP)
-    val QfMinusErr = acceptingStates(F, nfaF, E, ltsCCompP)
+    val F_notfull = NFAParallelComposition(E, ltsCCompP)
+    val nfaF_notfull = parallel(E, ltsCCompP)
 
-    val W = safe(E, F, QfMinusErr) intersect reachableStates(F, nfaF)
+    val QfMinusErr = acceptingStates(F, nfaF, E, ltsCCompP)
+    val W = gfp(E, F_notfull, nfaF_notfull, QfMinusErr, QfMinusErr) intersect reachableStates(F, nfaF)
 
     val Rf = ltsTransitions(F, nfaF.alphabet())
     val A = product(E.states, E.inputAlphabet.toSet(), E.states)
 
-    val F_notfull = NFAParallelComposition(E, ltsCCompP)
-    val nfaF_notfull = parallel(E, ltsCCompP)
+    val outgoingStates = outgoingStatesMap(W, F, nfaF)
     val transClosures = transClosureTable(F_notfull, nfaF_notfull)
 
     val init = F.initialStates
     val delta = DeltaBuilder(E, C, P)
     val visited = mutableSetOf<Set<Pair<Int,Int>>>()
 
-    deltaDFSHelper(init, delta, visited, A, F, nfaF, Rf, transClosures, W)
+    deltaDFSHelper(init, delta, visited, A, F, nfaF, Rf, outgoingStates, transClosures, W)
 
     return delta.toSet()
 }
@@ -460,7 +465,6 @@ fun deltaBackwardDFSHelper(SerrRaw : Set<Pair<Int,Int>>,
         .filter { !SerrRaw.contains(it.first) }
         .filter { (transClosures[it.first]?.intersect(SerrRaw))?.isNotEmpty() ?: false }
         .fold(SerrRaw) { acc,t -> acc + t.first }
-        .toSet()
 
     if (visited.contains(Serr) || !(W-Serr).containsAll(init)) {
         return
@@ -469,21 +473,16 @@ fun deltaBackwardDFSHelper(SerrRaw : Set<Pair<Int,Int>>,
 
     // compute delta
     val del = Rf
-        .filter { !Serr.contains(it.first) && Serr.contains(it.third) }
+        .filterTo(HashSet()) { !Serr.contains(it.first) && Serr.contains(it.third) }
         .map { Triple(it.first.first, it.second, it.third.first) }
-        .toSet()
-    val deltaCandidate = A - del
+    delta.add(A - del)
 
-    if (!delta.contains(deltaCandidate)) {
-        delta.add(deltaCandidate)
-
-        val toExplore = (incomingStates(Serr, F, nfaF) - Serr) intersect W
-        if (toExplore.isNotEmpty()) {
-            if (toExplore.size > 15) {
-                println("Exploring set size: ${toExplore.size}")
-            }
-            deltaBackwardDFSHelperRec(Serr, toExplore.toList(), visited, init, delta, A, F, nfaF, Rf, transClosures, W)
+    val toExplore = (incomingStates(Serr, F, nfaF) - Serr) intersect W
+    if (toExplore.isNotEmpty()) {
+        if (toExplore.size > 15) {
+            println("Exploring set size: ${toExplore.size}")
         }
+        deltaBackwardDFSHelperRec(Serr, toExplore.toList(), visited, init, delta, A, F, nfaF, Rf, transClosures, W)
     }
 }
 fun deltaBackwardDFSHelperRec(Serr : Set<Pair<Int,Int>>,
@@ -514,15 +513,15 @@ fun deltaBackwardDFS(E : CompactLTS<String>, C : CompactLTS<String>, P : Compact
     val ltsCCompP = parallel(C, P)
     val nfaF = parallel(Efull, ltsCCompP)
     val F = NFAParallelComposition(Efull, ltsCCompP)
-    val QfMinusErr = acceptingStates(F, nfaF, E, ltsCCompP)
+    val F_notfull = NFAParallelComposition(E, ltsCCompP)
+    val nfaF_notfull = parallel(E, ltsCCompP)
 
-    val W = safe(E, F, QfMinusErr) intersect reachableStates(F, nfaF)
+    val QfMinusErr = acceptingStates(F, nfaF, E, ltsCCompP)
+    val W = gfp(E, F_notfull, nfaF_notfull, QfMinusErr, QfMinusErr) intersect reachableStates(F, nfaF)
 
     val Rf = ltsTransitions(F, nfaF.alphabet())
     val A = product(E.states, E.inputAlphabet.toSet(), E.states)
 
-    val F_notfull = NFAParallelComposition(E, ltsCCompP)
-    val nfaF_notfull = parallel(E, ltsCCompP)
     val transClosures = transClosureTable(F_notfull, nfaF_notfull)
 
     val errorStates = F.getStates(nfaF.alphabet()) - W
@@ -533,6 +532,41 @@ fun deltaBackwardDFS(E : CompactLTS<String>, C : CompactLTS<String>, P : Compact
 
     return delta.toSet()
 }
+
+fun deltaWA(Eorig : CompactLTS<String>, C : CompactLTS<String>, P : CompactDetLTS<String>) : Set<Set<Triple<Int,String,Int>>> {
+    return emptySet()
+}
+
+/*
+fun deltaWA(Eorig : CompactLTS<String>, C : CompactLTS<String>, P : CompactDetLTS<String>) : Set<Set<Triple<Int,String,Int>>> {
+    val waGen = SubsetConstructionGenerator(C, Eorig, P)
+    val wa = waGen.generate()
+    val E = dfaToNfa(wa)
+
+    val Efull = copyLTSFull(E)
+    val ltsCCompP = parallel(C, P)
+    val nfaF = parallel(Efull, ltsCCompP)
+    val F = NFAParallelComposition(Efull, ltsCCompP)
+    val F_notfull = NFAParallelComposition(E, ltsCCompP)
+    val nfaF_notfull = parallel(E, ltsCCompP)
+
+    val QfMinusErr = acceptingStates(F, nfaF, E, ltsCCompP)
+    val W = gfp(E, F_notfull, nfaF_notfull, QfMinusErr, QfMinusErr) intersect reachableStates(F, nfaF)
+
+    val Rf = ltsTransitions(F, nfaF.alphabet())
+    val A = product(E.states, E.alphabet().toSet(), E.states)
+
+    val transClosures = transClosureTable(F_notfull, nfaF_notfull)
+
+    val errorStates = F.getStates(nfaF.alphabet()) - W
+    val delta = DeltaBuilder(E, C, P)
+    val visited = mutableSetOf<Set<Pair<Int,Int>>>()
+
+    deltaBackwardDFSHelper(errorStates, delta, visited, F.initialStates, A, F, nfaF, Rf, transClosures, W)
+
+    return delta.toSet()
+}
+ */
 
 
 fun main(args : Array<String>) {
@@ -571,6 +605,7 @@ fun main(args : Array<String>) {
 
     val delta =
         when (alg) {
+            "e" -> emptySet()
             "0" -> deltaNaiveBruteForce(E, C, P)
             "1" -> deltaBruteForce(E, C, P)
             "2" -> deltaHeuristic(E, C, P)
@@ -578,6 +613,7 @@ fun main(args : Array<String>) {
             "4" -> deltaBackwardsHeuristicMonolith(E, C, P)
             "5" -> deltaDFS(E, C, P)
             "6" -> deltaBackwardDFS(E, C, P)
+            "7" -> deltaWA(E, C, P)
             else -> {
                 println("Invalid algorithm")
                 return
@@ -644,4 +680,10 @@ fun main(args : Array<String>) {
         println("Num missing from one sol: ${(oneSol - delta).size}")
     }
      */
+
+    val waGen = SubsetConstructionGenerator(C, E, P)
+    val wa = waGen.generate()
+    println()
+    println("WA:")
+    write(System.out, wa, wa.alphabet())
 }

@@ -1,0 +1,3 @@
+property S0 = (e.enterCS -> S1 | w.enterCS -> S2),
+S1 = (e.exitCS -> S0),
+S2 = (w.exitCS -> S0).

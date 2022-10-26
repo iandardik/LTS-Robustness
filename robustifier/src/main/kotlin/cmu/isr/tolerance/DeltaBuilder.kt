@@ -1,13 +1,14 @@
 package cmu.isr.tolerance
 
 import addPerturbations
+import cmu.isr.ts.LTS
 import cmu.isr.ts.lts.CompactDetLTS
 import cmu.isr.ts.lts.CompactLTS
 import cmu.isr.ts.parallel
 import satisfies
 import java.lang.RuntimeException
 
-class DeltaBuilder(private val E : CompactLTS<String>, private val C : CompactLTS<String>, private val P : CompactDetLTS<String>) {
+class DeltaBuilder(private val E : LTS<Int, String>, private val C : CompactLTS<String>, private val P : CompactDetLTS<String>) {
     private var delta = mutableSetOf<Set<Triple<Int,String,Int>>>()
 
     fun add(newD : Set<Triple<Int,String,Int>>) {
