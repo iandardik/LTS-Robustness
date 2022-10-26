@@ -422,7 +422,6 @@ fun deltaDFSHelperRec(S : Set<Pair<Int,Int>>,
     }
 }
 
-// there's a bug in here, it's not quite correct
 fun deltaDFS(E : CompactLTS<String>, C : CompactLTS<String>, P : CompactDetLTS<String>) : Set<Set<Triple<Int,String,Int>>> {
     val Efull = copyLTSFull(E)
     val ltsCCompP = parallel(C, P)
