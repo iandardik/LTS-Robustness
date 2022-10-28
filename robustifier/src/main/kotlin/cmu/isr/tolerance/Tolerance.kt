@@ -444,6 +444,33 @@ fun deltaDFS(E : CompactLTS<String>, C : CompactLTS<String>, P : CompactDetLTS<S
     val delta = DeltaBuilder(E, C, P)
     val visited = mutableSetOf<Set<Pair<Int,Int>>>()
 
+    /* some quick checks */
+
+    // if the alphabets are different, then there is potential for optimization
+    if (ltsCCompP.alphabet().toSet() != nfaF.alphabet().toSet()) {
+        println("Alphabets are different")
+        println("nfaF alph: ${nfaF.alphabet()}")
+        println("ltsCCompP alph: ${ltsCCompP.alphabet()}")
+    }
+
+    // if there are groups with identical outgoing edges then we may only need to consider one member from the group
+    val statesWithIdenticalOutgoingEdges = outgoingStates
+        .entries.groupBy({ it.value }, { it.key })
+        .filter { it.value.size > 1 }
+        .map { it.value.toSet() }
+    val transClosuresExperiment = transClosures.toMutableMap()
+    for (group in statesWithIdenticalOutgoingEdges) {
+        //println("Identical outgoing edge group: $group")
+        /*
+        // this code is wrong, but let's do an experiment
+        for (s in group) {
+            val transClos = transClosuresExperiment[s]
+            checkNotNull(transClos)
+            transClosuresExperiment[s] = group union transClos
+        }
+         */
+    }
+
     deltaDFSHelper(init, delta, visited, A, F, nfaF, Rf, outgoingStates, transClosures, W)
 
     return delta.toSet()
@@ -533,148 +560,6 @@ fun deltaBackwardDFS(E : CompactLTS<String>, C : CompactLTS<String>, P : Compact
     return delta.toSet()
 }
 
-fun actions(edges : Set<Triple<Pair<Int,Int>, String, Pair<Int,Int>>>) : Set<String> {
-    return edges.mapTo(HashSet()) { it.second }
-}
-
-fun endStates(edges : Set<Triple<Pair<Int,Int>, String, Pair<Int,Int>>>) : Set<Pair<Int,Int>> {
-    return edges.mapTo(HashSet()) { it.third }
-}
-
-fun deltaWAHelper(S : Set<Pair<Int,Int>>,
-                  waTree : WATree,
-                  delta : DeltaBuilder,
-                  visited : MutableSet<Set<Pair<Int,Int>>>,
-                  A : Set<Triple<Int,String,Int>>,
-                  F : NFAParallelComposition<Int,Int,String>,
-                  nfaF : LTS<Int,String>,
-                  Rf : Set<Triple<Pair<Int,Int>, String, Pair<Int,Int>>>,
-                  forcedByEnv : Map<Pair<Int,Int>, Set<Pair<Int,Int>>>,
-                  transClosures : Map<Pair<Int,Int>, Set<Pair<Int,Int>>>,
-                  W : Set<Pair<Int,Int>>) {
-
-    if (visited.contains(S)) {
-        return
-    }
-    visited.add(S)
-
-    // compute delta
-    val containsEnv = S.fold(true) { acc,s -> acc && (transClosures[s]?.let { S.containsAll(it) } ?: true) }
-    if (containsEnv) {
-        val del = Rf
-            .filterTo(HashSet()) { S.contains(it.first) && !S.contains(it.third) }
-            .map { Triple(it.first.first, it.second, it.third.first) }
-        delta.add(A - del)
-    }
-
-    // compute next state sets to explore
-    val allowedActions = waTree.actionsAtLevel()
-    val outgoingEdges = outgoingEdges(S, F, nfaF)
-        .filterTo(HashSet()) { !S.contains(it.third) }
-        .filterTo(HashSet()) { W.contains(it.third) }
-        .filterTo(HashSet()) { allowedActions.contains(it.second) }
-    val necessaryEdges = outgoingEdges
-        .filterTo(HashSet()) { forcedByEnv[it.first]?.contains(it.third) ?: false }
-    val possibleEdges = outgoingEdges - necessaryEdges
-
-    val toExplore = possibleEdges
-    if (toExplore.size > 15) {
-        println("Exploring set size: ${toExplore.size}")
-    }
-    val Sprime = S + endStates(necessaryEdges)
-    deltaWAPowerset(Sprime, toExplore.toList(), emptySet(), actions(necessaryEdges), visited, waTree, delta, A, F, nfaF, Rf, forcedByEnv, transClosures, W)
-}
-fun deltaWAPowerset(S : Set<Pair<Int,Int>>,
-                    toExplore : List<Triple<Pair<Int,Int>,String,Pair<Int,Int>>>,
-                    willExplore : Set<Triple<Pair<Int,Int>,String,Pair<Int,Int>>>,
-                    necessaryActions : Set<String>,
-                    visited : MutableSet<Set<Pair<Int,Int>>>,
-                    waTree : WATree,
-                    delta : DeltaBuilder,
-                    A : Set<Triple<Int,String,Int>>,
-                    F : NFAParallelComposition<Int,Int,String>,
-                    nfaF : LTS<Int,String>,
-                    Rf : Set<Triple<Pair<Int,Int>, String, Pair<Int,Int>>>,
-                    forcedByEnv : Map<Pair<Int,Int>, Set<Pair<Int,Int>>>,
-                    transClosures : Map<Pair<Int,Int>, Set<Pair<Int,Int>>>,
-                    W : Set<Pair<Int,Int>>) {
-    if (toExplore.isEmpty()) {
-        val newStates = endStates(willExplore)
-        val chosenActions = actions(willExplore) union necessaryActions
-        deltaWAHelper(S + newStates, waTree.nextLevel(chosenActions), delta, visited, A, F, nfaF, Rf, forcedByEnv, transClosures, W)
-    }
-    else {
-        val head = toExplore.first()
-        val tail = toExplore.drop(1)
-        deltaWAPowerset(S, tail, willExplore, necessaryActions, visited, waTree, delta, A, F, nfaF, Rf, forcedByEnv, transClosures, W)
-        deltaWAPowerset(S, tail, willExplore + head, necessaryActions, visited, waTree, delta, A, F, nfaF, Rf, forcedByEnv, transClosures, W)
-    }
-}
-
-fun deltaWA(E : CompactLTS<String>, C : CompactLTS<String>, P : CompactDetLTS<String>) : Set<Set<Triple<Int,String,Int>>> {
-    val Efull = copyLTSFull(E)
-    val ltsCCompP = parallel(C, P)
-    val nfaF = parallel(Efull, ltsCCompP)
-    val F = NFAParallelComposition(Efull, ltsCCompP)
-    val F_notfull = NFAParallelComposition(E, ltsCCompP)
-    val nfaF_notfull = parallel(E, ltsCCompP)
-
-    val QfMinusErr = acceptingStates(F, nfaF, E, ltsCCompP)
-    val W = gfp(E, F_notfull, nfaF_notfull, QfMinusErr, QfMinusErr) intersect reachableStates(F, nfaF)
-
-    val Rf = ltsTransitions(F, nfaF.alphabet())
-    val A = product(E.states, E.inputAlphabet.toSet(), E.states)
-
-    // we can add this optimization back in later
-    //val outgoingStates = outgoingStatesMap(W, F, nfaF)
-
-    val transClosures = transClosureTable(F_notfull, nfaF_notfull)
-    val forcedByEnv = W.fold(HashMap<Pair<Int,Int>, Set<Pair<Int,Int>>>())
-                        { acc,s ->  acc[s] = outgoingStates(setOf(s), F_notfull, nfaF_notfull); acc }
-
-    val init = F.initialStates
-    val delta = DeltaBuilder(E, C, P)
-    val visited = mutableSetOf<Set<Pair<Int,Int>>>()
-
-    val waGen = SubsetConstructionGenerator(C, E, P)
-    val wa = waGen.generate()
-    val waTree = WATree(wa)
-
-    deltaWAHelper(init, waTree, delta, visited, A, F, nfaF, Rf, forcedByEnv, transClosures, W)
-
-    return delta.toSet()
-}
-
-/*
-fun deltaWA(Eorig : CompactLTS<String>, C : CompactLTS<String>, P : CompactDetLTS<String>) : Set<Set<Triple<Int,String,Int>>> {
-    val waGen = SubsetConstructionGenerator(C, Eorig, P)
-    val wa = waGen.generate()
-    val E = dfaToNfa(wa)
-
-    val Efull = copyLTSFull(E)
-    val ltsCCompP = parallel(C, P)
-    val nfaF = parallel(Efull, ltsCCompP)
-    val F = NFAParallelComposition(Efull, ltsCCompP)
-    val F_notfull = NFAParallelComposition(E, ltsCCompP)
-    val nfaF_notfull = parallel(E, ltsCCompP)
-
-    val QfMinusErr = acceptingStates(F, nfaF, E, ltsCCompP)
-    val W = gfp(E, F_notfull, nfaF_notfull, QfMinusErr, QfMinusErr) intersect reachableStates(F, nfaF)
-
-    val Rf = ltsTransitions(F, nfaF.alphabet())
-    val A = product(E.states, E.alphabet().toSet(), E.states)
-
-    val transClosures = transClosureTable(F_notfull, nfaF_notfull)
-
-    val errorStates = F.getStates(nfaF.alphabet()) - W
-    val delta = DeltaBuilder(E, C, P)
-    val visited = mutableSetOf<Set<Pair<Int,Int>>>()
-
-    deltaBackwardDFSHelper(errorStates, delta, visited, F.initialStates, A, F, nfaF, Rf, transClosures, W)
-
-    return delta.toSet()
-}
- */
 
 
 fun main(args : Array<String>) {
@@ -707,6 +592,11 @@ fun main(args : Array<String>) {
     val P = fspToDFA(args[3])
 
     if (!satisfies(parallel(E,C), P)) {
+        //val waGen = SubsetConstructionGenerator(C, E, P)
+        //val wa = waGen.generate()
+        //println("WA:")
+        //write(System.out, wa, wa.alphabet())
+        //println(wa.alphabet())
         println("E||C does not satisfy P")
         return
     }
@@ -721,7 +611,6 @@ fun main(args : Array<String>) {
             "4" -> deltaBackwardsHeuristicMonolith(E, C, P)
             "5" -> deltaDFS(E, C, P)
             "6" -> deltaBackwardDFS(E, C, P)
-            "7" -> deltaWA(E, C, P)
             else -> {
                 println("Invalid algorithm")
                 return
@@ -748,8 +637,8 @@ fun main(args : Array<String>) {
     // print the FSP for each Ed
     for (d in delta) {
         val Ed = copyLTSAcceptingOnly(addPerturbations(E, d))
-        //println()
-        //write(System.out, Ed, Ed.alphabet())
+        println()
+        write(System.out, Ed, Ed.alphabet())
     }
 
     // checks to make sure the solution is sound
