@@ -19,6 +19,18 @@ import java.io.File
 import java.lang.RuntimeException
 import java.util.*
 
+
+val randGen = Random()
+fun <T> randSubset(set : Set<T>, prob : Double) : Set<T> {
+    val subset = mutableSetOf<T>()
+    for (e in set) {
+        if (randGen.nextDouble() <= prob) {
+            subset.add(e)
+        }
+    }
+    return subset
+}
+
 fun QfProjE(src : Pair<Int, Int>,
             E : LTS<Int, String>,
             F : NFAParallelComposition<Int, Int, String>)
@@ -466,4 +478,22 @@ fun <T> containsSubsetOf(container : Set<Set<T>>, e : Set<T>) : Boolean {
         }
     }
     return false
+}
+
+fun makeMaximal(d : Set<Triple<Int,String,Int>>,
+                A : Array<Triple<Int,String,Int>>,
+                E : CompactLTS<String>,
+                C : CompactLTS<String>,
+                P : CompactDetLTS<String>)
+        : Set<Triple<Int,String,Int>> {
+    val dMax = d.toMutableSet()
+    A.shuffle()
+    for (e in A) {
+        val Ed = addPerturbations(E, dMax + e)
+        val EdComposeC = parallel(Ed, C)
+        if (satisfies(EdComposeC, P)) {
+            dMax += e
+        }
+    }
+    return dMax
 }

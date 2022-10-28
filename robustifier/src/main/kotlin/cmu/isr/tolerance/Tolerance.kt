@@ -24,6 +24,7 @@ import incomingStates
 import isClosedWithRespectToTable
 import isMaximal
 import ltsTransitions
+import makeMaximal
 import net.automatalib.util.automata.builders.AutomatonBuilders
 import net.automatalib.words.Alphabet
 import net.automatalib.words.impl.Alphabets
@@ -32,12 +33,14 @@ import outgoingStates
 import outgoingStatesMap
 import powerset
 import product
+import randSubset
 import reachableStates
 import safe
 import satisfies
 import stripTauTransitions
 import subsetOfAMaximalStateSubset
 import transClosureTable
+import java.io.File
 import java.util.*
 import kotlin.collections.HashMap
 
@@ -560,6 +563,124 @@ fun deltaBackwardDFS(E : CompactLTS<String>, C : CompactLTS<String>, P : Compact
     return delta.toSet()
 }
 
+fun deltaDFSRandHelper(Sraw : Set<Pair<Int,Int>>,
+                       delta : DeltaBuilder,
+                       visited : MutableSet<Set<Pair<Int,Int>>>,
+                       level : Int,
+                       A : Set<Triple<Int,String,Int>>,
+                       F : NFAParallelComposition<Int,Int,String>,
+                       nfaF : LTS<Int,String>,
+                       Rf : Set<Triple<Pair<Int,Int>, String, Pair<Int,Int>>>,
+                       Aarr : Array<Triple<Int,String,Int>>,
+                       E : CompactLTS<String>,
+                       C : CompactLTS<String>,
+                       P : CompactDetLTS<String>,
+                       outgoingStates : Map<Pair<Int,Int>, Set<Pair<Int,Int>>>,
+                       transClosures : Map<Pair<Int,Int>, Set<Pair<Int,Int>>>,
+                       W : Set<Pair<Int,Int>>) {
+    val S = Sraw
+        .mapNotNull { transClosures[it] }
+        .fold(Sraw) { acc, e -> acc union e }
+
+    if (visited.contains(S)) {
+        return
+    }
+    visited.add(S)
+
+    // compute delta
+    val del = Rf
+        .filterTo(HashSet()) { S.contains(it.first) && !S.contains(it.third) }
+        .map { Triple(it.first.first, it.second, it.third.first) }
+    //delta.add(A - del)
+    Aarr.shuffle()
+    val maximalElement = makeMaximal(A - del, Aarr, E, C, P)
+    delta.add(maximalElement)
+
+    val succ = S
+        .mapNotNull { outgoingStates[it] }
+        .fold(emptySet<Pair<Int,Int>>()) { acc,outgoing -> acc union outgoing }
+    val outgoing = succ - S
+
+    // target a constant number of edges to explore
+    val avgNumEdges = 5.0 //3.0
+    val rawP = avgNumEdges / outgoing.size.toDouble() //0.2 //0.03
+    val p = rawP / Math.pow(2.0, level.toDouble())
+    val toExplore = randSubset(outgoing, p)
+
+    if (toExplore.isNotEmpty()) {
+        if (toExplore.size > 15) {
+            println("Exploring set size: ${toExplore.size}")
+        }
+        deltaDFSRandHelperRec(S, toExplore.toList(), visited, level + 1, delta, A, F, nfaF, Rf, Aarr, E, C, P, outgoingStates, transClosures, W)
+    }
+}
+fun deltaDFSRandHelperRec(S : Set<Pair<Int,Int>>,
+                          toExplore : List<Pair<Int,Int>>,
+                          visited : MutableSet<Set<Pair<Int,Int>>>,
+                          level : Int,
+                          delta : DeltaBuilder,
+                          A : Set<Triple<Int,String,Int>>,
+                          F : NFAParallelComposition<Int,Int,String>,
+                          nfaF : LTS<Int,String>,
+                          Rf : Set<Triple<Pair<Int,Int>, String, Pair<Int,Int>>>,
+                          Aarr : Array<Triple<Int,String,Int>>,
+                          E : CompactLTS<String>,
+                          C : CompactLTS<String>,
+                          P : CompactDetLTS<String>,
+                          outgoingStates : Map<Pair<Int,Int>, Set<Pair<Int,Int>>>,
+                          transClosures : Map<Pair<Int,Int>, Set<Pair<Int,Int>>>,
+                          W : Set<Pair<Int,Int>>) {
+    if (toExplore.isEmpty()) {
+        deltaDFSRandHelper(S, delta, visited, level, A, F, nfaF, Rf, Aarr, E, C, P, outgoingStates, transClosures, W)
+    }
+    else {
+        val head = toExplore.first()
+        val tail = toExplore.drop(1)
+        val Skeep = S + head
+        deltaDFSRandHelperRec(S, tail, visited, level, delta, A, F, nfaF, Rf, Aarr, E, C, P, outgoingStates, transClosures, W)
+        deltaDFSRandHelperRec(Skeep, tail, visited, level, delta, A, F, nfaF, Rf, Aarr, E, C, P, outgoingStates, transClosures, W)
+    }
+}
+
+fun deltaDFSRand(E : CompactLTS<String>, C : CompactLTS<String>, P : CompactDetLTS<String>) : Set<Set<Triple<Int,String,Int>>> {
+    val Efull = copyLTSFull(E)
+    val ltsCCompP = parallel(C, P)
+    val nfaF = parallel(Efull, ltsCCompP)
+    val F = NFAParallelComposition(Efull, ltsCCompP)
+    val F_notfull = NFAParallelComposition(E, ltsCCompP)
+    val nfaF_notfull = parallel(E, ltsCCompP)
+
+    val QfMinusErr = acceptingStates(F, nfaF, E, ltsCCompP)
+    val W = gfp(E, F_notfull, nfaF_notfull, QfMinusErr, QfMinusErr) intersect reachableStates(F, nfaF)
+
+    val Rf = ltsTransitions(F, nfaF.alphabet())
+    val A = product(E.states, E.inputAlphabet.toSet(), E.states)
+
+    val outgoingStates = outgoingStatesMap(W, F, nfaF)
+    val transClosures = transClosureTable(F_notfull, nfaF_notfull)
+
+    val init = F.initialStates
+    val delta = DeltaBuilder(E, C, P)
+    val visited = mutableSetOf<Set<Pair<Int,Int>>>()
+    val initLevel = 0
+
+    deltaDFSRandHelper(init, delta, visited, initLevel, A, F, nfaF, Rf, A.toTypedArray(), E, C, P, outgoingStates, transClosures, W)
+    //println("DFS complete")
+
+    // make all elements of delta maximal by randomly adding edges to each non-maximal element
+    /*
+    val Aarr = A.toTypedArray()
+    var nonMaximal = delta.toSet().firstOrNull { !isMaximal(E, it, C, P) }
+    while (nonMaximal != null) {
+        val maximalElement = makeMaximal(nonMaximal, Aarr, E, C, P)
+        delta.add(maximalElement)
+        nonMaximal = delta.toSet().firstOrNull { !isMaximal(E, it, C, P) }
+    }
+     */
+
+    return delta.toSet()
+}
+
 
 
 fun main(args : Array<String>) {
@@ -584,6 +705,14 @@ fun main(args : Array<String>) {
     if (args.size < 4) {
         println("usage: tolerance <alg> <env> <ctrl> <prop>")
         return
+    }
+
+    for (i in 1..3) {
+        val path = args[i]
+        if (!File(path).exists()) {
+            println("File \"$path\" does not exist")
+            return
+        }
     }
 
     val alg = args[0]
@@ -611,6 +740,7 @@ fun main(args : Array<String>) {
             "4" -> deltaBackwardsHeuristicMonolith(E, C, P)
             "5" -> deltaDFS(E, C, P)
             "6" -> deltaBackwardDFS(E, C, P)
+            "7" -> deltaDFSRand(E, C, P)
             else -> {
                 println("Invalid algorithm")
                 return
@@ -631,14 +761,14 @@ fun main(args : Array<String>) {
                 a.third - b.third
             }
         }
-        println("  {${sortedD.joinToString()}}")
+        //println("  {${sortedD.joinToString()}}")
     }
 
     // print the FSP for each Ed
     for (d in delta) {
         val Ed = copyLTSAcceptingOnly(addPerturbations(E, d))
-        println()
-        write(System.out, Ed, Ed.alphabet())
+        //println()
+        //write(System.out, Ed, Ed.alphabet())
     }
 
     // checks to make sure the solution is sound
