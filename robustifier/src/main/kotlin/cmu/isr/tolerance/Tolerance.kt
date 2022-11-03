@@ -8,6 +8,7 @@ import cmu.isr.ts.alphabet
 import cmu.isr.ts.lts.*
 import cmu.isr.ts.lts.ltsa.write
 import cmu.isr.ts.nfa.NFAParallelComposition
+import cmu.isr.ts.nfa.determinise
 import cmu.isr.ts.parallel
 import containsSubsetOf
 import copyLTS
@@ -25,6 +26,7 @@ import isClosedWithRespectToTable
 import isMaximal
 import ltsTransitions
 import makeMaximal
+import net.automatalib.automata.fsa.impl.compact.CompactDFA
 import net.automatalib.util.automata.builders.AutomatonBuilders
 import net.automatalib.words.Alphabet
 import net.automatalib.words.impl.Alphabets
@@ -450,10 +452,11 @@ fun deltaDFS(E : CompactLTS<String>, C : CompactLTS<String>, P : CompactDetLTS<S
     /* some quick checks */
 
     // if the alphabets are different, then there is potential for optimization
-    if (ltsCCompP.alphabet().toSet() != nfaF.alphabet().toSet()) {
+    val ltsECalph = parallel(E, C).alphabet().toSet()
+    if (ltsECalph != nfaF.alphabet().toSet()) {
         println("Alphabets are different")
         println("nfaF alph: ${nfaF.alphabet()}")
-        println("ltsCCompP alph: ${ltsCCompP.alphabet()}")
+        println("ltsEC alph: ${ltsECalph}")
     }
 
     // if there are groups with identical outgoing edges then we may only need to consider one member from the group
@@ -682,6 +685,30 @@ fun deltaDFSRand(E : CompactLTS<String>, C : CompactLTS<String>, P : CompactDetL
 }
 
 
+fun filterControlledDuplicates(delta : Set<Set<Triple<Int,String,Int>>>,
+                               E : CompactLTS<String>,
+                               C : CompactLTS<String>)
+                               : Set<Set<Triple<Int,String,Int>>> {
+    val controlledDelta = delta.associateWith { parallel(addPerturbations(E,it), C) }
+    val ls = delta.toMutableList()
+    val toRemove = mutableSetOf<Int>()
+    for (i in 0 until ls.size) {
+        val di = ls[i]
+        val cdi = controlledDelta[di] ?: throw RuntimeException("cdi bug")
+        val cdiDet = CompactDetLTS(determinise(cdi) as CompactDFA<String>)
+        for (j in i+1 until ls.size) {
+            val dj = ls[j]
+            val cdj = controlledDelta[dj] ?: throw RuntimeException("cdj bug")
+            val cdjDet = CompactDetLTS(determinise(cdj) as CompactDFA<String>)
+            if (satisfies(cdi, cdjDet) && satisfies(cdj, cdiDet)) {
+                toRemove.add(j)
+            }
+        }
+    }
+    return ls.filterIndexedTo(HashSet()) { i,_ -> !toRemove.contains(i) }
+}
+
+
 
 fun main(args : Array<String>) {
     /*
@@ -730,7 +757,7 @@ fun main(args : Array<String>) {
         return
     }
 
-    val delta =
+    var delta =
         when (alg) {
             "e" -> emptySet()
             "0" -> deltaNaiveBruteForce(E, C, P)
@@ -747,8 +774,13 @@ fun main(args : Array<String>) {
             }
         }
 
-    // prints delta
     println("#delta: ${delta.size}")
+    delta = filterControlledDuplicates(delta, E, C)
+    println("#(filtered delta): ${delta.size}")
+
+
+    // prints delta
+    //println("#delta: ${delta.size}")
     for (d in delta) {
         val sortedD = d.sortedWith { a, b ->
             if (a.second != b.second) {
@@ -769,6 +801,22 @@ fun main(args : Array<String>) {
         val Ed = copyLTSAcceptingOnly(addPerturbations(E, d))
         //println()
         //write(System.out, Ed, Ed.alphabet())
+    }
+
+    // print the FSP for each Ed || C
+    for (d in delta) {
+        val Ed = addPerturbations(E, d)
+        val EdC = copyLTSAcceptingOnly(parallel(Ed, C))
+        //println()
+        //write(System.out, EdC, EdC.alphabet())
+    }
+
+    // print the DOT for each Ed || C
+    for (d in delta) {
+        val Ed = addPerturbations(E, d)
+        val EdC = copyLTSAcceptingOnly(parallel(Ed, C))
+        println()
+        writeDOT(System.out, EdC, EdC.alphabet())
     }
 
     // checks to make sure the solution is sound

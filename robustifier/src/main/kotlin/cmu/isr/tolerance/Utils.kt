@@ -94,6 +94,18 @@ fun ltsTransitions(T : LTS<Int, String>) : Set<Triple<Int,String,Int>> {
     return transitions
 }
 
+fun ltsTransitions(T : NFA<Int, String>) : Set<Triple<Int,String,Int>> {
+    val transitions = mutableSetOf<Triple<Int,String,Int>>()
+    for (src in T) {
+        for (a in T.alphabet()) {
+            for (dst in T.getTransitions(src, a)) {
+                transitions.add(Triple(src, a, dst))
+            }
+        }
+    }
+    return transitions
+}
+
 fun ltsTransitions(T : NFAParallelComposition<Int, Int, String>, alph : Alphabet<String>) : Set<Triple<Pair<Int,Int>,String,Pair<Int,Int>>> {
     val transitions = mutableSetOf<Triple<Pair<Int,Int>,String,Pair<Int,Int>>>()
     for (src in T.getStates(alph)) {
@@ -213,8 +225,8 @@ fun copyLTSFull(T : DetLTS<Int, String>) : CompactLTS<String> {
     return newNFA.asLTS()
 }
 
-fun copyLTSAcceptingOnly(T : CompactLTS<String>) : NFA<Int, String> {
-    val newNFA = AutomatonBuilders.newNFA(T.inputAlphabet).create()
+fun copyLTSAcceptingOnly(T : NFA<Int, String>) : NFA<Int, String> {
+    val newNFA = AutomatonBuilders.newNFA(T.alphabet()).create()
     for (s in T.states) {
         if (T.isAccepting(s)) {
             if (T.initialStates.contains(s)) {

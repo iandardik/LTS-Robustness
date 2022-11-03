@@ -107,6 +107,10 @@ private class NFAFSPWriterVisitor<S, I>(
         builder.setLength(builder.length - 3)
         builder.appendLine("),")
       }
+      else if (builder.endsWith("(")) {
+        builder.setLength(builder.length - 1)
+        builder.appendLine("STOP,")
+      }
       builder.append("S$state = (")
       true
     } else {
