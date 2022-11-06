@@ -24,6 +24,7 @@ import gfp
 import incomingStates
 import isClosedWithRespectToTable
 import isMaximal
+import isMaximalAccepting
 import ltsTransitions
 import makeMaximal
 import net.automatalib.automata.fsa.impl.compact.CompactDFA
@@ -33,6 +34,7 @@ import net.automatalib.words.impl.Alphabets
 import outgoingEdges
 import outgoingStates
 import outgoingStatesMap
+import parallelRestrict
 import powerset
 import product
 import randSubset
@@ -597,6 +599,8 @@ fun deltaDFSRandHelper(Sraw : Set<Pair<Int,Int>>,
     //delta.add(A - del)
     Aarr.shuffle()
     val maximalElement = makeMaximal(A - del, Aarr, E, C, P)
+    //val tmp = A.map { Triple(it.first, "up", it.third) } + Aarr.toList()
+    //val maximalElement = makeMaximal(A - del, tmp.toTypedArray(), E, C, P)
     delta.add(maximalElement)
 
     val succ = S
@@ -658,6 +662,8 @@ fun deltaDFSRand(E : CompactLTS<String>, C : CompactLTS<String>, P : CompactDetL
 
     val Rf = ltsTransitions(F, nfaF.alphabet())
     val A = product(E.states, E.inputAlphabet.toSet(), E.states)
+        .filter { E.isAccepting(it.first) && E.isAccepting(it.third) }
+        .toSet()
 
     val outgoingStates = outgoingStatesMap(W, F, nfaF)
     val transClosures = transClosureTable(F_notfull, nfaF_notfull)
@@ -688,24 +694,76 @@ fun deltaDFSRand(E : CompactLTS<String>, C : CompactLTS<String>, P : CompactDetL
 fun filterControlledDuplicates(delta : Set<Set<Triple<Int,String,Int>>>,
                                E : CompactLTS<String>,
                                C : CompactLTS<String>)
-                               : Set<Set<Triple<Int,String,Int>>> {
+        : Set<Set<Triple<Int,String,Int>>> {
     val controlledDelta = delta.associateWith { parallel(addPerturbations(E,it), C) }
     val ls = delta.toMutableList()
     val toRemove = mutableSetOf<Int>()
     for (i in 0 until ls.size) {
+        if (i in toRemove) {
+            continue
+        }
         val di = ls[i]
         val cdi = controlledDelta[di] ?: throw RuntimeException("cdi bug")
         val cdiDet = CompactDetLTS(determinise(cdi) as CompactDFA<String>)
         for (j in i+1 until ls.size) {
+            if (j in toRemove) {
+                continue
+            }
             val dj = ls[j]
             val cdj = controlledDelta[dj] ?: throw RuntimeException("cdj bug")
             val cdjDet = CompactDetLTS(determinise(cdj) as CompactDFA<String>)
+            if (satisfies(cdi, cdjDet)) {
+                toRemove.add(j)
+            }
+            else if (satisfies(cdj, cdiDet)) {
+                toRemove.add(i)
+            }
+
+            /*
             if (satisfies(cdi, cdjDet) && satisfies(cdj, cdiDet)) {
                 toRemove.add(j)
             }
+             */
+            // only keep maximal behaviors, JDEDS style
+            /*
+            else if (satisfies(cdi, cdjDet)) {
+                toRemove.add(i)
+            }
+            else if (satisfies(cdj, cdiDet)) {
+                toRemove.add(j)
+            }
+             */
         }
     }
     return ls.filterIndexedTo(HashSet()) { i,_ -> !toRemove.contains(i) }
+}
+
+fun bucketControlledDuplicates(delta : Set<Set<Triple<Int,String,Int>>>,
+                               E : CompactLTS<String>,
+                               C : CompactLTS<String>)
+                               : Set<Set<Set<Triple<Int,String,Int>>>> {
+    val controlledDelta = delta.associateWith { parallel(addPerturbations(E,it), C) }
+    val buckets = mutableMapOf<Pair<LTS<Int,String>,CompactDetLTS<String>>, Set<Set<Triple<Int,String,Int>>>>()
+    for (d in delta) {
+        val cd = controlledDelta[d] ?: throw RuntimeException("cdi bug")
+        val cdDet = CompactDetLTS(determinise(cd) as CompactDFA<String>)
+        var foundBucket = false
+        for (k in buckets.keys) {
+            val dk = k.first
+            val dkDet = k.second
+            if (satisfies(cd, dkDet) && satisfies(dk, cdDet)) {
+                val bucketk = buckets[k] ?: throw RuntimeException("bucket error")
+                buckets[k] = bucketk union setOf(d)
+                foundBucket = true
+                break
+            }
+        }
+        if (!foundBucket) {
+            val k = Pair(cd,cdDet)
+            buckets[k] = setOf(d)
+        }
+    }
+    return buckets.values.toSet()
 }
 
 
@@ -757,6 +815,9 @@ fun main(args : Array<String>) {
         return
     }
 
+    println("E:")
+    writeDOT(System.out, E, E.alphabet())
+
     var delta =
         when (alg) {
             "e" -> emptySet()
@@ -775,8 +836,90 @@ fun main(args : Array<String>) {
         }
 
     println("#delta: ${delta.size}")
+    /*
+    delta = delta
+        .map { it.filter { E.isAccepting(it.first) && E.isAccepting(it.third) }.toSet() }
+        .associateWith { 0 }
+        .keys.toSet()
+    println("#delta no err states: ${delta.size}")
+     */
+
+    val Qe = ltsTransitions(E).filter { E.isAccepting(it.first) && E.isAccepting(it.third) }.toSet()
+
+    /*
+    val maxPertSize = delta.map { it.size }.max()
+    val minPertSize = delta.map { it.size }.min()
+    val minEdgesToErr = minPertSize+1 - Qe.size
+    println("maxPertSize: $maxPertSize")
+    println("minPertSize: $minPertSize")
+    println("minEdgesToErr: $minEdgesToErr")
+
+    val lcd = delta.fold(delta.first()) { acc, d -> acc intersect d }
+    val lcdPerts = lcd - Qe
+    val Elcd = addPerturbations(E, lcdPerts)
+    val ElcdRestr = parallelRestrict(Elcd, C)
+    println("lcdPerts: $lcdPerts")
+    println("#lcdPerts: ${lcdPerts.size}")
+    println("Ecld:")
+    writeDOT(System.out, Elcd, Elcd.alphabet())
+    println("EcldRestr:")
+    writeDOT(System.out, ElcdRestr, ElcdRestr.alphabet())
+    println()
+     */
+
     delta = filterControlledDuplicates(delta, E, C)
     println("#(filtered delta): ${delta.size}")
+
+    /*
+    val controlledBehBuckets = bucketControlledDuplicates(delta, E, C)
+    val cbbMin = controlledBehBuckets.map { it.size }.min()
+    val cbbMax = controlledBehBuckets.map { it.size }.max()
+    println("#controlledBehBuckets: ${controlledBehBuckets.size}")
+    println("min # controlledBehBuckets: $cbbMin")
+    println("max # controlledBehBuckets: $cbbMax")
+
+    val intersects = controlledBehBuckets
+        .map {
+                s -> s.fold(s.first()) { acc,d -> acc intersect d }
+        }
+        .fold(DeltaBuilder(E,C,P)) { acc,i -> acc.add(i); acc }
+        .toSet()
+    println("# Max Intersects: ${intersects.size}")
+     */
+    /*
+    println("Max Intersects (sample):")
+    for (d in intersects.take(3)) {
+        val Ed = addPerturbations(E, d)
+        writeDOT(System.out, Ed, Ed.alphabet())
+    }
+     */
+
+    /*
+    val sampleIntersects = controlledBehBuckets
+        .filter { it.size > 1 }
+        .take(5)
+        .map {
+            s -> s.fold(s.first()) { acc,d -> acc intersect d }
+        }
+        .toSet()
+    println("Samples Intersects:")
+    for (d in sampleIntersects) {
+        val Ed = addPerturbations(E, d)
+        writeDOT(System.out, Ed, Ed.alphabet())
+    }
+     */
+
+    /*
+    val tb = controlledBehBuckets
+        .first { it.size > 1 }
+        .take(3)
+        .toSet()
+    println("Samples:")
+    for (d in tb) {
+        val Ed = addPerturbations(E, d)
+        writeDOT(System.out, Ed, Ed.alphabet())
+    }
+     */
 
 
     // prints delta
@@ -812,11 +955,11 @@ fun main(args : Array<String>) {
     }
 
     // print the DOT for each Ed || C
-    for (d in delta) {
+    for (d in delta.take(3)) {
         val Ed = addPerturbations(E, d)
-        val EdC = copyLTSAcceptingOnly(parallel(Ed, C))
+        val EdRestrictedToC = parallelRestrict(Ed, C)
         println()
-        writeDOT(System.out, EdC, EdC.alphabet())
+        writeDOT(System.out, EdRestrictedToC, EdRestrictedToC.alphabet())
     }
 
     // checks to make sure the solution is sound
@@ -837,9 +980,10 @@ fun main(args : Array<String>) {
     // checks to make sure every member of delta is maximal
     var maximal = true
     for (d in delta) {
-        if (!isMaximal(E, d, C, P)) {
+        if (!isMaximalAccepting(E, d, C, P)) {
             maximal = false
-            println("Found non-maximal d: $d")
+            println("Found non-maximal d")
+            //println("Found non-maximal d: $d")
         }
     }
     if (maximal) {

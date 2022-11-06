@@ -243,6 +243,37 @@ fun copyLTSAcceptingOnly(T : NFA<Int, String>) : NFA<Int, String> {
     return newNFA
 }
 
+fun parallelRestrict(ref : NFA<Int,String>, restr : NFA<Int,String>) : NFA<Int,String> {
+    val transitionsToKeep = mutableSetOf<Pair<Int,String>>()
+    val comp = NFAParallelComposition(ref, restr)
+    val nfaComp = parallel(ref, restr)
+    for (state in comp.getStates(nfaComp.alphabet())) {
+        val refState = state.first
+        val restrState = state.second
+        for (a in ref.alphabet()) {
+            if (!(a in restr.alphabet() && restr.getTransitions(restrState, a).isEmpty())) {
+                transitionsToKeep.add(Pair(refState, a))
+            }
+        }
+    }
+
+    val newNFA = AutomatonBuilders.newNFA(ref.alphabet()).create()
+    for (s in ref.states) {
+        if (ref.initialStates.contains(s)) {
+            newNFA.addInitialState(ref.isAccepting(s))
+        }
+        else {
+            newNFA.addState(ref.isAccepting(s))
+        }
+    }
+    for (t in ltsTransitions(ref)) {
+        if (Pair(t.first,t.second) in transitionsToKeep) {
+            newNFA.addTransition(t.first, t.second, t.third)
+        }
+    }
+    return newNFA.asLTS()
+}
+
 /**
  * Turns an NFA (T) into a DFA
  */
@@ -463,11 +494,30 @@ fun isMaximal(E : CompactLTS<String>,
               C : CompactLTS<String>,
               P : CompactDetLTS<String>,
               A : Set<Triple<Int,String,Int>> = product(E.states, E.inputAlphabet.toSet(), E.states))
-              : Boolean {
+        : Boolean {
     val Ed = addPerturbations(E, d)
     val unusedEdges = A - ltsTransitions(Ed)
     for (e in unusedEdges) {
         if (satisfies(parallel(addPerturbations(Ed,setOf(e)), C), P)) {
+            return false
+        }
+    }
+    return true
+}
+
+fun isMaximalAccepting(E : CompactLTS<String>,
+                       d : Set<Triple<Int,String,Int>>,
+                       C : CompactLTS<String>,
+                       P : CompactDetLTS<String>)
+                       : Boolean {
+    val A = product(E.states, E.inputAlphabet.toSet(), E.states)
+        .filter { E.isAccepting(it.first) && E.isAccepting(it.third) }
+        .toSet()
+    val Ed = addPerturbations(E, d)
+    val unusedEdges = A - ltsTransitions(Ed)
+    for (e in unusedEdges) {
+        if (satisfies(parallel(addPerturbations(Ed,setOf(e)), C), P)) {
+            println("Can add edge: $e")
             return false
         }
     }
@@ -499,7 +549,6 @@ fun makeMaximal(d : Set<Triple<Int,String,Int>>,
                 P : CompactDetLTS<String>)
         : Set<Triple<Int,String,Int>> {
     val dMax = d.toMutableSet()
-    A.shuffle()
     for (e in A) {
         val Ed = addPerturbations(E, dMax + e)
         val EdComposeC = parallel(Ed, C)
