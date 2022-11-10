@@ -4,6 +4,7 @@ import addPerturbations
 import atLeastAsPowerful
 import cmu.isr.assumption.SubsetConstructionGenerator
 import cmu.isr.ts.LTS
+import cmu.isr.ts.MutableDetLTS
 import cmu.isr.ts.alphabet
 import cmu.isr.ts.lts.*
 import cmu.isr.ts.lts.ltsa.write
@@ -43,6 +44,7 @@ import safe
 import satisfies
 import stripTauTransitions
 import subsetOfAMaximalStateSubset
+import toDeterministic
 import transClosureTable
 import java.io.File
 import java.util.*
@@ -690,6 +692,23 @@ fun deltaDFSRand(E : CompactLTS<String>, C : CompactLTS<String>, P : CompactDetL
     return delta.toSet()
 }
 
+fun deltaNaiveRand(E : CompactLTS<String>, C : CompactLTS<String>, P : CompactDetLTS<String>, N : Int) : Set<Set<Triple<Int,String,Int>>> {
+    val Re = ltsTransitions(E)
+        .filter { E.isAccepting(it.first) && E.isAccepting(it.third) }
+        .toSet()
+    val A = product(E.states, E.inputAlphabet.toSet(), E.states)
+        .filter { E.isAccepting(it.first) && E.isAccepting(it.third) }
+        .toSet() - Re
+    val delta = DeltaBuilder(E, C, P)
+    val Aarr = A.toTypedArray()
+    for (i in 1..N) {
+        Aarr.shuffle()
+        val maximalElement = makeMaximal(Re, Aarr, E, C, P)
+        delta.add(maximalElement)
+    }
+    return delta.toSet()
+}
+
 
 fun filterControlledDuplicates(delta : Set<Set<Triple<Int,String,Int>>>,
                                E : CompactLTS<String>,
@@ -815,8 +834,33 @@ fun main(args : Array<String>) {
         return
     }
 
-    println("E:")
-    writeDOT(System.out, E, E.alphabet())
+    //println("E:")
+    //writeDOT(System.out, E, E.alphabet())
+
+    if (alg == "t") {
+        val nTrials = 1000
+        for (naiveRandN in setOf(2,3,4,5,6,7,8,9,10,15,19)) {
+            var nSuccess = 0
+            var nFail = 0
+            for (i in 0..nTrials) {
+                val delta = deltaNaiveRand(E, C, P, naiveRandN)
+                if (delta.size == 3) {
+                    ++nSuccess
+                } else {
+                    ++nFail
+                }
+            }
+            val successRate = nSuccess.toDouble() / nTrials.toDouble()
+            val failRate = nFail.toDouble() / nTrials.toDouble()
+            println("naiveRandN: $naiveRandN")
+            println("success %: ${successRate * 100.0}")
+            println("fail %: ${failRate * 100.0}")
+            println()
+        }
+        return
+    }
+
+    val naiveRandN = 1000 //19
 
     var delta =
         when (alg) {
@@ -829,6 +873,7 @@ fun main(args : Array<String>) {
             "5" -> deltaDFS(E, C, P)
             "6" -> deltaBackwardDFS(E, C, P)
             "7" -> deltaDFSRand(E, C, P)
+            "8" -> deltaNaiveRand(E, C, P, naiveRandN)
             else -> {
                 println("Invalid algorithm")
                 return
@@ -844,18 +889,23 @@ fun main(args : Array<String>) {
     println("#delta no err states: ${delta.size}")
      */
 
-    val Qe = ltsTransitions(E).filter { E.isAccepting(it.first) && E.isAccepting(it.third) }.toSet()
+    val A = product(E.states, E.inputAlphabet.toSet(), E.states)
+        .filter { E.isAccepting(it.first) && E.isAccepting(it.third) }
+        .toSet()
+    val Re = ltsTransitions(E)
+        .filter { E.isAccepting(it.first) && E.isAccepting(it.third) }
+        .toSet()
 
     /*
     val maxPertSize = delta.map { it.size }.max()
     val minPertSize = delta.map { it.size }.min()
-    val minEdgesToErr = minPertSize+1 - Qe.size
+    val minEdgesToErr = minPertSize+1 - Re.size
     println("maxPertSize: $maxPertSize")
     println("minPertSize: $minPertSize")
     println("minEdgesToErr: $minEdgesToErr")
 
     val lcd = delta.fold(delta.first()) { acc, d -> acc intersect d }
-    val lcdPerts = lcd - Qe
+    val lcdPerts = lcd - Re
     val Elcd = addPerturbations(E, lcdPerts)
     val ElcdRestr = parallelRestrict(Elcd, C)
     println("lcdPerts: $lcdPerts")
@@ -867,8 +917,8 @@ fun main(args : Array<String>) {
     println()
      */
 
-    delta = filterControlledDuplicates(delta, E, C)
-    println("#(filtered delta): ${delta.size}")
+    //delta = filterControlledDuplicates(delta, E, C)
+    //println("#(filtered delta): ${delta.size}")
 
     /*
     val controlledBehBuckets = bucketControlledDuplicates(delta, E, C)
@@ -947,15 +997,15 @@ fun main(args : Array<String>) {
     }
 
     // print the FSP for each Ed || C
-    for (d in delta) {
+    for (d in delta.take(1)) {
         val Ed = addPerturbations(E, d)
         val EdC = copyLTSAcceptingOnly(parallel(Ed, C))
-        //println()
-        //write(System.out, EdC, EdC.alphabet())
+        println()
+        write(System.out, EdC, EdC.alphabet())
     }
 
     // print the DOT for each Ed || C
-    for (d in delta.take(3)) {
+    for (d in delta.take(1)) {
         val Ed = addPerturbations(E, d)
         val EdRestrictedToC = parallelRestrict(Ed, C)
         println()
@@ -1000,11 +1050,60 @@ fun main(args : Array<String>) {
     }
      */
 
-    /*
+    println("calc'ing WA")
     val waGen = SubsetConstructionGenerator(C, E, P)
     val wa = waGen.generate()
+    //println()
+    //println("WA:")
+    //write(System.out, wa, wa.alphabet())
+
+    var equiv = mutableSetOf<Set<Triple<Int,String,Int>>>()
+    for (d in delta) {
+        val Ed = addPerturbations(E, d)
+        val EdDet = toDeterministic(Ed)
+        if (satisfies(wa, EdDet)) {
+            equiv.add(d)
+        }
+        if (!satisfies(Ed, wa as MutableDetLTS<Int, String>)) {
+            println("WA ERROR!!")
+        }
+    }
+    println("#equiv: ${equiv.size}")
+    println("#missing: ${delta.size - equiv.size}")
+    val equivIntersect = equiv
+        .fold(A) { acc,d -> acc intersect d }
+        .toSet() - Re
+    println("#Equiv intersect: ${equivIntersect.size}")
+    /*
+    println("Equiv intersect: $equivIntersect")
+    println("Equiv extras:")
+    equiv.forEach {
+        val extra = it - equivIntersect
+        println("  $extra")
+    }
     println()
-    println("WA:")
-    write(System.out, wa, wa.alphabet())
-    */
+     */
+    /*
+    for (d in equiv.take(1)) {
+        val Ed = parallelRestrict(addPerturbations(E, d), C)
+        println("equiv:")
+        write(System.out, Ed, Ed.alphabet())
+    }
+     */
+
+    // top/bottom used edges
+    val useFrequency = (A - Re)
+        .associateWith { e -> delta.filter { it.contains(e) }.size.toDouble() / delta.size.toDouble() * 100.0 }
+        .entries
+        .sortedByDescending { it.value }
+
+    val tNum = 5
+    println("Top $tNum edges:")
+    useFrequency
+        .take(tNum)
+        .forEach { (e,f) -> println("$e: $f %") }
+    println("Bottom $tNum edges:")
+    useFrequency
+        .takeLast(tNum)
+        .forEach { (e,f) -> println("$e: $f %") }
 }

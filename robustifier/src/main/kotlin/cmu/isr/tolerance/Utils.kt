@@ -279,8 +279,9 @@ fun parallelRestrict(ref : NFA<Int,String>, restr : NFA<Int,String>) : NFA<Int,S
  */
 fun toDeterministic(T : CompactLTS<String>) : MutableDetLTS<Int, String> {
     val det = determinise(T) as CompactDFA<String>
-    val detLts = CompactDetLTS(det)
-    return detLts as MutableDetLTS<Int, String>
+    return CompactDetLTS(det)
+    //val detLts = CompactDetLTS(det)
+    //return detLts as MutableDetLTS<Int, String>
 }
 
 /**
@@ -288,8 +289,8 @@ fun toDeterministic(T : CompactLTS<String>) : MutableDetLTS<Int, String> {
  * T |= P
  */
 fun satisfies(T : LTS<Int, String>, P : MutableDetLTS<Int,String>) : Boolean {
-    // TODO really should make a copy of P
-    val pFixed = makeErrorState(P)
+    val Pcopy = copyLTS(P as CompactDetLTS<String>)
+    val pFixed = makeErrorState(Pcopy)
     val result = checkSafety(T, pFixed)
     return !result.violation
 }
