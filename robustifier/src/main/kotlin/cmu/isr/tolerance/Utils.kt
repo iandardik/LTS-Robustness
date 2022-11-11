@@ -363,6 +363,15 @@ fun fspToNFA(path: String) : CompactLTS<String> {
     return composite.asLTS() as CompactLTS
 }
 
+fun fspStringToDFA(spec : String) : CompactDetLTS<String> {
+    val composite = LTSACall.compile(spec).compose()
+    return composite.asDetLTS() as CompactDetLTS
+}
+fun fspStringToNFA(spec : String) : CompactLTS<String> {
+    val composite = LTSACall.compile(spec).compose()
+    return composite.asLTS() as CompactLTS
+}
+
 fun transClosureTable(F : NFAParallelComposition<Int,Int,String>, nfaF : LTS<Int,String>) : Map<Pair<Int,Int>, Set<Pair<Int,Int>>> {
     val m = mutableMapOf<Pair<Int,Int>, Set<Pair<Int,Int>>>()
     for (state in F.getStates(nfaF.alphabet())) {
@@ -558,4 +567,14 @@ fun makeMaximal(d : Set<Triple<Int,String,Int>>,
         }
     }
     return dMax
+}
+
+fun acceptingStates(F : NFAParallelComposition<Int, Int, String>,
+                    nfaF : LTS<Int, String>,
+                    E : LTS<Int, String>,
+                    P : LTS<Int, String>)
+        : Set<Pair<Int, Int>> {
+    return F.getStates(nfaF.alphabet())
+        .filter { E.isAccepting(it.first) && P.isAccepting(it.second) }
+        .toSet()
 }
