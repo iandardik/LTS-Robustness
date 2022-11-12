@@ -1,9 +1,9 @@
 package cmu.isr.tolerance
 
+import cmu.isr.tolerance.utils.ltsTransitions
+import cmu.isr.tolerance.utils.makeMaximal
 import cmu.isr.ts.lts.CompactDetLTS
 import cmu.isr.ts.lts.CompactLTS
-import ltsTransitions
-import makeMaximal
 import product
 
 const val defaultNumIters = 1000

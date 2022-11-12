@@ -1,47 +1,13 @@
 package cmu.isr.tolerance.delta
 
-import addPerturbations
-import canReachBadState
 import cmu.isr.tolerance.DeltaBuilder
-import cmu.isr.ts.LTS
+import cmu.isr.tolerance.utils.*
 import cmu.isr.ts.alphabet
 import cmu.isr.ts.lts.CompactDetLTS
 import cmu.isr.ts.lts.CompactLTS
 import cmu.isr.ts.lts.makeErrorState
 import cmu.isr.ts.nfa.NFAParallelComposition
-import cmu.isr.ts.parallel
-import copyLTS
-import copyLTSFull
-import ltsTransitions
-import makeMaximal
-import net.automatalib.automata.fsa.NFA
-import outgoingStatesMap
 import product
-import randSubset
-import reachableStates
-import satisfies
-import java.lang.RuntimeException
-
-fun <S,I> outgoingStates(set : Set<S>, lts: NFA<S, I>) : Set<S> {
-    val outgoing = mutableSetOf<S>()
-    for (src in set) {
-        for (a in lts.alphabet()) {
-            outgoing.addAll(lts.getTransitions(src, a))
-        }
-    }
-    return outgoing
-}
-fun <S,I> gfp(set : Set<S>, lts : NFA<S,I>) : Set<S> {
-    val setPrime = set
-        .filter { set.containsAll(outgoingStates(setOf(it), lts)) }
-        .toSet()
-    return if (setPrime == set) {
-        set
-    }
-    else {
-        gfp(setPrime, lts)
-    }
-}
 
 class DeltaDFSRand(private val env : CompactLTS<String>,
                    private val ctrl : CompactLTS<String>,

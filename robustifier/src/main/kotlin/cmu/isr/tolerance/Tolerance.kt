@@ -2,26 +2,18 @@ package cmu.isr.tolerance
 
 import addPerturbations
 import cmu.isr.assumption.SubsetConstructionGenerator
-import cmu.isr.tolerance.delta.DeltaBackwardDFS
 import cmu.isr.tolerance.delta.DeltaDFS
 import cmu.isr.tolerance.delta.DeltaDFSRand
+import cmu.isr.tolerance.utils.*
 import cmu.isr.ts.LTS
 import cmu.isr.ts.MutableDetLTS
-import cmu.isr.ts.alphabet
 import cmu.isr.ts.lts.*
-import cmu.isr.ts.lts.ltsa.write
 import cmu.isr.ts.nfa.determinise
 import cmu.isr.ts.parallel
-import copyLTSAcceptingOnly
-import fspToDFA
-import fspToNFA
-import isMaximalAccepting
-import ltsTransitions
 import net.automatalib.automata.fsa.impl.compact.CompactDFA
 import parallelRestrict
 import product
 import satisfies
-import stripTauTransitions
 import toDeterministic
 import java.io.File
 import java.util.*
@@ -182,11 +174,9 @@ fun main(args : Array<String>) {
         when (alg) {
             "0" -> emptySet()
             "1" -> deltaNaiveBruteForce(E, C, P)
-            "2" -> deltaBruteForce(E, C, P)
-            "3" -> DeltaDFS(E, C, P).compute()
-            "4" -> DeltaBackwardDFS(E, C, P).compute()
-            "5" -> DeltaDFSRand(E, C, P).compute()
-            "6" -> deltaNaiveRand(E, C, P)
+            "2" -> DeltaDFS(E, C, P).compute()
+            "3" -> DeltaDFSRand(E, C, P).compute()
+            "4" -> deltaNaiveRand(E, C, P)
             else -> {
                 println("Invalid algorithm")
                 return

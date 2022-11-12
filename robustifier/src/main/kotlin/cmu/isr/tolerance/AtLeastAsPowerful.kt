@@ -1,9 +1,5 @@
-import cmu.isr.ts.alphabet
+import cmu.isr.tolerance.utils.copyLTS
 import cmu.isr.ts.lts.CompactLTS
-import net.automatalib.automata.fsa.impl.compact.CompactNFA
-import net.automatalib.util.ts.copy.TSCopy
-import net.automatalib.util.ts.traversal.TSTraversal
-import net.automatalib.util.ts.traversal.TSTraversalMethod
 
 fun addPerturbations(lts : CompactLTS<String>, d : Set<Triple<Int,String,Int>>) : CompactLTS<String> {
     val ltsD = copyLTS(lts)

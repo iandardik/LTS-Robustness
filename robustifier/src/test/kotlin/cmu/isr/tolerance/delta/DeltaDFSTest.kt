@@ -1,13 +1,13 @@
 package cmu.isr.tolerance.delta
 
 import addPerturbations
+import cmu.isr.tolerance.utils.fspStringToDFA
+import cmu.isr.tolerance.utils.fspStringToNFA
+import cmu.isr.tolerance.utils.isMaximalAccepting
+import cmu.isr.tolerance.utils.stripTauTransitions
 import cmu.isr.ts.parallel
-import fspStringToDFA
-import fspStringToNFA
-import isMaximalAccepting
 import org.junit.jupiter.api.Test
 import satisfies
-import stripTauTransitions
 
 class DeltaDFSTest {
 
