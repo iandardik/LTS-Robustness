@@ -31,6 +31,15 @@ fun <T> randSubset(set : Set<T>, prob : Double) : Set<T> {
     return subset
 }
 
+fun <S,I> canReachBadState(states : Set<S>, lts : NFA<S,I>) : Boolean {
+    reachableStates(lts, states).forEach {
+        if (!lts.isAccepting(it)) {
+            return false
+        }
+    }
+    return true
+}
+
 fun QfProjE(src : Pair<Int, Int>,
             E : LTS<Int, String>,
             F : NFAParallelComposition<Int, Int, String>)
@@ -81,36 +90,11 @@ fun gfp(E : LTS<Int, String>,
 /**
  * Finds all transitions in T
  */
-
-fun ltsTransitions(T : LTS<Int, String>) : Set<Triple<Int,String,Int>> {
-    val transitions = mutableSetOf<Triple<Int,String,Int>>()
-    for (src in T) {
-        for (a in T.alphabet()) {
-            for (dst in T.getTransitions(src, a)) {
-                transitions.add(Triple(src, a, dst))
-            }
-        }
-    }
-    return transitions
-}
-
-fun ltsTransitions(T : NFA<Int, String>) : Set<Triple<Int,String,Int>> {
-    val transitions = mutableSetOf<Triple<Int,String,Int>>()
-    for (src in T) {
-        for (a in T.alphabet()) {
-            for (dst in T.getTransitions(src, a)) {
-                transitions.add(Triple(src, a, dst))
-            }
-        }
-    }
-    return transitions
-}
-
-fun ltsTransitions(T : NFAParallelComposition<Int, Int, String>, alph : Alphabet<String>) : Set<Triple<Pair<Int,Int>,String,Pair<Int,Int>>> {
-    val transitions = mutableSetOf<Triple<Pair<Int,Int>,String,Pair<Int,Int>>>()
-    for (src in T.getStates(alph)) {
+fun <S,I> ltsTransitions(lts : NFA<S, I>, alph : Alphabet<I> = lts.alphabet()) : Set<Triple<S,I,S>> {
+    val transitions = mutableSetOf<Triple<S,I,S>>()
+    for (src in lts.states) {
         for (a in alph) {
-            for (dst in T.getTransitions(src, a)) {
+            for (dst in lts.getTransitions(src, a)) {
                 transitions.add(Triple(src, a, dst))
             }
         }
@@ -375,7 +359,7 @@ fun fspStringToNFA(spec : String) : CompactLTS<String> {
 fun transClosureTable(F : NFAParallelComposition<Int,Int,String>, nfaF : LTS<Int,String>) : Map<Pair<Int,Int>, Set<Pair<Int,Int>>> {
     val m = mutableMapOf<Pair<Int,Int>, Set<Pair<Int,Int>>>()
     for (state in F.getStates(nfaF.alphabet())) {
-        val closure = reachableStates(state, F, nfaF)
+        val closure = reachableStates(F, setOf(state))
         m.put(state, closure)
     }
     return m
@@ -435,33 +419,15 @@ fun incomingStates(S : Set<Pair<Int,Int>>, F : NFAParallelComposition<Int,Int,St
     return incoming
 }
 
-fun reachableStates(init : Pair<Int,Int>, F : NFAParallelComposition<Int,Int,String>, nfaF : LTS<Int,String>) : Set<Pair<Int,Int>> {
-    val reach = mutableSetOf<Pair<Int,Int>>()
-    val queue : Queue<Pair<Int, Int>> = LinkedList()
-    queue.add(init)
+fun <S,I> reachableStates(F : NFA<S,I>, init : Set<S> = F.initialStates) : Set<S> {
+    val reach = mutableSetOf<S>()
+    val queue : Queue<S> = LinkedList()
+    queue.addAll(init)
     while (queue.isNotEmpty()) {
         val src = queue.remove()
         if (!reach.contains(src)) {
             reach.add(src)
-            for (a in nfaF.alphabet()) {
-                for (dst in F.getTransitions(src, a)) {
-                    queue.add(dst)
-                }
-            }
-        }
-    }
-    return reach
-}
-
-fun reachableStates(F : NFAParallelComposition<Int,Int,String>, nfaF : LTS<Int,String>) : Set<Pair<Int,Int>> {
-    val reach = mutableSetOf<Pair<Int,Int>>()
-    val queue : Queue<Pair<Int, Int>> = LinkedList()
-    queue.addAll(F.initialStates)
-    while (queue.isNotEmpty()) {
-        val src = queue.remove()
-        if (!reach.contains(src)) {
-            reach.add(src)
-            for (a in nfaF.alphabet()) {
+            for (a in F.alphabet()) {
                 for (dst in F.getTransitions(src, a)) {
                     queue.add(dst)
                 }
@@ -515,25 +481,6 @@ fun isMaximal(E : CompactLTS<String>,
     return true
 }
 
-fun isMaximalAccepting(E : CompactLTS<String>,
-                       d : Set<Triple<Int,String,Int>>,
-                       C : CompactLTS<String>,
-                       P : CompactDetLTS<String>)
-                       : Boolean {
-    val A = product(E.states, E.inputAlphabet.toSet(), E.states)
-        .filter { E.isAccepting(it.first) && E.isAccepting(it.third) }
-        .toSet()
-    val Ed = addPerturbations(E, d)
-    val unusedEdges = A - ltsTransitions(Ed)
-    for (e in unusedEdges) {
-        if (satisfies(parallel(addPerturbations(Ed,setOf(e)), C), P)) {
-            println("Can add edge: $e")
-            return false
-        }
-    }
-    return true
-}
-
 fun subsetOfAMaximalStateSubset(S : Set<Pair<Int,Int>>, delta : Set<Set<Pair<Int,Int>>>) : Boolean {
     for (d in delta) {
         if (d.containsAll(S)) {
@@ -553,20 +500,38 @@ fun <T> containsSubsetOf(container : Set<Set<T>>, e : Set<T>) : Boolean {
 }
 
 fun makeMaximal(d : Set<Triple<Int,String,Int>>,
-                A : Array<Triple<Int,String,Int>>,
-                E : CompactLTS<String>,
-                C : CompactLTS<String>,
-                P : CompactDetLTS<String>)
+                allEdges : Array<Triple<Int,String,Int>>,
+                env : CompactLTS<String>,
+                ctrl : CompactLTS<String>,
+                prop : CompactDetLTS<String>)
         : Set<Triple<Int,String,Int>> {
     val dMax = d.toMutableSet()
-    for (e in A) {
-        val Ed = addPerturbations(E, dMax + e)
-        val EdComposeC = parallel(Ed, C)
-        if (satisfies(EdComposeC, P)) {
+    for (e in allEdges) {
+        val envD = addPerturbations(env, dMax + e)
+        val envDCtrl = parallel(envD, ctrl)
+        if (satisfies(envDCtrl, prop)) {
             dMax += e
         }
     }
     return dMax
+}
+
+fun isMaximalAccepting(env : CompactLTS<String>,
+                       ctrl : CompactLTS<String>,
+                       prop : CompactDetLTS<String>)
+        : Boolean {
+    val allEdges = product(env.states, env.inputAlphabet.toSet(), env.states)
+        .filter { env.isAccepting(it.first) && env.isAccepting(it.third) }
+        .toSet()
+    val unusedEdges = allEdges - ltsTransitions(env)
+    for (e in unusedEdges) {
+        val envE = addPerturbations(env, setOf(e))
+        if (satisfies(parallel(envE, ctrl), prop)) {
+            println("Can add edge: $e")
+            return false
+        }
+    }
+    return true
 }
 
 fun acceptingStates(F : NFAParallelComposition<Int, Int, String>,

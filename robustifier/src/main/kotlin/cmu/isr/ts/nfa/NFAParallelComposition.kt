@@ -1,18 +1,21 @@
 package cmu.isr.ts.nfa
 
 import cmu.isr.ts.alphabet
+import net.automatalib.automata.concepts.InputAlphabetHolder
 import net.automatalib.automata.fsa.NFA
 import net.automatalib.automata.fsa.impl.compact.CompactNFA
 import net.automatalib.ts.UniversalTransitionSystem
 import net.automatalib.util.ts.copy.TSCopy
 import net.automatalib.util.ts.traversal.TSTraversal
 import net.automatalib.util.ts.traversal.TSTraversalMethod
+import net.automatalib.words.Alphabet
 import net.automatalib.words.impl.Alphabets
 
 open class NFAParallelComposition<S1, S2, I>(
   private val nfa1: NFA<S1, I>,
   private val nfa2: NFA<S2, I>
-) : UniversalTransitionSystem<Pair<S1, S2>, I, Pair<S1, S2>, Boolean, Void?> {
+) : NFA<Pair<S1, S2>, I> {
+//UniversalTransitionSystem<Pair<S1, S2>, I, Pair<S1, S2>, Boolean, Void?> {
 
   override fun getInitialStates(): Set<Pair<S1, S2>> {
     return nfa1.initialStates.flatMap { s1 -> nfa2.initialStates.map { s2 -> Pair(s1, s2) } }.toSet()
@@ -61,9 +64,16 @@ open class NFAParallelComposition<S1, S2, I>(
     }
   }
 
-  /**
-   * I'm ignoring the input, sorry not sorry
-   */
+  override fun getStates() : MutableCollection<Pair<S1, S2>> {
+    val states = mutableSetOf<Pair<S1,S2>>()
+    for (s1 in nfa1.states) {
+      for (s2 in nfa2.states) {
+        states.add(Pair(s1, s2))
+      }
+    }
+    return states
+  }
+
   override fun getStates(input: MutableIterable<I>?): MutableSet<Pair<S1, S2>> {
     val states = mutableSetOf<Pair<S1,S2>>()
     for (s1 in nfa1.states) {
@@ -74,10 +84,13 @@ open class NFAParallelComposition<S1, S2, I>(
     return states
   }
 
-  fun isAccepting(state : Pair<S1, S2>) : Boolean {
+  override fun isAccepting(state : Pair<S1, S2>) : Boolean {
     return nfa1.isAccepting(state.first) && nfa2.isAccepting(state.second)
   }
 
+  fun alphabet() : Alphabet<I> {
+    return Alphabets.fromCollection(nfa1.alphabet() union nfa2.alphabet())
+  }
 }
 
 fun <I> parallelComposition(nfa1: NFA<*, I>, nfa2: NFA<*, I>): NFA<Int, I> {

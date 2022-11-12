@@ -31,7 +31,8 @@ class DeltaDFSTest {
 
         // checks to make sure every member of delta is maximal
         for (d in delta) {
-            assert(isMaximalAccepting(env, d, ctrl, prop)) { "Found non-maximal member of delta" }
+            val envD = addPerturbations(env, d)
+            assert(isMaximalAccepting(envD, ctrl, prop)) { "Found non-maximal member of delta" }
         }
 
         // checks to make sure delta has 3 elements
@@ -65,7 +66,8 @@ class DeltaDFSTest {
 
         // checks to make sure every member of delta is maximal
         for (d in delta) {
-            assert(isMaximalAccepting(env, d, ctrl, prop)) { "Found non-maximal member of delta" }
+            val envD = addPerturbations(env, d)
+            assert(isMaximalAccepting(envD, ctrl, prop)) { "Found non-maximal member of delta" }
         }
 
         // checks to make sure delta has 3 elements

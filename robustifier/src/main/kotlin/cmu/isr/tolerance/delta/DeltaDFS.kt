@@ -39,7 +39,7 @@ class DeltaDFS(private val env : CompactLTS<String>,
         allTransitions = product(env.states, env.inputAlphabet.toSet(), env.states)
 
         val qfMinusErr = acceptingStates(f, fNFA, env, ltsCCompP)
-        val winningSet = gfp(env, fNotFull, fNotFullNFA, qfMinusErr, qfMinusErr) intersect reachableStates(f, fNFA)
+        val winningSet = gfp(env, fNotFull, fNotFullNFA, qfMinusErr, qfMinusErr) intersect reachableStates(f)
         outgoingStates = outgoingStatesMap(winningSet, f, fNFA)
         transClosures = transClosureTable(fNotFull, fNotFullNFA)
     }

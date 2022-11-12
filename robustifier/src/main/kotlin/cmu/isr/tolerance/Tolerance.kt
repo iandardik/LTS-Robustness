@@ -332,7 +332,8 @@ fun main(args : Array<String>) {
         val EdComposeC = parallel(Ed, C)
         if (!satisfies(EdComposeC, P)) {
             sound = false
-            println("Violation for Ed||P |= P: $d")
+            println("Found violation for Ed||P |= P")
+            //println("Violation for Ed||P |= P: $d")
         }
     }
     if (sound) {
@@ -343,7 +344,8 @@ fun main(args : Array<String>) {
     // checks to make sure every member of delta is maximal
     var maximal = true
     for (d in delta) {
-        if (!isMaximalAccepting(E, d, C, P)) {
+        val envD = addPerturbations(E, d)
+        if (!isMaximalAccepting(envD, C, P)) {
             maximal = false
             println("Found non-maximal d")
             //println("Found non-maximal d: $d")
@@ -405,6 +407,7 @@ fun main(args : Array<String>) {
      */
 
     // top/bottom used edges
+    /*
     val useFrequency = (A - Re)
         .associateWith { e -> delta.filter { it.contains(e) }.size.toDouble() / delta.size.toDouble() * 100.0 }
         .entries
@@ -419,4 +422,5 @@ fun main(args : Array<String>) {
     useFrequency
         .takeLast(tNum)
         .forEach { (e,f) -> println("$e: $f %") }
+     */
 }

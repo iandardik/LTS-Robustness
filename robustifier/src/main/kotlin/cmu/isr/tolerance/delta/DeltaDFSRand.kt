@@ -1,68 +1,94 @@
 package cmu.isr.tolerance.delta
 
-import acceptingStates
+import addPerturbations
+import canReachBadState
 import cmu.isr.tolerance.DeltaBuilder
 import cmu.isr.ts.LTS
 import cmu.isr.ts.alphabet
 import cmu.isr.ts.lts.CompactDetLTS
 import cmu.isr.ts.lts.CompactLTS
+import cmu.isr.ts.lts.makeErrorState
 import cmu.isr.ts.nfa.NFAParallelComposition
 import cmu.isr.ts.parallel
+import copyLTS
 import copyLTSFull
-import gfp
 import ltsTransitions
 import makeMaximal
+import net.automatalib.automata.fsa.NFA
 import outgoingStatesMap
 import product
 import randSubset
 import reachableStates
-import transClosureTable
+import satisfies
+import java.lang.RuntimeException
+
+fun <S,I> outgoingStates(set : Set<S>, lts: NFA<S, I>) : Set<S> {
+    val outgoing = mutableSetOf<S>()
+    for (src in set) {
+        for (a in lts.alphabet()) {
+            outgoing.addAll(lts.getTransitions(src, a))
+        }
+    }
+    return outgoing
+}
+fun <S,I> gfp(set : Set<S>, lts : NFA<S,I>) : Set<S> {
+    val setPrime = set
+        .filter { set.containsAll(outgoingStates(setOf(it), lts)) }
+        .toSet()
+    return if (setPrime == set) {
+        set
+    }
+    else {
+        gfp(setPrime, lts)
+    }
+}
 
 class DeltaDFSRand(private val env : CompactLTS<String>,
                    private val ctrl : CompactLTS<String>,
                    private val prop : CompactDetLTS<String>) {
-    private val allTransitions : Set<Triple<Int,String,Int>>
-    private val allTransitionsArray : Array<Triple<Int,String,Int>>
-    private val f : NFAParallelComposition<Int, Int, String>
-    private val fNFA : LTS<Int, String>
-    private val fNotFull : NFAParallelComposition<Int, Int, String>
-    private val fNotFullNFA : LTS<Int, String>
-    private val fR : Set<Triple<Pair<Int, Int>, String, Pair<Int, Int>>>
-    private val outgoingStates : Map<Pair<Int, Int>, Set<Pair<Int, Int>>>
-    private val transClosures : Map<Pair<Int, Int>, Set<Pair<Int, Int>>>
+
+    private val metaCtrl : NFAParallelComposition<Int, Pair<Int,Int>, String>
+    private val metaCtrlTransitions : Set<Triple<Pair<Int, Pair<Int, Int>>, String, Pair<Int, Pair<Int, Int>>>>
+    private val envFullTransitions : Set<Triple<Int,String,Int>>
+    private val envFullTransitionsArray : Array<Triple<Int,String,Int>>
+    private val winningSet : Set<Pair<Int, Pair<Int,Int>>>
+    private val transClosureTable : Map<Pair<Int, Pair<Int,Int>>, Set<Pair<Int, Pair<Int,Int>>>>
 
     init {
         val envFull = copyLTSFull(env)
-        val ltsCCompP = parallel(ctrl, prop)
-        f = NFAParallelComposition(envFull, ltsCCompP)
-        fNFA = parallel(envFull, ltsCCompP)
-        fNotFull = NFAParallelComposition(env, ltsCCompP)
-        fNotFullNFA = parallel(env, ltsCCompP)
-        fR = ltsTransitions(f, fNFA.alphabet())
-        allTransitions = product(env.states, env.inputAlphabet.toSet(), env.states)
-        allTransitionsArray = allTransitions.toTypedArray()
+        val propErr = makeErrorState(copyLTS(prop))
+        metaCtrl = NFAParallelComposition(envFull, NFAParallelComposition(ctrl, propErr))
+        metaCtrlTransitions = ltsTransitions(metaCtrl)
 
-        val qfMinusErr = acceptingStates(f, fNFA, env, ltsCCompP)
-        val winningSet = gfp(env, fNotFull, fNotFullNFA, qfMinusErr, qfMinusErr) intersect reachableStates(f, fNFA)
-        outgoingStates = outgoingStatesMap(winningSet, f, fNFA)
-        transClosures = transClosureTable(fNotFull, fNotFullNFA)
+        envFullTransitions = product(env.states, env.alphabet().toSet(), env.states)
+            .filter { env.isAccepting(it.first) && env.isAccepting(it.third) }
+            .toSet()
+        envFullTransitionsArray = envFullTransitions.toTypedArray()
+
+        val metaCtrlNotFull = NFAParallelComposition(env, NFAParallelComposition(ctrl, propErr))
+        val allMetaCtrlStates = metaCtrlNotFull.states
+            .filter { metaCtrl.isAccepting(it) }
+            .toSet()
+        winningSet = gfp(allMetaCtrlStates, metaCtrlNotFull) intersect reachableStates(metaCtrl)
+        transClosureTable = metaCtrlNotFull.states
+            .associateWith { reachableStates(metaCtrlNotFull, setOf(it)) }
     }
 
     fun compute() : Set<Set<Triple<Int, String, Int>>> {
-        val init = f.initialStates
+        val init = metaCtrl.initialStates
         val delta = DeltaBuilder(env, ctrl, prop)
-        val visited = mutableSetOf<Set<Pair<Int, Int>>>()
+        val visited = mutableSetOf<Set<Pair<Int, Pair<Int,Int>>>>()
         val initLevel = 0
         recCompute(init, initLevel, delta, visited)
         return delta.toSet()
     }
 
-    private fun recCompute(setRaw : Set<Pair<Int, Int>>,
+    private fun recCompute(setRaw : Set<Pair<Int, Pair<Int,Int>>>,
                            level : Int,
                            delta : DeltaBuilder,
-                           visited : MutableSet<Set<Pair<Int, Int>>>) {
+                           visited : MutableSet<Set<Pair<Int, Pair<Int,Int>>>>) {
         val set = setRaw
-            .mapNotNull { transClosures[it] }
+            .mapNotNull { transClosureTable[it] }
             .fold(setRaw) { acc, e -> acc union e }
 
         if (visited.contains(set)) {
@@ -71,17 +97,15 @@ class DeltaDFSRand(private val env : CompactLTS<String>,
         visited.add(set)
 
         // compute delta
-        val del = fR
-            .filterTo(HashSet()) { set.contains(it.first) && !set.contains(it.third) }
+        val del = metaCtrlTransitions
+            .filter { set.contains(it.first) && !set.contains(it.third) }
             .map { Triple(it.first.first, it.second, it.third.first) }
-        allTransitionsArray.shuffle()
-        val maximalElement = makeMaximal(allTransitions - del, allTransitionsArray, env, ctrl, prop)
+            .toSet()
+        envFullTransitionsArray.shuffle()
+        val maximalElement = makeMaximal(envFullTransitions - del, envFullTransitionsArray, env, ctrl, prop)
         delta.add(maximalElement)
 
-        val succ = set
-            .mapNotNull { outgoingStates[it] }
-            .fold(emptySet<Pair<Int,Int>>()) { acc,outgoing -> acc union outgoing }
-        val outgoing = succ - set
+        val outgoing = (outgoingStates(set, metaCtrl) - set) intersect winningSet
 
         // target a constant number of edges to explore
         val avgNumEdges = 5.0 //3.0
@@ -97,13 +121,13 @@ class DeltaDFSRand(private val env : CompactLTS<String>,
         }
     }
 
-    private fun powersetCompute(set : Set<Pair<Int, Int>>,
-                                toExplore : List<Pair<Int, Int>>,
+    private fun powersetCompute(set : Set<Pair<Int, Pair<Int,Int>>>,
+                                toExplore : List<Pair<Int, Pair<Int,Int>>>,
                                 level : Int,
                                 delta : DeltaBuilder,
-                                visited : MutableSet<Set<Pair<Int, Int>>>) {
+                                visited : MutableSet<Set<Pair<Int, Pair<Int,Int>>>>) {
         if (toExplore.isEmpty()) {
-            recCompute(set, level, delta, visited)
+            recCompute(set, level+1, delta, visited)
         } else {
             val head = toExplore.first()
             val tail = toExplore.drop(1)

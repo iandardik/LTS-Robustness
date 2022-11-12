@@ -25,7 +25,7 @@ fun deltaBruteForce(env : CompactLTS<String>,
     val fNotFullNFA = parallel(env, ltsCCompP)
     val qfMinusErr = acceptingStates(f, fNFA, env, ltsCCompP)
 
-    val winningSet = gfp(env, fNotFull, fNotFullNFA, qfMinusErr, qfMinusErr) intersect reachableStates(f, fNFA)
+    val winningSet = gfp(env, fNotFull, fNotFullNFA, qfMinusErr, qfMinusErr) intersect reachableStates(f)
     println("#W: ${winningSet.size}")
 
     val ltsECompC = parallel(env, ctrl)
