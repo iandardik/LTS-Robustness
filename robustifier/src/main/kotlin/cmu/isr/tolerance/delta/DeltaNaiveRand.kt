@@ -1,5 +1,6 @@
 package cmu.isr.tolerance
 
+import cmu.isr.tolerance.delta.DeltaBuilder
 import cmu.isr.tolerance.utils.ltsTransitions
 import cmu.isr.tolerance.utils.makeMaximal
 import cmu.isr.ts.lts.CompactDetLTS

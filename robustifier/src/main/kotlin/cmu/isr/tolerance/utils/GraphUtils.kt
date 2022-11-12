@@ -6,7 +6,7 @@ import net.automatalib.automata.fsa.NFA
 import net.automatalib.words.Alphabet
 import java.util.*
 
-fun <S,I> outgoingStates(set : Set<S>, lts: NFA<S, I>) : Set<S> {
+fun <S,I> outgoingStates(set : Set<S>, lts : NFA<S,I>) : Set<S> {
     val outgoing = mutableSetOf<S>()
     for (src in set) {
         for (a in lts.alphabet()) {
@@ -16,12 +16,12 @@ fun <S,I> outgoingStates(set : Set<S>, lts: NFA<S, I>) : Set<S> {
     return outgoing
 }
 
-fun incomingStates(S : Set<Pair<Int,Int>>, F : NFAParallelComposition<Int,Int,String>, nfaF : LTS<Int,String>) : Set<Pair<Int,Int>> {
-    val incoming = mutableSetOf<Pair<Int,Int>>()
-    for (src in F.getStates(nfaF.alphabet())) {
-        for (a in nfaF.alphabet()) {
-            for (dst in F.getTransitions(src, a)) {
-                if (S.contains(dst)) {
+fun <S,I> incomingStates(set : Set<S>, lts : NFA<S,I>) : Set<S> {
+    val incoming = mutableSetOf<S>()
+    for (src in lts.getStates(lts.alphabet())) {
+        for (a in lts.alphabet()) {
+            for (dst in lts.getTransitions(src, a)) {
+                if (set.contains(dst)) {
                     incoming.add(src)
                 }
             }
@@ -30,7 +30,7 @@ fun incomingStates(S : Set<Pair<Int,Int>>, F : NFAParallelComposition<Int,Int,St
     return incoming
 }
 
-fun <S,I> reachableStates(F : NFA<S,I>, init : Set<S> = F.initialStates) : Set<S> {
+fun <S,I> reachableStates(lts : NFA<S,I>, init : Set<S> = lts.initialStates) : Set<S> {
     val reach = mutableSetOf<S>()
     val queue : Queue<S> = LinkedList()
     queue.addAll(init)
@@ -38,29 +38,14 @@ fun <S,I> reachableStates(F : NFA<S,I>, init : Set<S> = F.initialStates) : Set<S
         val src = queue.remove()
         if (!reach.contains(src)) {
             reach.add(src)
-            for (a in F.alphabet()) {
-                for (dst in F.getTransitions(src, a)) {
+            for (a in lts.alphabet()) {
+                for (dst in lts.getTransitions(src, a)) {
                     queue.add(dst)
                 }
             }
         }
     }
     return reach
-}
-
-/**
- * Performs a greatest fixpoint computation on S
- */
-fun <S,I> gfp(set : Set<S>, lts : NFA<S,I>) : Set<S> {
-    val setPrime = set
-        .filter { set.containsAll(outgoingStates(setOf(it), lts)) }
-        .toSet()
-    return if (setPrime == set) {
-        set
-    }
-    else {
-        gfp(setPrime, lts)
-    }
 }
 
 /**
@@ -76,4 +61,19 @@ fun <S,I> ltsTransitions(lts : NFA<S, I>, alph : Alphabet<I> = lts.alphabet()) :
         }
     }
     return transitions
+}
+
+/**
+ * Performs a greatest fixpoint computation on S
+ */
+fun <S,I> gfp(set : Set<S>, lts : NFA<S,I>) : Set<S> {
+    val setPrime = set
+        .filter { set.containsAll(outgoingStates(setOf(it), lts)) }
+        .toSet()
+    return if (setPrime == set) {
+        set
+    }
+    else {
+        gfp(setPrime, lts)
+    }
 }

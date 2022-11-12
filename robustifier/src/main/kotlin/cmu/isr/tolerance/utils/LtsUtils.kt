@@ -17,18 +17,26 @@ import java.util.*
  * returns whether:
  * T |= P
  */
-fun satisfies(T : LTS<Int, String>, P : MutableDetLTS<Int,String>) : Boolean {
-    val Pcopy = copyLTS(P as CompactDetLTS<String>)
-    val pFixed = makeErrorState(Pcopy)
-    val result = checkSafety(T, pFixed)
+fun satisfies(lts : LTS<Int, String>, prop : MutableDetLTS<Int,String>) : Boolean {
+    val propCopy = copyLTS(prop as CompactDetLTS<String>)
+    val propErr = makeErrorState(propCopy)
+    val result = checkSafety(lts, propErr)
     return !result.violation
+}
+
+fun <I> addPerturbations(lts : CompactLTS<I>, d : Set<Triple<Int,I,Int>>) : CompactLTS<I> {
+    val ltsD = copyLTS(lts)
+    for (t in d) {
+        ltsD.addTransition(t.first, t.second, t.third)
+    }
+    return ltsD
 }
 
 /**
  * Turns an NFA (T) into a DFA
  */
-fun toDeterministic(T : CompactLTS<String>) : MutableDetLTS<Int, String> {
-    val det = determinise(T) as CompactDFA<String>
+fun <I> toDeterministic(lts : CompactLTS<I>) : MutableDetLTS<Int, I> {
+    val det = determinise(lts) as CompactDFA<I>
     return CompactDetLTS(det)
 }
 

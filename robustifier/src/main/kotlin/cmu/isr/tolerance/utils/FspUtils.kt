@@ -11,18 +11,18 @@ import net.automatalib.util.automata.builders.AutomatonBuilders
 import net.automatalib.words.impl.Alphabets
 import java.io.File
 
-fun stripTauTransitions(T : CompactLTS<String>) : CompactLTS<String> {
-    val newAlphabet = Alphabets.fromCollection(T.inputAlphabet.toSet() - "tau")
+fun stripTauTransitions(lts : CompactLTS<String>) : CompactLTS<String> {
+    val newAlphabet = Alphabets.fromCollection(lts.inputAlphabet.toSet() - "tau")
     val newNFA = AutomatonBuilders.newNFA(newAlphabet).create()
-    for (s in T.states) {
-        if (T.initialStates.contains(s)) {
-            newNFA.addInitialState(T.isAccepting(s))
+    for (s in lts.states) {
+        if (lts.initialStates.contains(s)) {
+            newNFA.addInitialState(lts.isAccepting(s))
         }
         else {
-            newNFA.addState(T.isAccepting(s))
+            newNFA.addState(lts.isAccepting(s))
         }
     }
-    for (t in ltsTransitions(T)) {
+    for (t in ltsTransitions(lts)) {
         if (t.second != "tau") {
             newNFA.addTransition(t.first, t.second, t.third)
         }

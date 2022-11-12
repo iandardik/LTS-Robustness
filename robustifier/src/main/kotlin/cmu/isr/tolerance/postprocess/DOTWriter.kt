@@ -1,4 +1,4 @@
-package cmu.isr.tolerance
+package cmu.isr.tolerance.postprocess
 
 import net.automatalib.automata.fsa.NFA
 import net.automatalib.commons.util.Holder

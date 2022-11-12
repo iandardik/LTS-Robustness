@@ -1,6 +1,5 @@
 package cmu.isr.tolerance.delta
 
-import cmu.isr.tolerance.DeltaBuilder
 import cmu.isr.tolerance.utils.*
 import cmu.isr.ts.alphabet
 import cmu.isr.ts.lts.CompactDetLTS

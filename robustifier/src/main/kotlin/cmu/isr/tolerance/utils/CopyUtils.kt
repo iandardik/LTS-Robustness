@@ -35,35 +35,35 @@ fun <I> copyLTS(lts : CompactDetLTS<I>) : CompactDetLTS<I> {
  * DFA copyLTS, but it does assume that T.states iterates on the state IDs in order, and T.addInitialState() and
  * T.addState() add new state IDs to T in order.
  */
-fun copyLTS(T : CompactLTS<String>) : CompactLTS<String> {
-    val newNFA = AutomatonBuilders.newNFA(T.inputAlphabet).create()
-    for (s in T.states) {
-        if (T.initialStates.contains(s)) {
-            newNFA.addInitialState(T.isAccepting(s))
+fun <I> copyLTS(lts : CompactLTS<I>) : CompactLTS<I> {
+    val newNFA = AutomatonBuilders.newNFA(lts.inputAlphabet).create()
+    for (s in lts.states) {
+        if (lts.initialStates.contains(s)) {
+            newNFA.addInitialState(lts.isAccepting(s))
         }
         else {
-            newNFA.addState(T.isAccepting(s))
+            newNFA.addState(lts.isAccepting(s))
         }
     }
-    for (t in ltsTransitions(T)) {
+    for (t in ltsTransitions(lts)) {
         newNFA.addTransition(t.first, t.second, t.third)
     }
     return newNFA.asLTS()
 }
 
-fun copyLTSFull(T : CompactLTS<String>) : CompactLTS<String> {
-    val newNFA = AutomatonBuilders.newNFA(T.inputAlphabet).create()
-    for (s in T.states) {
-        if (T.initialStates.contains(s)) {
-            newNFA.addInitialState(T.isAccepting(s))
+fun <I> copyLTSFull(lts : CompactLTS<I>) : CompactLTS<I> {
+    val newNFA = AutomatonBuilders.newNFA(lts.inputAlphabet).create()
+    for (s in lts.states) {
+        if (lts.initialStates.contains(s)) {
+            newNFA.addInitialState(lts.isAccepting(s))
         }
         else {
-            newNFA.addState(T.isAccepting(s))
+            newNFA.addState(lts.isAccepting(s))
         }
     }
-    for (src in T.states) {
-        for (a in T.alphabet()) {
-            for (dst in T.states) {
+    for (src in lts.states) {
+        for (a in lts.alphabet()) {
+            for (dst in lts.states) {
                 newNFA.addTransition(src, a, dst)
             }
         }
@@ -71,18 +71,18 @@ fun copyLTSFull(T : CompactLTS<String>) : CompactLTS<String> {
     return newNFA.asLTS()
 }
 
-fun copyLTSAcceptingOnly(T : NFA<Int, String>) : NFA<Int, String> {
-    val newNFA = AutomatonBuilders.newNFA(T.alphabet()).create()
-    for (s in T.states) {
-        if (T.isAccepting(s)) {
-            if (T.initialStates.contains(s)) {
-                newNFA.addInitialState(T.isAccepting(s))
+fun <I> copyLTSAcceptingOnly(lts : NFA<Int, I>) : NFA<Int, I> {
+    val newNFA = AutomatonBuilders.newNFA(lts.alphabet()).create()
+    for (s in lts.states) {
+        if (lts.isAccepting(s)) {
+            if (lts.initialStates.contains(s)) {
+                newNFA.addInitialState(lts.isAccepting(s))
             } else {
-                newNFA.addState(T.isAccepting(s))
+                newNFA.addState(lts.isAccepting(s))
             }
         }
     }
-    for (t in ltsTransitions(T)) {
+    for (t in ltsTransitions(lts)) {
         if (newNFA.states.contains(t.first) && newNFA.states.contains(t.third))
             newNFA.addTransition(t.first, t.second, t.third)
     }

@@ -5,117 +5,15 @@ import cmu.isr.assumption.SubsetConstructionGenerator
 import cmu.isr.tolerance.delta.DeltaDFS
 import cmu.isr.tolerance.delta.DeltaDFSRand
 import cmu.isr.tolerance.utils.*
-import cmu.isr.ts.LTS
 import cmu.isr.ts.MutableDetLTS
-import cmu.isr.ts.lts.*
-import cmu.isr.ts.nfa.determinise
 import cmu.isr.ts.parallel
-import net.automatalib.automata.fsa.impl.compact.CompactDFA
 import parallelRestrict
 import product
 import satisfies
 import toDeterministic
 import java.io.File
-import java.util.*
-
-
-
-fun filterControlledDuplicates(delta : Set<Set<Triple<Int,String,Int>>>,
-                               E : CompactLTS<String>,
-                               C : CompactLTS<String>)
-        : Set<Set<Triple<Int,String,Int>>> {
-    val controlledDelta = delta.associateWith { parallel(addPerturbations(E,it), C) }
-    val ls = delta.toMutableList()
-    val toRemove = mutableSetOf<Int>()
-    for (i in 0 until ls.size) {
-        if (i in toRemove) {
-            continue
-        }
-        val di = ls[i]
-        val cdi = controlledDelta[di] ?: throw RuntimeException("cdi bug")
-        val cdiDet = CompactDetLTS(determinise(cdi) as CompactDFA<String>)
-        for (j in i+1 until ls.size) {
-            if (j in toRemove) {
-                continue
-            }
-            val dj = ls[j]
-            val cdj = controlledDelta[dj] ?: throw RuntimeException("cdj bug")
-            val cdjDet = CompactDetLTS(determinise(cdj) as CompactDFA<String>)
-            if (satisfies(cdi, cdjDet)) {
-                toRemove.add(j)
-            }
-            else if (satisfies(cdj, cdiDet)) {
-                toRemove.add(i)
-            }
-
-            /*
-            if (satisfies(cdi, cdjDet) && satisfies(cdj, cdiDet)) {
-                toRemove.add(j)
-            }
-             */
-            // only keep maximal behaviors, JDEDS style
-            /*
-            else if (satisfies(cdi, cdjDet)) {
-                toRemove.add(i)
-            }
-            else if (satisfies(cdj, cdiDet)) {
-                toRemove.add(j)
-            }
-             */
-        }
-    }
-    return ls.filterIndexedTo(HashSet()) { i,_ -> !toRemove.contains(i) }
-}
-
-fun bucketControlledDuplicates(delta : Set<Set<Triple<Int,String,Int>>>,
-                               E : CompactLTS<String>,
-                               C : CompactLTS<String>)
-                               : Set<Set<Set<Triple<Int,String,Int>>>> {
-    val controlledDelta = delta.associateWith { parallel(addPerturbations(E,it), C) }
-    val buckets = mutableMapOf<Pair<LTS<Int,String>,CompactDetLTS<String>>, Set<Set<Triple<Int,String,Int>>>>()
-    for (d in delta) {
-        val cd = controlledDelta[d] ?: throw RuntimeException("cdi bug")
-        val cdDet = CompactDetLTS(determinise(cd) as CompactDFA<String>)
-        var foundBucket = false
-        for (k in buckets.keys) {
-            val dk = k.first
-            val dkDet = k.second
-            if (satisfies(cd, dkDet) && satisfies(dk, cdDet)) {
-                val bucketk = buckets[k] ?: throw RuntimeException("bucket error")
-                buckets[k] = bucketk union setOf(d)
-                foundBucket = true
-                break
-            }
-        }
-        if (!foundBucket) {
-            val k = Pair(cd,cdDet)
-            buckets[k] = setOf(d)
-        }
-    }
-    return buckets.values.toSet()
-}
-
-
 
 fun main(args : Array<String>) {
-    /*
-    val T = AutomatonBuilders.newNFA(Alphabets.fromArray("a"))
-        .withInitial(0)
-        .from(0).on("a").to(1)
-        .withAccepting(0, 1, 2)
-        .create()
-        .asLTS()
-    val P = AutomatonBuilders.newDFA(Alphabets.fromArray("a"))
-        .withInitial(0)
-        .from(0).on("a").to(1)
-        .from(1).on("a").to(2)
-        //.from(0).on("b").to(0)
-        .withAccepting(0, 1, 2)
-        .create()
-        .asLTS()
-    write(System.out, P, P.alphabet())
-    */
-
     if (args.size < 4) {
         println("usage: tolerance <alg> <env> <ctrl> <prop>")
         return
@@ -130,22 +28,22 @@ fun main(args : Array<String>) {
     }
 
     val alg = args[0]
-    val E = stripTauTransitions(fspToNFA(args[1]))
-    val C = stripTauTransitions(fspToNFA(args[2]))
-    val P = fspToDFA(args[3])
+    val env = stripTauTransitions(fspToNFA(args[1]))
+    val ctrl = stripTauTransitions(fspToNFA(args[2]))
+    val prop = fspToDFA(args[3])
 
-    if (!satisfies(parallel(E,C), P)) {
-        //val waGen = SubsetConstructionGenerator(C, E, P)
+    if (!satisfies(parallel(env,ctrl), prop)) {
+        //val waGen = SubsetConstructionGenerator(C, env, P)
         //val wa = waGen.generate()
         //println("WA:")
         //write(System.out, wa, wa.alphabet())
         //println(wa.alphabet())
-        println("E||C does not satisfy P")
+        println("env||C does not satisfy P")
         return
     }
 
-    //println("E:")
-    //writeDOT(System.out, E, E.alphabet())
+    //println("env:")
+    //writeDOT(System.out, env, env.alphabet())
 
     if (alg == "t") {
         val nTrials = 1000
@@ -153,7 +51,7 @@ fun main(args : Array<String>) {
             var nSuccess = 0
             var nFail = 0
             for (i in 0..nTrials) {
-                val delta = deltaNaiveRand(E, C, P, naiveRandN)
+                val delta = deltaNaiveRand(env, ctrl, prop, naiveRandN)
                 if (delta.size == 3) {
                     ++nSuccess
                 } else {
@@ -173,10 +71,10 @@ fun main(args : Array<String>) {
     var delta =
         when (alg) {
             "0" -> emptySet()
-            "1" -> deltaNaiveBruteForce(E, C, P)
-            "2" -> DeltaDFS(E, C, P).compute()
-            "3" -> DeltaDFSRand(E, C, P).compute()
-            "4" -> deltaNaiveRand(E, C, P)
+            "1" -> deltaNaiveBruteForce(env, ctrl, prop)
+            "2" -> DeltaDFS(env, ctrl, prop).compute()
+            "3" -> DeltaDFSRand(env, ctrl, prop).compute()
+            "4" -> deltaNaiveRand(env, ctrl, prop)
             else -> {
                 println("Invalid algorithm")
                 return
@@ -186,17 +84,17 @@ fun main(args : Array<String>) {
     println("#delta: ${delta.size}")
     /*
     delta = delta
-        .map { it.filter { E.isAccepting(it.first) && E.isAccepting(it.third) }.toSet() }
+        .map { it.filter { env.isAccepting(it.first) && env.isAccepting(it.third) }.toSet() }
         .associateWith { 0 }
         .keys.toSet()
     println("#delta no err states: ${delta.size}")
      */
 
-    val A = product(E.states, E.inputAlphabet.toSet(), E.states)
-        .filter { E.isAccepting(it.first) && E.isAccepting(it.third) }
+    val A = product(env.states, env.inputAlphabet.toSet(), env.states)
+        .filter { env.isAccepting(it.first) && env.isAccepting(it.third) }
         .toSet()
-    val Re = ltsTransitions(E)
-        .filter { E.isAccepting(it.first) && E.isAccepting(it.third) }
+    val Re = ltsTransitions(env)
+        .filter { env.isAccepting(it.first) && env.isAccepting(it.third) }
         .toSet()
 
     /*
@@ -220,11 +118,11 @@ fun main(args : Array<String>) {
     println()
      */
 
-    //delta = filterControlledDuplicates(delta, E, C)
+    //delta = filterControlledDuplicates(delta, env, C)
     //println("#(filtered delta): ${delta.size}")
 
     /*
-    val controlledBehBuckets = bucketControlledDuplicates(delta, E, C)
+    val controlledBehBuckets = bucketControlledDuplicates(delta, env, C)
     val cbbMin = controlledBehBuckets.map { it.size }.min()
     val cbbMax = controlledBehBuckets.map { it.size }.max()
     println("#controlledBehBuckets: ${controlledBehBuckets.size}")
@@ -235,14 +133,14 @@ fun main(args : Array<String>) {
         .map {
                 s -> s.fold(s.first()) { acc,d -> acc intersect d }
         }
-        .fold(DeltaBuilder(E,C,P)) { acc,i -> acc.add(i); acc }
+        .fold(DeltaBuilder(env,C,P)) { acc,i -> acc.add(i); acc }
         .toSet()
     println("# Max Intersects: ${intersects.size}")
      */
     /*
     println("Max Intersects (sample):")
     for (d in intersects.take(3)) {
-        val Ed = addPerturbations(E, d)
+        val Ed = addPerturbations(env d)
         writeDOT(System.out, Ed, Ed.alphabet())
     }
      */
@@ -257,7 +155,7 @@ fun main(args : Array<String>) {
         .toSet()
     println("Samples Intersects:")
     for (d in sampleIntersects) {
-        val Ed = addPerturbations(E, d)
+        val Ed = addPerturbations(env d)
         writeDOT(System.out, Ed, Ed.alphabet())
     }
      */
@@ -294,23 +192,23 @@ fun main(args : Array<String>) {
 
     // print the FSP for each Ed
     for (d in delta) {
-        val Ed = copyLTSAcceptingOnly(addPerturbations(E, d))
+        val Ed = copyLTSAcceptingOnly(addPerturbations(env, d))
         //println()
         //write(System.out, Ed, Ed.alphabet())
     }
 
     // print the FSP for each Ed || C
     for (d in delta) {
-        val Ed = addPerturbations(E, d)
-        val EdC = copyLTSAcceptingOnly(parallel(Ed, C))
+        val Ed = addPerturbations(env, d)
+        val EdC = copyLTSAcceptingOnly(parallel(Ed, ctrl))
         //println()
         //write(System.out, EdC, EdC.alphabet())
     }
 
     // print the DOT for each Ed || C
     for (d in delta) {
-        val Ed = addPerturbations(E, d)
-        val EdRestrictedToC = parallelRestrict(Ed, C)
+        val Ed = addPerturbations(env, d)
+        val EdRestrictedToC = parallelRestrict(Ed, ctrl)
         //println()
         //writeDOT(System.out, EdRestrictedToC, EdRestrictedToC.alphabet())
     }
@@ -318,9 +216,9 @@ fun main(args : Array<String>) {
     // checks to make sure the solution is sound
     var sound = true
     for (d in delta) {
-        val Ed = addPerturbations(E, d)
-        val EdComposeC = parallel(Ed, C)
-        if (!satisfies(EdComposeC, P)) {
+        val Ed = addPerturbations(env, d)
+        val EdComposeC = parallel(Ed, ctrl)
+        if (!satisfies(EdComposeC, prop)) {
             sound = false
             println("Found violation for Ed||P |= P")
             //println("Violation for Ed||P |= P: $d")
@@ -334,8 +232,8 @@ fun main(args : Array<String>) {
     // checks to make sure every member of delta is maximal
     var maximal = true
     for (d in delta) {
-        val envD = addPerturbations(E, d)
-        if (!isMaximalAccepting(envD, C, P)) {
+        val envD = addPerturbations(env, d)
+        if (!isMaximalAccepting(envD, ctrl, prop)) {
             maximal = false
             println("Found non-maximal d")
             //println("Found non-maximal d: $d")
@@ -356,7 +254,7 @@ fun main(args : Array<String>) {
      */
 
     println("calc'ing WA")
-    val waGen = SubsetConstructionGenerator(C, E, P)
+    val waGen = SubsetConstructionGenerator(ctrl, env, prop)
     val wa = waGen.generate()
     //println()
     //println("WA:")
@@ -364,7 +262,7 @@ fun main(args : Array<String>) {
 
     var equiv = mutableSetOf<Set<Triple<Int,String,Int>>>()
     for (d in delta) {
-        val Ed = addPerturbations(E, d)
+        val Ed = addPerturbations(env, d)
         val EdDet = toDeterministic(Ed)
         if (satisfies(wa, EdDet)) {
             equiv.add(d)

@@ -1,6 +1,7 @@
 package cmu.isr.tolerance
 
 import addPerturbations
+import cmu.isr.tolerance.delta.DeltaBuilder
 import cmu.isr.ts.alphabet
 import cmu.isr.ts.lts.CompactDetLTS
 import cmu.isr.ts.lts.CompactLTS
