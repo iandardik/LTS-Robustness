@@ -38,13 +38,14 @@ fun main(args : Array<String>) {
        # of trials. We can only truly estimate this % if we know the real size of delta.
      */
     if (alg == "t") {
+        val trueDeltaSize = 3 // for the classic toy example
         val nTrials = 1000
         for (naiveRandN in setOf(2,3,4,5,6,7,8,9,10,15,19)) {
             var nSuccess = 0
             var nFail = 0
             for (i in 0..nTrials) {
                 val delta = deltaNaiveRand(env, ctrl, prop, naiveRandN)
-                if (delta.size == 3) {
+                if (delta.size == trueDeltaSize) {
                     ++nSuccess
                 } else {
                     ++nFail
@@ -80,62 +81,3 @@ fun main(args : Array<String>) {
     soundnessCheck(delta, env, ctrl, prop)
     maximalityCheck(delta, env, ctrl, prop)
 }
-
-/*
-delta = delta
-    .map { it.filter { env.isAccepting(it.first) && env.isAccepting(it.third) }.toSet() }
-    .associateWith { 0 }
-    .keys.toSet()
-println("#delta no err states: ${delta.size}")
- */
-//delta = filterControlledDuplicates(delta, env, C)
-//println("#(filtered delta): ${delta.size}")
-/*
-val controlledBehBuckets = bucketControlledDuplicates(delta, env, C)
-val cbbMin = controlledBehBuckets.map { it.size }.min()
-val cbbMax = controlledBehBuckets.map { it.size }.max()
-println("#controlledBehBuckets: ${controlledBehBuckets.size}")
-println("min # controlledBehBuckets: $cbbMin")
-println("max # controlledBehBuckets: $cbbMax")
- */
-/*
-val intersects = controlledBehBuckets
-    .map {
-            s -> s.fold(s.first()) { acc,d -> acc intersect d }
-    }
-    .fold(DeltaBuilder(env,C,P)) { acc,i -> acc.add(i); acc }
-    .toSet()
-println("# Max Intersects: ${intersects.size}")
-*/
-/*
-println("Max Intersects (sample):")
-for (d in intersects.take(3)) {
-    val Ed = addPerturbations(env d)
-    writeDOT(System.out, Ed, Ed.alphabet())
-}
- */
-/*
-val sampleIntersects = controlledBehBuckets
-    .filter { it.size > 1 }
-    .take(5)
-    .map {
-        s -> s.fold(s.first()) { acc,d -> acc intersect d }
-    }
-    .toSet()
-println("Samples Intersects:")
-for (d in sampleIntersects) {
-    val Ed = addPerturbations(env d)
-    writeDOT(System.out, Ed, Ed.alphabet())
-}
- */
-/*
-val tb = controlledBehBuckets
-    .first { it.size > 1 }
-    .take(3)
-    .toSet()
-println("Samples:")
-for (d in tb) {
-    val Ed = addPerturbations(E, d)
-    writeDOT(System.out, Ed, Ed.alphabet())
-}
- */
