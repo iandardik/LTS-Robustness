@@ -24,6 +24,24 @@ fun makeMaximal(d : Set<Triple<Int,String,Int>>,
     return dMax
 }
 
+fun makeMaximal(d : Set<Triple<Int,String,Int>>,
+                allEdges : Array<Triple<Int,String,Int>>,
+                env : CompactLTS<String>,
+                ctrl : CompactLTS<String>,
+                prop : CompactDetLTS<String>,
+                envProp : DetLTS<Int, String>)
+        : Set<Triple<Int,String,Int>> {
+    val dMax = d.toMutableSet()
+    for (e in allEdges) {
+        val envD = addPerturbations(env, dMax + e)
+        val envDCtrl = parallel(envD, ctrl)
+        if (satisfies(envDCtrl, prop) && satisfies(envD, envProp)) {
+            dMax += e
+        }
+    }
+    return dMax
+}
+
 fun isMaximalAccepting(env : CompactLTS<String>,
                        ctrl : CompactLTS<String>,
                        prop : CompactDetLTS<String>)

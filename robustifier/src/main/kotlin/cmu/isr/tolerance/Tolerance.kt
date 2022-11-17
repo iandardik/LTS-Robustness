@@ -1,18 +1,38 @@
 package cmu.isr.tolerance
 
+import addPerturbations
 import cmu.isr.tolerance.delta.DeltaDFS
+import cmu.isr.tolerance.delta.DeltaDFSEnvProp
 import cmu.isr.tolerance.delta.DeltaDFSRand
-import cmu.isr.tolerance.postprocess.maximalityCheck
-import cmu.isr.tolerance.postprocess.printDelta
-import cmu.isr.tolerance.postprocess.soundnessCheck
+import cmu.isr.tolerance.postprocess.*
 import cmu.isr.tolerance.utils.*
+import cmu.isr.ts.MutableDetLTS
+import cmu.isr.ts.alphabet
+import cmu.isr.ts.lts.CompactDetLTS
+import cmu.isr.ts.lts.ltsa.write
+import cmu.isr.ts.lts.makeErrorState
 import cmu.isr.ts.parallel
+import net.automatalib.automata.fsa.impl.compact.CompactDFA
 import satisfies
 import java.io.File
 
+fun <I> makeErrorStateCopy(rawProp : CompactDetLTS<I>) : CompactDetLTS<I> {
+    val prop = copyLTS(rawProp)
+    for (s in prop.states) {
+        if (prop.isErrorState(s))
+            continue
+        for (a in prop.inputAlphabet) {
+            if (prop.getTransition(s, a) == null) {
+                prop.addTransition(s, a, prop.errorState, null)
+            }
+        }
+    }
+    return prop
+}
+
 fun main(args : Array<String>) {
     if (args.size < 4) {
-        println("usage: tolerance <alg> <env> <ctrl> <prop>")
+        println("usage: tolerance <alg> <env> <ctrl> <prop> [<env_props>]")
         return
     }
 
@@ -28,9 +48,30 @@ fun main(args : Array<String>) {
     val env = stripTauTransitions(fspToNFA(args[1]))
     val ctrl = stripTauTransitions(fspToNFA(args[2]))
     val prop = fspToDFA(args[3])
+    val envPropList = args
+        .drop(4)
+        .map { fspToDFA(it) }
+
+    val envProp =
+        if (envPropList.isEmpty()) {
+            if (alg == "4") {
+                error("envPropList is empty")
+            }
+            prop
+        }
+        else if (envPropList.size == 1) {
+            envPropList.first()
+        }
+        else {
+            parallel(*envPropList.toTypedArray()) as CompactDetLTS<String>
+        }
 
     if (!satisfies(parallel(env,ctrl), prop)) {
-        println("env||C does not satisfy P")
+        println("E||C does not satisfy P")
+        return
+    }
+    if (!satisfies(env, envProp)) {
+        println("E does not satisfy P_env")
         return
     }
 
@@ -68,7 +109,9 @@ fun main(args : Array<String>) {
             "1" -> deltaNaiveBruteForce(env, ctrl, prop)
             "2" -> DeltaDFS(env, ctrl, prop).compute()
             "3" -> DeltaDFSRand(env, ctrl, prop).compute()
-            "4" -> deltaNaiveRand(env, ctrl, prop)
+            "4" -> DeltaDFSEnvProp(env, ctrl, prop, envProp).compute()
+            "5" -> deltaNaiveRand(env, ctrl, prop)
+            "6" -> deltaNaiveRandEnvProp(env, ctrl, prop, envProp)
             else -> {
                 println("Invalid algorithm")
                 return
@@ -76,8 +119,27 @@ fun main(args : Array<String>) {
         }
 
     println("#delta: ${delta.size}")
-    printDelta(delta, 5)
+    //printDelta(delta, 5)
+    printDOT(delta, env, ctrl, 3)
+    //printFSP(delta, env, 3)
 
     soundnessCheck(delta, env, ctrl, prop)
-    maximalityCheck(delta, env, ctrl, prop)
+    //maximalityCheck(delta, env, ctrl, prop)
+
+    for (d in delta) {
+        val envD = addPerturbations(env, d)
+        if (!satisfies(envD, envProp)) {
+            println("Found violation for overall Ed |= P_env")
+            //println("Property:")
+            //write(System.out, envProp, envProp.alphabet())
+            println("envD:")
+            write(System.out, envD, envD.alphabet())
+            println()
+        }
+        for (p in envPropList) {
+            if (!satisfies(envD, p)) {
+                println("Found violation for individual Ed |= P_env")
+            }
+        }
+    }
 }

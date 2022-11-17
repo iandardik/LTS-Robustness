@@ -17,7 +17,7 @@ import java.util.*
  * returns whether:
  * T |= P
  */
-fun satisfies(lts : LTS<Int, String>, prop : MutableDetLTS<Int,String>) : Boolean {
+fun satisfies(lts : LTS<Int, String>, prop : DetLTS<Int,String>) : Boolean {
     val propCopy = copyLTS(prop as CompactDetLTS<String>)
     val propErr = makeErrorState(propCopy)
     val result = checkSafety(lts, propErr)

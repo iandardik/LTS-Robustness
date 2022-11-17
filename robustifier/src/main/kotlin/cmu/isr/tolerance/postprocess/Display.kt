@@ -34,6 +34,46 @@ fun printDelta(delta : Set<Set<Triple<Int, String, Int>>>, maxNum : Int = -1) {
     }
 }
 
+fun printFSP(delta : Set<Set<Triple<Int, String, Int>>>,
+             env : CompactLTS<String>,
+             maxNum : Int = -1) {
+    val deltaTrimmed = if (maxNum < 0) { delta } else { delta.take(maxNum) }
+    for (d in deltaTrimmed) {
+        val envD = copyLTSAcceptingOnly(addPerturbations(env, d))
+        println()
+        write(System.out, envD, envD.alphabet())
+    }
+}
+
+fun printClosedLoopFSP(delta : Set<Set<Triple<Int, String, Int>>>,
+                       env : CompactLTS<String>,
+                       ctrl : CompactLTS<String>,
+                       maxNum : Int = -1) {
+    // print the FSP for each Ed || C
+    val deltaTrimmed = if (maxNum < 0) { delta } else { delta.take(maxNum) }
+    for (d in deltaTrimmed) {
+        val envD = addPerturbations(env, d)
+        val envDCtrl = copyLTSAcceptingOnly(parallel(envD, ctrl))
+        println()
+        write(System.out, envDCtrl, envDCtrl.alphabet())
+    }
+}
+
+fun printDOT(delta : Set<Set<Triple<Int, String, Int>>>,
+             env : CompactLTS<String>,
+             ctrl : CompactLTS<String>,
+             maxNum : Int = -1) {
+    // print the DOT for each Ed || C
+    val deltaTrimmed = if (maxNum < 0) { delta } else { delta.take(maxNum) }
+    for (d in deltaTrimmed) {
+        val envD = addPerturbations(env, d)
+        //val envDRCtrl = parallelRestrict(envD, ctrl)
+        println()
+        writeDOT(System.out, envD, envD.alphabet())
+        //writeDOT(System.out, envDRCtrl, envDRCtrl.alphabet())
+    }
+}
+
 fun edgesToErr(delta : Set<Set<Triple<Int, String, Int>>>, env : CompactLTS<String>) {
     val Re = ltsTransitions(env)
         .filter { env.isAccepting(it.first) && env.isAccepting(it.third) }
@@ -44,34 +84,6 @@ fun edgesToErr(delta : Set<Set<Triple<Int, String, Int>>>, env : CompactLTS<Stri
     println("maxPertSize: $maxPertSize")
     println("minPertSize: $minPertSize")
     println("minEdgesToErr: $minEdgesToErr")
-}
-
-fun printFSP(delta : Set<Set<Triple<Int, String, Int>>>, env : CompactLTS<String>) {
-    for (d in delta) {
-        val envD = copyLTSAcceptingOnly(addPerturbations(env, d))
-        println()
-        write(System.out, envD, envD.alphabet())
-    }
-}
-
-fun printClosedLoopFSP(delta : Set<Set<Triple<Int, String, Int>>>, env : CompactLTS<String>, ctrl : CompactLTS<String>) {
-    // print the FSP for each Ed || C
-    for (d in delta) {
-        val envD = addPerturbations(env, d)
-        val envDCtrl = copyLTSAcceptingOnly(parallel(envD, ctrl))
-        println()
-        write(System.out, envDCtrl, envDCtrl.alphabet())
-    }
-}
-
-fun printDotFSP(delta : Set<Set<Triple<Int, String, Int>>>, env : CompactLTS<String>, ctrl : CompactLTS<String>) {
-    // print the DOT for each Ed || C
-    for (d in delta) {
-        val envD = addPerturbations(env, d)
-        val envDRCtrl = parallelRestrict(envD, ctrl)
-        println()
-        writeDOT(System.out, envDRCtrl, envDRCtrl.alphabet())
-    }
 }
 
 fun soundnessCheck(delta : Set<Set<Triple<Int, String, Int>>>,
