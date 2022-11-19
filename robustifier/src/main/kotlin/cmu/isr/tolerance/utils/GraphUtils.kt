@@ -16,6 +16,17 @@ fun <S,I> outgoingStates(set : Set<S>, lts : NFA<S,I>) : Set<S> {
     return outgoing
 }
 
+fun <S,I> outgoingEdges(set : Set<S>, lts : NFA<S,I>) : Set<Triple<S,I,S>> {
+    val outgoing = mutableSetOf<Triple<S,I,S>>()
+    for (src in set) {
+        for (a in lts.alphabet()) {
+            lts.getTransitions(src, a)
+                .forEach { outgoing.add(Triple(src,a,it)) }
+        }
+    }
+    return outgoing
+}
+
 fun <S,I> incomingStates(set : Set<S>, lts : NFA<S,I>) : Set<S> {
     val incoming = mutableSetOf<S>()
     for (src in lts.getStates(lts.alphabet())) {

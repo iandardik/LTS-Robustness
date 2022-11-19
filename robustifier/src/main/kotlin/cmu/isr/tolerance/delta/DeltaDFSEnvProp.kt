@@ -1,5 +1,6 @@
 package cmu.isr.tolerance.delta
 
+import addPerturbations
 import cmu.isr.tolerance.utils.*
 import cmu.isr.ts.DetLTS
 import cmu.isr.ts.alphabet
@@ -25,6 +26,7 @@ class DeltaDFSEnvProp(private val env : CompactLTS<String>,
     private val winningSet : Set<MetaState>
     private val transClosureTable : Map<MetaState, Set<MetaState>>
     private val envPropAllowedTransitions : Set<Set<Triple<Int,String,Int>>>
+    private val envPropReach : Set<Set<Pair<Int, Pair<Int,Int>>>>
 
     init {
         val envFull = copyLTSFull(env)
@@ -50,7 +52,16 @@ class DeltaDFSEnvProp(private val env : CompactLTS<String>,
             .withAccepting(0)
             .create()
         val emptyCtrlLts = CompactLTS<String>(emptyCtrl)
+        println("Calc'ing envProp transitions...")
         envPropAllowedTransitions = DeltaDFS(env, emptyCtrlLts, envProp as CompactDetLTS<String>).compute()
+        envPropReach = envPropAllowedTransitions
+            .map { d -> addPerturbations(env, d) }
+            .map { envD -> reachableStates(envD) }
+            .map {
+                reach -> winningSet.filter { it.first in reach }.toSet()
+            }
+            .toSet()
+        println("Done calc'ing envProp transitions")
     }
 
     fun compute() : Set<Set<Triple<Int, String, Int>>> {
@@ -85,12 +96,26 @@ class DeltaDFSEnvProp(private val env : CompactLTS<String>,
             .map { safeTransitions intersect it }
             .forEach { delta.add(it) }
 
-        val toExplore = (outgoingStates(set, metaCtrl) - set) intersect winningSet
-        if (toExplore.isNotEmpty()) {
-            if (toExplore.size > 15) {
-                println("Exploring set size: ${toExplore.size}")
+        // compute next set of states to explore
+        val succ = (outgoingStates(set, metaCtrl) - set) intersect winningSet
+        val toExplore = envPropReach
+            .map { reach -> reach intersect succ }
+            .toMutableList()
+        // filter any subsets/duplicates
+        for (i in (toExplore.size-1) downTo 0) {
+            for (j in 0 until i) {
+                if (toExplore[j].containsAll(toExplore[i])) {
+                    toExplore.removeAt(i)
+                    break
+                }
             }
-            powersetCompute(set, toExplore.toList(), level, delta, visited)
+        }
+
+        if (toExplore.size > 15) {
+            println("Exploring set size: ${toExplore.size}")
+        }
+        for (exp in toExplore) {
+            powersetCompute(set, exp.toList(), level, delta, visited)
         }
     }
 
