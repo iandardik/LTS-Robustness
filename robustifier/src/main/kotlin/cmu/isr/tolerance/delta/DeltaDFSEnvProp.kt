@@ -97,25 +97,19 @@ class DeltaDFSEnvProp(private val env : CompactLTS<String>,
             .forEach { delta.add(it) }
 
         // compute next set of states to explore
-        val succ = (outgoingStates(set, metaCtrl) - set) intersect winningSet
-        val toExplore = envPropReach
-            .map { reach -> reach intersect succ }
-            .toMutableList()
-        // filter any subsets/duplicates
-        for (i in (toExplore.size-1) downTo 0) {
-            for (j in 0 until i) {
-                if (toExplore[j].containsAll(toExplore[i])) {
-                    toExplore.removeAt(i)
-                    break
-                }
-            }
-        }
+        val curWithSucc = set union (outgoingStates(set, metaCtrl) intersect winningSet)
+        val toExploreListDups = envPropReach
+            .map { reach -> reach intersect curWithSucc }
+            .filter { curWithSuccReach -> curWithSuccReach.containsAll(set) } // rule out any scenarios that aren't compatible with <code>set</code>
+            .map { curWithSuccReach -> curWithSuccReach - set }
+            .toSet()
+        val toExploreList = removeSubsetDuplicates(toExploreListDups)
 
-        if (toExplore.size > 15) {
-            println("Exploring set size: ${toExplore.size}")
-        }
-        for (exp in toExplore) {
-            powersetCompute(set, exp.toList(), level, delta, visited)
+        for (toExplore in toExploreList) {
+            if (toExplore.size > 15) {
+                println("Exploring set size: ${toExplore.size}")
+            }
+            powersetCompute(set, toExplore.toList(), level, delta, visited)
         }
     }
 

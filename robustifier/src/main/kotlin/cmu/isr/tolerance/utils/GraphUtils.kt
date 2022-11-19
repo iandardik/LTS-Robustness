@@ -88,3 +88,16 @@ fun <S,I> gfp(set : Set<S>, lts : NFA<S,I>) : Set<S> {
         gfp(setPrime, lts)
     }
 }
+
+fun <T> removeSubsetDuplicates(set : Set<Set<T>>) : Set<Set<T>> {
+    val list = set.toMutableList()
+    for (i in (list.size - 1) downTo 0) {
+        for (j in 0 until i) {
+            if (list[j].containsAll(list[i])) {
+                list.removeAt(i)
+                break
+            }
+        }
+    }
+    return list.toSet()
+}
