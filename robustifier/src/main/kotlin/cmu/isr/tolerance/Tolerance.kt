@@ -54,7 +54,7 @@ fun main(args : Array<String>) {
 
     val envProp =
         if (envPropList.isEmpty()) {
-            if (alg == "4") {
+            if (alg == "4" || alg == "6") {
                 error("envPropList is empty")
             }
             prop
@@ -71,8 +71,10 @@ fun main(args : Array<String>) {
         return
     }
     if (!satisfies(env, envProp)) {
-        println("E does not satisfy P_env")
-        return
+        if (alg == "4" || alg == "6") {
+            println("E does not satisfy P_env")
+            return
+        }
     }
 
     /* Functionality for empirically estimating % of delta the Naive Rand algo will produce as a function of
@@ -126,19 +128,21 @@ fun main(args : Array<String>) {
     soundnessCheck(delta, env, ctrl, prop)
     //maximalityCheck(delta, env, ctrl, prop)
 
-    for (d in delta) {
-        val envD = addPerturbations(env, d)
-        if (!satisfies(envD, envProp)) {
-            println("Found violation for overall Ed |= P_env")
-            //println("Property:")
-            //write(System.out, envProp, envProp.alphabet())
-            println("envD:")
-            write(System.out, envD, envD.alphabet())
-            println()
-        }
-        for (p in envPropList) {
-            if (!satisfies(envD, p)) {
-                println("Found violation for individual Ed |= P_env")
+    if (alg == "4" || alg == "6") {
+        for (d in delta) {
+            val envD = addPerturbations(env, d)
+            if (!satisfies(envD, envProp)) {
+                println("Found violation for overall Ed |= P_env")
+                //println("Property:")
+                //write(System.out, envProp, envProp.alphabet())
+                println("envD:")
+                write(System.out, envD, envD.alphabet())
+                println()
+            }
+            for (p in envPropList) {
+                if (!satisfies(envD, p)) {
+                    println("Found violation for individual Ed |= P_env")
+                }
             }
         }
     }

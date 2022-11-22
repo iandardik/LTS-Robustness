@@ -1,2 +1,0 @@
-S0 = (x -> S1),
-S1 = (x -> STOP) + {x,b,enter,e,up}.

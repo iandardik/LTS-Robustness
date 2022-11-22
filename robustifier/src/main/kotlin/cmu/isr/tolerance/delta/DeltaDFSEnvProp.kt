@@ -55,12 +55,25 @@ class DeltaDFSEnvProp(private val env : CompactLTS<String>,
         println("Calc'ing envProp transitions...")
         envPropAllowedTransitions = DeltaDFS(env, emptyCtrlLts, envProp as CompactDetLTS<String>).compute()
         envPropReach = envPropAllowedTransitions
+            .map { d ->
+                val dEnvFull = addPerturbations(env, d)
+                val dMetaCtrl = NFAParallelComposition(dEnvFull, NFAParallelComposition(ctrl, propErr))
+                val dAllMetaCtrlStates = metaCtrlNotFull.states
+                    .filter { metaCtrlNotFull.isAccepting(it) }
+                    .toSet()
+                val dWinningSet = gfp(dAllMetaCtrlStates, metaCtrlNotFull) intersect reachableStates(dMetaCtrl)
+                dWinningSet
+            }
+            .toSet()
+        /*
+        envPropReach = envPropAllowedTransitions
             .map { d -> addPerturbations(env, d) }
             .map { envD -> reachableStates(envD) }
             .map {
                 reach -> winningSet.filter { it.first in reach }.toSet()
             }
             .toSet()
+         */
         println("Done calc'ing envProp transitions")
     }
 
