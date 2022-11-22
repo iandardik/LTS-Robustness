@@ -25,8 +25,8 @@ class DeltaDFSEnvProp(private val env : CompactLTS<String>,
     private val envFullTransitionsArray : Array<Triple<Int,String,Int>>
     private val winningSet : Set<MetaState>
     private val transClosureTable : Map<MetaState, Set<MetaState>>
-    private val envPropAllowedTransitions : Set<Set<Triple<Int,String,Int>>>
-    private val envPropReach : Set<Set<Pair<Int, Pair<Int,Int>>>>
+    private val envPropDelta : Set<Set<Triple<Int,String,Int>>>
+    private val envPropWinningSets : Set<Set<MetaState>>
 
     init {
         val envFull = copyLTSFull(env)
@@ -47,14 +47,14 @@ class DeltaDFSEnvProp(private val env : CompactLTS<String>,
         transClosureTable = metaCtrlNotFull.states
             .associateWith { reachableStates(metaCtrlNotFull, setOf(it)) }
 
+        println("Calc'ing envProp transitions...")
         val emptyCtrl = AutomatonBuilders.newNFA(Alphabets.fromArray<String>())
             .withInitial(0)
             .withAccepting(0)
             .create()
         val emptyCtrlLts = CompactLTS<String>(emptyCtrl)
-        println("Calc'ing envProp transitions...")
-        envPropAllowedTransitions = DeltaDFS(env, emptyCtrlLts, envProp as CompactDetLTS<String>).compute()
-        envPropReach = envPropAllowedTransitions
+        envPropDelta = DeltaDFS(env, emptyCtrlLts, envProp as CompactDetLTS<String>).compute()
+        envPropWinningSets = envPropDelta
             .map { d ->
                 val dEnvFull = addPerturbations(env, d)
                 val dMetaCtrl = NFAParallelComposition(dEnvFull, NFAParallelComposition(ctrl, propErr))
@@ -65,15 +65,6 @@ class DeltaDFSEnvProp(private val env : CompactLTS<String>,
                 dWinningSet
             }
             .toSet()
-        /*
-        envPropReach = envPropAllowedTransitions
-            .map { d -> addPerturbations(env, d) }
-            .map { envD -> reachableStates(envD) }
-            .map {
-                reach -> winningSet.filter { it.first in reach }.toSet()
-            }
-            .toSet()
-         */
         println("Done calc'ing envProp transitions")
     }
 
@@ -81,13 +72,11 @@ class DeltaDFSEnvProp(private val env : CompactLTS<String>,
         val init = metaCtrl.initialStates
         val delta = DeltaBuilder(env, ctrl, prop)
         val visited = mutableSetOf<Set<MetaState>>()
-        val initLevel = 0
-        recCompute(init, initLevel, delta, visited)
+        recCompute(init, delta, visited)
         return delta.toSet()
     }
 
     private fun recCompute(setRaw : Set<MetaState>,
-                           level : Int,
                            delta : DeltaBuilder,
                            visited : MutableSet<Set<MetaState>>) {
         val set = setRaw
@@ -105,13 +94,13 @@ class DeltaDFSEnvProp(private val env : CompactLTS<String>,
             .map { Triple(it.first.first, it.second, it.third.first) }
             .toSet()
         val safeTransitions = envFullTransitions - del
-        envPropAllowedTransitions
+        envPropDelta
             .map { safeTransitions intersect it }
             .forEach { delta.add(it) }
 
         // compute next set of states to explore
         val curWithSucc = set union (outgoingStates(set, metaCtrl) intersect winningSet)
-        val toExploreListDups = envPropReach
+        val toExploreListDups = envPropWinningSets
             .map { reach -> reach intersect curWithSucc }
             .filter { curWithSuccReach -> curWithSuccReach.containsAll(set) } // rule out any scenarios that aren't compatible with <code>set</code>
             .map { curWithSuccReach -> curWithSuccReach - set }
@@ -122,23 +111,22 @@ class DeltaDFSEnvProp(private val env : CompactLTS<String>,
             if (toExplore.size > 15) {
                 println("Exploring set size: ${toExplore.size}")
             }
-            powersetCompute(set, toExplore.toList(), level, delta, visited)
+            powersetCompute(set, toExplore.toList(), delta, visited)
         }
     }
 
     private fun powersetCompute(set : Set<MetaState>,
                                 toExplore : List<MetaState>,
-                                level : Int,
                                 delta : DeltaBuilder,
                                 visited : MutableSet<Set<MetaState>>) {
         if (toExplore.isEmpty()) {
-            recCompute(set, level+1, delta, visited)
+            recCompute(set, delta, visited)
         } else {
             val head = toExplore.first()
             val tail = toExplore.drop(1)
             val setKeep = set + head
-            powersetCompute(set, tail, level, delta, visited)
-            powersetCompute(setKeep, tail, level, delta, visited)
+            powersetCompute(set, tail, delta, visited)
+            powersetCompute(setKeep, tail, delta, visited)
         }
     }
 }

@@ -146,4 +146,24 @@ fun main(args : Array<String>) {
             }
         }
     }
+    if (alg == "4") {
+        var deltaContainsAll = true
+        val deltaRand = deltaNaiveRandEnvProp(env, ctrl, prop, envProp)
+        for (dr in deltaRand) {
+            var deltaContains = false
+            for (d in delta) {
+                if (d.containsAll(dr)) {
+                    deltaContains = true
+                    break
+                }
+            }
+            if (!deltaContains) {
+                deltaContainsAll = false
+                println("delta missing from rand: $dr")
+            }
+        }
+        if (deltaContainsAll) {
+            println("delta contains all rand solutions")
+        }
+    }
 }
