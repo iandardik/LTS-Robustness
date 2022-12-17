@@ -1,0 +1,40 @@
+
+TTABLE_FLATTENER = (
+      e -> TTABLE_FLATTENER_TO_SPREADER
+    | x -> TTABLE_FLATTENER
+),
+TTABLE_FLATTENER_TO_SPREADER = (
+      e -> TTABLE_FLATTENER_TO_SPREADER
+    | x -> TTABLE_FLATTENER
+    | rotate -> TTABLE_SPREADER
+),
+TTABLE_SPREADER = (
+      e -> TTABLE_SPREADER
+    | x -> TTABLE_SPREADER_TO_FLATTENER
+),
+TTABLE_SPREADER_TO_FLATTENER = (
+      e -> TTABLE_SPREADER
+    | x -> TTABLE_SPREADER_TO_FLATTENER
+    | rotate -> TTABLE_FLATTENER
+).
+
+
+TERM0 = (x -> TERM1 | e -> TERM1 | enter -> TERM0 | up -> TERM0),
+TERM1 = (x -> TERM1 | e -> TERM1 | enter -> TERM2 | up -> TERM1),
+TERM2 = (beamReady -> TERM3 | enter -> TERM2 | up -> TERM1),
+TERM3 = (fireBeam -> TERM0).
+
+XRAY_MODE = (
+      x -> XRAY_MODE
+    | e -> ELECTRON_MODE
+    | fireBeam -> fireXray -> XRAY_MODE
+),
+ELECTRON_MODE = (
+      x -> XRAY_MODE
+    | e -> ELECTRON_MODE
+    | fireBeam -> fireElectron -> ELECTRON_MODE
+).
+
+TTABLE = (rotate -> TTABLE).
+
+||SYS = (TERM0 || XRAY_MODE || TTABLE).

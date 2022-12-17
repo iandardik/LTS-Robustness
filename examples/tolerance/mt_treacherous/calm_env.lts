@@ -1,0 +1,5 @@
+CALM0 = (moveEast -> CALM1),
+CALM1 = (moveEast -> CALM2 | moveWest -> CALM0),
+CALM2 = (moveEast -> CALM3 | moveWest -> CALM1 | westWind -> CALM1),
+CALM3 = (moveEast -> CALM4 | moveWest -> CALM2),
+CALM4 = (moveWest -> CALM3) + {eastWind}.

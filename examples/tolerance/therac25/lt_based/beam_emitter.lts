@@ -1,0 +1,13 @@
+// the main therac-25 machine. essentially, we model the beam.
+// the operator cannot see this.
+XRAY_MODE = (
+      x -> XRAY_MODE
+    | e -> ELECTRON_MODE
+    | fireBeam -> fireXray -> XRAY_MODE
+),
+ELECTRON_MODE = (
+      x -> XRAY_MODE
+    | e -> ELECTRON_MODE
+    | fireBeam -> fireElectron -> ELECTRON_MODE
+).
+

@@ -1,0 +1,5 @@
+P0 = (moveEast -> P1 | moveWest -> P0 | eastWind -> P1 | westWind -> P0 | dropPackage -> ERROR),
+P1 = (moveEast -> P2 | moveWest -> P0 | eastWind -> P2 | westWind -> P0 | dropPackage -> ERROR),
+P2 = (moveEast -> P3 | moveWest -> P1 | eastWind -> P3 | westWind -> P1 | dropPackage -> P2),
+P3 = (moveEast -> P4 | moveWest -> P2 | eastWind -> P4 | westWind -> P2 | dropPackage -> ERROR),
+P4 = (moveEast -> P4 | moveWest -> P3 | eastWind -> P4 | westWind -> P3 | dropPackage -> ERROR).

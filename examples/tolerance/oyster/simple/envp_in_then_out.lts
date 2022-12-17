@@ -1,0 +1,5 @@
+const Card1 = 0
+const Card2 = 1
+range AllCards = Card1 .. Card2
+
+EP1 = (gatein.req.oyster[c1:AllCards] -> gateout.bal[c2:AllCards] -> EP1).

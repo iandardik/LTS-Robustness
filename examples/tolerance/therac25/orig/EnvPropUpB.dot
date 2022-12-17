@@ -1,0 +1,9 @@
+digraph G {
+  "0" -> "1" [label="x, e"]
+  "0" -> "0" [label="b"]
+  "1" -> "1" [label="b"]
+  "1" -> "2" [label="enter"]
+  "1" -> "0" [label="up"]
+  "2" -> "0" [label="b"]
+  "2" -> "1" [label="up"]
+}

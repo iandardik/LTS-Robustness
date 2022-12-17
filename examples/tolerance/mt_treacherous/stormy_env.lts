@@ -1,0 +1,14 @@
+STORM0 = (moveEast -> STORM1),
+STORM1 = (moveEast -> STORM2 | moveWest -> STORM0),
+STORM2 = (
+      moveEast -> STORM3
+    | moveWest -> STORM1
+    | westWind -> STORM1
+    | eastWind -> STORM3
+),
+STORM3 = (
+      moveEast -> STORM4
+    | moveWest -> STORM2
+    | eastWind -> STORM4
+),
+STORM4 = (moveWest -> STORM3).

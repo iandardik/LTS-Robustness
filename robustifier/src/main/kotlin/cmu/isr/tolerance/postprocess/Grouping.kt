@@ -1,13 +1,40 @@
 package cmu.isr.tolerance.postprocess
 
 import addPerturbations
+import cmu.isr.tolerance.utils.ltsTransitions
 import cmu.isr.ts.LTS
+import cmu.isr.ts.alphabet
 import cmu.isr.ts.lts.CompactDetLTS
 import cmu.isr.ts.lts.CompactLTS
 import cmu.isr.ts.nfa.determinise
 import cmu.isr.ts.parallel
 import net.automatalib.automata.fsa.impl.compact.CompactDFA
 import satisfies
+
+/**
+ * This should only be used if all env props have the same state space and identical form to env
+ */
+fun filterEnvPropSubsets(delta : Set<Set<Triple<Int,String,Int>>>,
+                         envPropList: List<CompactDetLTS<String>>)
+                         : Set<Set<Triple<Int,String,Int>>> {
+    val envPropTransitions = envPropList.map { ltsTransitions(it, it.alphabet()) }
+    val allSubsetDeltaElems = mutableSetOf<Set<Triple<Int,String,Int>>>()
+    for (d in delta) {
+        val subsetOfAllEnvProps = envPropTransitions.fold (true) {
+            acc,epTrans -> acc && epTrans.containsAll(d)
+        }
+        if (subsetOfAllEnvProps) {
+            allSubsetDeltaElems.add(d)
+        }
+    }
+
+    return if (allSubsetDeltaElems.isEmpty()) {
+        delta
+    }
+    else {
+        allSubsetDeltaElems
+    }
+}
 
 fun filterControlledDuplicates(delta : Set<Set<Triple<Int,String,Int>>>,
                                env : CompactLTS<String>,

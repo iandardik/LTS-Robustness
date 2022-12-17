@@ -1,0 +1,3 @@
+S0 = (moveEast -> S1),
+S1 = (moveEast -> S2 | westWind -> S0),
+S2 = (dropPackage -> STOP | westWind -> S1) + {moveWest}.

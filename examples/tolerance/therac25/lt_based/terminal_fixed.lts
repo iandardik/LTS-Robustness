@@ -1,0 +1,5 @@
+// the operator's terminal. this is what the user can see.
+TERM0 = (x -> TERM1 | e -> TERM1 | enter -> TERM0 | up -> TERM0),
+TERM1 = (x -> TERM1 | e -> TERM1 | enter -> TERM2 | up -> TERM1),
+TERM2 = (rotate -> beamReady -> TERM3 | enter -> TERM2 | up -> TERM1),
+TERM3 = (fireBeam -> TERM0).

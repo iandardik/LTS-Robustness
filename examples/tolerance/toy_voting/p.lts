@@ -1,0 +1,2 @@
+P_EO_OUTSIDE = (eo.enter -> P_EO_INSIDE | v.vote -> P_EO_OUTSIDE),
+P_EO_INSIDE = (eo.exit -> P_EO_OUTSIDE | v.vote -> ERROR).

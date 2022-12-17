@@ -1,0 +1,10 @@
+WIND0 = (moveEast -> WIND1),
+WIND1 = (moveEast -> WIND2 | moveWest -> WIND0),
+WIND2 = (
+      moveEast -> WIND3
+    | moveWest -> WIND1
+    | westWind -> WIND1
+    | eastWind -> WIND3
+),
+WIND3 = (moveEast -> WIND4 | moveWest -> WIND2),
+WIND4 = (moveWest -> WIND3).

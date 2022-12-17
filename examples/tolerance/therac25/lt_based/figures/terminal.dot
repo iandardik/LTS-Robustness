@@ -1,0 +1,10 @@
+digraph G {
+  "0" -> "1" [label="x, e"]
+  "0" -> "0" [label="enter, up"]
+  "1" -> "1" [label="x, e, up"]
+  "1" -> "2" [label="enter"]
+  "2" -> "2" [label="enter"]
+  "2" -> "1" [label="up"]
+  "2" -> "3" [label="beamReady"]
+  "3" -> "0" [label="fireBeam"]
+}

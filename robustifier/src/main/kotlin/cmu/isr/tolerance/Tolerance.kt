@@ -31,6 +31,14 @@ fun <I> makeErrorStateCopy(rawProp : CompactDetLTS<I>) : CompactDetLTS<I> {
 }
 
 fun main(args : Array<String>) {
+    // just for convenience
+    if (args.size == 1) {
+        //val m = stripTauTransitions(fspToNFA(args[0]))
+        val m = fspToDFA(args[0])
+        writeDOT(System.out, m, m.alphabet())
+        return
+    }
+
     if (args.size < 4) {
         println("usage: tolerance <alg> <env> <ctrl> <prop> [<env_props>]")
         return
@@ -122,6 +130,12 @@ fun main(args : Array<String>) {
 
     println("#delta: ${delta.size}")
     //printDelta(delta, 5)
+    //printDOT(delta, env, ctrl, 3)
+    // TODO also check envPropList to make sure each contains all of env's transitions
+    // TODO under which conditions will we always get a single delta elem back? and can we prove it??
+    //printDOT(filterEnvPropSubsets(delta, envPropList), env, ctrl, 3)
+    //compareBehToWA(delta, env, ctrl, prop, 3)
+    compareBehPairs(delta, env, ctrl, prop, 3)
     printDOT(delta, env, ctrl, 3)
     //printFSP(delta, env, 3)
 

@@ -5,12 +5,15 @@ import cmu.isr.assumption.SubsetConstructionGenerator
 import cmu.isr.tolerance.utils.copyLTSAcceptingOnly
 import cmu.isr.tolerance.utils.isMaximalAccepting
 import cmu.isr.tolerance.utils.ltsTransitions
+import cmu.isr.ts.DetLTS
 import cmu.isr.ts.MutableDetLTS
 import cmu.isr.ts.alphabet
 import cmu.isr.ts.lts.CompactDetLTS
 import cmu.isr.ts.lts.CompactLTS
 import cmu.isr.ts.lts.ltsa.write
+import cmu.isr.ts.nfa.determinise
 import cmu.isr.ts.parallel
+import net.automatalib.automata.fsa.impl.compact.CompactDFA
 import parallelRestrict
 import product
 import satisfies
@@ -71,6 +74,60 @@ fun printDOT(delta : Set<Set<Triple<Int, String, Int>>>,
         println()
         writeDOT(System.out, envD, envD.alphabet())
         //writeDOT(System.out, envDRCtrl, envDRCtrl.alphabet())
+    }
+}
+
+fun compareBehToWA(delta : Set<Set<Triple<Int, String, Int>>>,
+                   env : CompactLTS<String>,
+                   ctrl : CompactLTS<String>,
+                   prop : CompactDetLTS<String>,
+                   maxNum : Int = -1) {
+    // print the DOT for each Ed || C
+    val deltaTrimmed = if (maxNum < 0) { delta } else { delta.take(maxNum) }
+    val waGen = SubsetConstructionGenerator(ctrl, env, prop)
+    val wa = waGen.generate()
+    for (d in deltaTrimmed) {
+        val envD = addPerturbations(env, d)
+        val envDProp =  CompactDetLTS(determinise(envD) as CompactDFA<String>)
+        val equivToWA = satisfies(wa, envDProp)
+        if (equivToWA) {
+            println("Equiv to WA")
+        }
+        else {
+            println("NOT equiv to WA")
+        }
+    }
+}
+
+fun compareBehPairs(delta : Set<Set<Triple<Int, String, Int>>>,
+                    env : CompactLTS<String>,
+                    ctrl : CompactLTS<String>,
+                    prop : CompactDetLTS<String>,
+                    maxNum : Int = -1) {
+    // print the DOT for each Ed || C
+    val deltaTrimmed = if (maxNum < 0) { delta } else { delta.take(maxNum) }
+    val deltaList = deltaTrimmed.toList()
+    for (i in 0 until deltaList.size) {
+        for (j in (i+1)until deltaList.size) {
+            val envDI = addPerturbations(env, deltaList[i])
+            val envDJ = addPerturbations(env, deltaList[j])
+            val envDIProp = CompactDetLTS(determinise(envDI) as CompactDFA<String>)
+            val envDJProp = CompactDetLTS(determinise(envDJ) as CompactDFA<String>)
+            val iStronger = satisfies(envDI, envDJProp)
+            val jStronger = satisfies(envDJ, envDIProp)
+            if (iStronger && jStronger) {
+                println("$i and $j are equiv")
+            }
+            else if (iStronger) {
+                println("$i is stronger than $j")
+            }
+            else if (jStronger) {
+                println("$j is stronger than $i")
+            }
+            else {
+                println("$i and $j are incomparable")
+            }
+        }
     }
 }
 

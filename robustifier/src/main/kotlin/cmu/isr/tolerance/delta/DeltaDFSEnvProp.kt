@@ -58,10 +58,7 @@ class DeltaDFSEnvProp(private val env : CompactLTS<String>,
             .map { d ->
                 val dEnvFull = addPerturbations(env, d)
                 val dMetaCtrl = NFAParallelComposition(dEnvFull, NFAParallelComposition(ctrl, propErr))
-                val dAllMetaCtrlStates = metaCtrlNotFull.states
-                    .filter { metaCtrlNotFull.isAccepting(it) }
-                    .toSet()
-                val dWinningSet = gfp(dAllMetaCtrlStates, metaCtrlNotFull) intersect reachableStates(dMetaCtrl)
+                val dWinningSet = winningSet intersect reachableStates(dMetaCtrl)
                 dWinningSet
             }
             .toSet()
@@ -99,11 +96,9 @@ class DeltaDFSEnvProp(private val env : CompactLTS<String>,
             .forEach { delta.add(it) }
 
         // compute next set of states to explore
-        val curWithSucc = set union (outgoingStates(set, metaCtrl) intersect winningSet)
+        val succ = (outgoingStates(set, metaCtrl) - set) intersect winningSet
         val toExploreListDups = envPropWinningSets
-            .map { reach -> reach intersect curWithSucc }
-            .filter { curWithSuccReach -> curWithSuccReach.containsAll(set) } // rule out any scenarios that aren't compatible with <code>set</code>
-            .map { curWithSuccReach -> curWithSuccReach - set }
+            .map { reach -> reach intersect succ }
             .toSet()
         val toExploreList = removeSubsetDuplicates(toExploreListDups)
 

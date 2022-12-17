@@ -1,0 +1,22 @@
+P_FLATTENER = (
+      e -> P_TO_SPREADER
+    | x -> P_FLATTENER
+    | fireXray -> P_FLATTENER
+),
+P_TO_SPREADER = (
+      e -> P_TO_SPREADER
+    | x -> P_FLATTENER
+    | rotate -> P_SPREADER
+    | fireXray -> ERROR
+),
+P_SPREADER = (
+      e -> P_SPREADER
+    | x -> P_TO_FLATTENER
+    | fireXray -> ERROR
+),
+P_TO_FLATTENER = (
+      e -> P_SPREADER
+    | x -> P_TO_FLATTENER
+    | rotate -> P_FLATTENER
+    | fireXray -> ERROR
+).

@@ -1,0 +1,44 @@
+const Flattener = 0
+const Spreader = 1
+range TurnTableState = Flattener .. Spreader
+
+const Static = 2
+const ToFlattener = 3
+const ToSpreader = 4
+range RotatingMode = Static .. ToSpreader
+
+P = P[Flattener][Static],
+P[tt:TurnTableState][moving:RotatingMode] = (
+	  when (moving == Static && tt == Flattener) e -> P[tt][ToSpreader]
+	| when (moving == Static && tt == Spreader) e -> P[tt][moving]
+	| when (moving == Static && tt == Spreader) x -> P[tt][ToFlattener]
+	| when (moving == Static && tt == Flattener) x -> P[tt][moving]
+	| when (moving == ToSpreader) rotate -> P[Spreader][Static]
+	| when (moving == ToFlattener) rotate -> P[Flattener][Static]
+	| when (tt == Flattener) fireXray -> P[tt][moving]
+	| when (tt == Spreader) fireXray -> ERROR
+).
+
+
+P_FLATTENER = (
+      e -> P_TO_SPREADER
+    | x -> P_FLATTENER
+    | fireXray -> P_FLATTENER
+),
+P_TO_SPREADER = (
+      e -> P_TO_SPREADER
+    | x -> P_FLATTENER
+    | rotate -> P_SPREADER
+    | fireXray -> P_TO_SPREADER
+),
+P_SPREADER = (
+      e -> P_SPREADER
+    | x -> P_TO_FLATTENER
+    | fireXray -> ERROR
+),
+P_TO_FLATTENER = (
+      e -> P_SPREADER
+    | x -> P_TO_FLATTENER
+    | rotate -> P_FLATTENER
+    | fireXray -> ERROR
+).
