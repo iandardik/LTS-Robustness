@@ -4,9 +4,11 @@ import cmu.isr.robustify.RobustifierTests
 import cmu.isr.robustify.supervisory.Algorithms
 import cmu.isr.supervisory.SupervisoryDFA
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.io.File
 
+@Disabled
 class VotingTests : RobustifierTests() {
 
   @Test

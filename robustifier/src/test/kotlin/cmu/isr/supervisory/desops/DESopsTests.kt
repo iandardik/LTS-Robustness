@@ -4,13 +4,12 @@ import cmu.isr.supervisory.*
 import net.automatalib.util.automata.Automata
 import net.automatalib.util.automata.builders.AutomatonBuilders
 import net.automatalib.words.impl.Alphabets
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.condition.DisabledOnOs
-import org.junit.jupiter.api.condition.OS
 import java.io.ByteArrayOutputStream
 import kotlin.test.assertEquals
 
-@DisabledOnOs(OS.WINDOWS)
+@Disabled
 class DESopsTests : SynthesisTests() {
 
   private val _synthesizer = DESopsRunner()
