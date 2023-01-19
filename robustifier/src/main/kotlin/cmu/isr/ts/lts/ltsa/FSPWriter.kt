@@ -21,6 +21,22 @@ fun <S, I> write(output: OutputStream, dfa: DFA<S, I>, inputs: Alphabet<I>) {
   writer.flush()
 }
 
+fun transformIndices(actionWithDot : String) : String {
+  var actionBuilder = StringBuilder()
+  val indices = actionWithDot.split('.')
+  for (i in indices.indices) {
+    when (i) {
+      0 -> actionBuilder.append(indices[i])
+      1 -> actionBuilder.append("[").append(indices[i])
+      else -> actionBuilder.append("][").append(indices[i])
+    }
+  }
+  if (indices.size > 1) {
+    actionBuilder.append("]")
+  }
+  return actionBuilder.toString()
+}
+
 private class FSPWriterVisitor<S, I>(
   val builder: StringBuilder,
   val dfa: DFA<S, I>,
@@ -62,11 +78,12 @@ private class FSPWriterVisitor<S, I>(
         break
       }
     }
+    val action = transformIndices(input.toString())
     return if (isDeadlock) {
-      builder.append("$input -> STOP | ")
+      builder.append("$action -> STOP | ")
       TSTraversalAction.IGNORE
     } else {
-      builder.append("$input -> S$succ | ")
+      builder.append("$action -> S$succ | ")
       TSTraversalAction.EXPLORE
     }
   }
@@ -134,11 +151,12 @@ private class NFAFSPWriterVisitor<S, I>(
         break
       }
     }
+    val action = transformIndices(input.toString())
     return if (isDeadlock) {
-      builder.append("$input -> STOP | ")
+      builder.append("$action -> STOP | ")
       TSTraversalAction.IGNORE
     } else {
-      builder.append("$input -> S$succ | ")
+      builder.append("$action -> S$succ | ")
       TSTraversalAction.EXPLORE
     }
   }

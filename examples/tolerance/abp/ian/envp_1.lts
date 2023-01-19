@@ -1,0 +1,13 @@
+range B = 0..1 // bit
+range M = 100..101 // message
+
+// backwards channel
+BC0 = (
+      a[b:B][n:M] -> BC0
+    | a[b:B][m:M] -> BC[b][m]
+),
+BC[b:B][m:M] = (
+      a_p[b][m] -> BC0
+    | a[c:B][m] -> BC[b][m]
+    | a_p[c:B][m] -> BC[b][m]
+).

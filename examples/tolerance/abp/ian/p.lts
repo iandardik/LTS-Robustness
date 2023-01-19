@@ -1,0 +1,6 @@
+range B = 0..1 // bit
+range M = 100..101 // message
+
+// key safety property
+property P0 = (send[m:M] -> P1[m] | done[n:M] -> P0),
+P1[m:M]     = (send[m] -> P1[m] | done[m] -> P0).

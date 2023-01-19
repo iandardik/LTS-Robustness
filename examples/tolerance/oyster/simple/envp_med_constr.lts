@@ -2,4 +2,4 @@ const Card1 = 0
 const Card2 = 1
 range AllCards = Card1 .. Card2
 
-EP = (gateout.snd.gin[c:AllCards] -> gateout.snd.bal[c] -> gateout.rec.newBal[c] -> EP).
+EP = (gateout.snd.gin[c:AllCards] -> gateout.snd.bal[c] -> EP).

@@ -1,0 +1,44 @@
+range B = 0..1 // bit
+range M = 100..101 // message
+
+// forward channel
+FC0 = (
+      p[b:B][n:M] -> FC0
+    | p[b:B][m:M] -> FC[b][m]
+),
+FC[b:B][m:M] = (
+      p_p[b][m] -> FC0
+    | p[w:B][m] -> FC[b][m]
+    | p_p[b][m] -> FC[b][m]
+).
+
+// sending client
+SC = (done[m:M] -> SC | send[m:M] -> done[m] -> SC).
+
+// receiving client
+RC = (deliver[m:M] -> RC).
+
+// timeout
+TO = (timeout -> TO).
+
+// ABP sender
+S0      = (a_p[b:B][n:M] -> S0 | timeout -> S0 | send[m:M] -> S1[m]),
+S1[m:M] = (p[0][m] -> S2[m]),
+S2[m:M] = (send[n:M] -> S1[m] | a_p[1][n:M] -> S1[m] | timeout -> S1[m] | a_p[0][m] -> S3[m]),
+S3[m:M] = (done[m] -> S4),
+S4      = (a_p[b:B][n:M] -> S4 | timeout -> S4 | send[m:M] -> S5[m]),
+S5[m:M] = (p[1][m] -> S6[m]),
+S6[m:M] = (send[n:M] -> S5[m] | a_p[0][n:M] -> S5[m] | timeout -> S5[m] | a_p[1][m] -> S7[m]),
+S7[m:M] = (done[m] -> S0).
+
+// ABP receiver
+R0      = (p_p[0][m:M] -> R1[m] | p_p[1][m:M] -> R5[m]),
+R1[m:M] = (deliver[m] -> R2[m]),
+R2[m:M] = (a[0][m] -> R3),
+R3      = (p_p[1][m:M] -> R4[m] | p_p[0][m:M] -> R2[m]),
+R4[m:M] = (deliver[m] -> R5[m]),
+R5[m:M] = (a[1][m] -> R0).
+
+
+// system, minus the backwards channel
+||SYS = (SC || S0 || FC0 || R0 || RC || TO).

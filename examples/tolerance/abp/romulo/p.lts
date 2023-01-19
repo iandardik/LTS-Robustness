@@ -1,0 +1,2 @@
+P0 = (deliver -> ERROR | send -> P1),
+P1 = (deliver -> P0 | send -> ERROR).

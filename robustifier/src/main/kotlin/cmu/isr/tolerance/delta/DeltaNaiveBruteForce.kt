@@ -2,6 +2,8 @@ package cmu.isr.tolerance
 
 import addPerturbations
 import cmu.isr.tolerance.delta.DeltaBuilder
+import cmu.isr.tolerance.utils.powerset
+import cmu.isr.ts.DetLTS
 import cmu.isr.ts.alphabet
 import cmu.isr.ts.lts.CompactDetLTS
 import cmu.isr.ts.lts.CompactLTS
@@ -10,34 +12,13 @@ import net.automatalib.words.Alphabet
 import product
 import satisfies
 
-fun <T> allPerturbations(states : Collection<T>, alphabet : Alphabet<String>) : Set<Set<Triple<T, String, T>>> {
-    fun pertHelper(perturbations : MutableSet<MutableSet<Triple<T,String,T>>>,
-                   powerset : Set<Triple<T,String,T>>) {
-        if (powerset.isNotEmpty()) {
-            val elem = powerset.first()
-            pertHelper(perturbations, powerset - elem)
-
-            val dPlusElems = mutableSetOf<MutableSet<Triple<T, String, T>>>()
-            for (d in perturbations) {
-                dPlusElems += (d + elem) as MutableSet<Triple<T, String, T>>
-            }
-            perturbations += dPlusElems
-        }
-    }
-    val perturbations : MutableSet<MutableSet<Triple<T,String,T>>> = mutableSetOf(mutableSetOf())
-    val powerset = product(states, alphabet.toMutableSet(), states)
-    pertHelper(perturbations, powerset)
-    return perturbations
-}
-
 fun deltaNaiveBruteForce(env : CompactLTS<String>,
                          ctrl : CompactLTS<String>,
-                         prop : CompactDetLTS<String>
-)
+                         prop : CompactDetLTS<String>)
         : Set<Set<Triple<Int,String,Int>>> {
     val delta = DeltaBuilder(env, ctrl, prop)
-    val allPerts = allPerturbations(env.states, env.alphabet())
-
+    val stateSpace = product(env.states, env.alphabet().toSet(), env.states)
+    val allPerts = powerset(stateSpace)
     for (d in allPerts) {
         val envD = addPerturbations(env, d)
         val envDCompC = parallel(envD, ctrl)
@@ -45,6 +26,23 @@ fun deltaNaiveBruteForce(env : CompactLTS<String>,
             delta += d
         }
     }
+    return delta.toSet()
+}
 
+fun deltaNaiveBruteForceEnvProp(env : CompactLTS<String>,
+                                ctrl : CompactLTS<String>,
+                                prop : CompactDetLTS<String>,
+                                envProp : DetLTS<Int, String>)
+        : Set<Set<Triple<Int,String,Int>>> {
+    val delta = DeltaBuilder(env, ctrl, prop)
+    val stateSpace = product(env.states, env.alphabet().toSet(), env.states)
+    val allPerts = powerset(stateSpace)
+    for (d in allPerts) {
+        val envD = addPerturbations(env, d)
+        val envDCompC = parallel(envD, ctrl)
+        if (satisfies(envDCompC, prop) && satisfies(envD, envProp)) {
+            delta += d
+        }
+    }
     return delta.toSet()
 }

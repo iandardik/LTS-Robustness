@@ -11,7 +11,11 @@ import cmu.isr.ts.alphabet
 import cmu.isr.ts.lts.CompactDetLTS
 import cmu.isr.ts.lts.ltsa.write
 import cmu.isr.ts.lts.makeErrorState
+import cmu.isr.ts.nfa.determinise
 import cmu.isr.ts.parallel
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.*
+import com.github.ajalt.clikt.parameters.types.int
 import net.automatalib.automata.fsa.impl.compact.CompactDFA
 import satisfies
 import java.io.File
@@ -30,7 +34,7 @@ fun <I> makeErrorStateCopy(rawProp : CompactDetLTS<I>) : CompactDetLTS<I> {
     return prop
 }
 
-fun main(args : Array<String>) {
+fun oldMain(args : Array<String>) {
     // just for convenience
     if (args.size == 1) {
         //val m = stripTauTransitions(fspToNFA(args[0]))
@@ -181,3 +185,86 @@ fun main(args : Array<String>) {
         }
     }
 }
+
+class ToleranceApp : CliktCommand() {
+    val envFile by option("--env", help="FSP file for the environment.").required()
+    val ctrlFile by option("--ctrl", help="FSP file for the controller.").required()
+    val propFile by option("--prop", help="FSP file for the property.").required()
+    val envPropFile by option("--env-prop", help="FSP file for an environment property. This arg is allowed multiple times.")
+        .multiple()
+    val random by option("--rand", help="Will run randomized version of the algorithm.")
+        .flag(default = false)
+    val randInters by option("--rand-iters", help="Number of iterations to run in randomized mode.")
+        .int()
+        .default(1000)
+    val silent by option("--silent", help="Will not print the contents of delta to stdout.")
+        .flag(default = false)
+    val printDOT by option("--print-dot", help="Print the contents of delta in DOT format. Default is set format.")
+        .flag(default = false)
+    val printFSP by option("--print-fsp", help="Print the contents of delta in FSP format. Default is set format.")
+        .flag(default = false)
+    val numPrint by option("--num-print", help="Number of items in delta to print. Default is 3.")
+        .int()
+        .default(3)
+
+    override fun run() {
+        val env = stripTauTransitions(fspToNFA(envFile))
+        val ctrl = stripTauTransitions(fspToNFA(ctrlFile))
+        val prop = fspToDFA(propFile)
+
+        if (!satisfies(parallel(env,ctrl), prop)) {
+            println("Error: ~(E||C |= P)")
+            return
+        }
+
+        val delta =
+            if (envPropFile.isEmpty()) {
+                if (random) {
+                    if (!silent) {
+                        println("Running randomized algorithm with $randInters iterations")
+                    }
+                    deltaNaiveRand(env, ctrl, prop, randInters)
+                } else {
+                    DeltaDFS(env, ctrl, prop).compute()
+                }
+            }
+            else {
+                //val envPropList = envPropFile.map { fspToDFA(it) }
+                val envPropList = envPropFile.map { CompactDetLTS(determinise(stripTauTransitions(fspToNFA(it))) as CompactDFA) }
+                val envProp =
+                    if (envPropList.size == 1) {
+                        envPropList.first()
+                    }
+                    else {
+                        parallel(*envPropList.toTypedArray()) as CompactDetLTS<String>
+                    }
+                if (!satisfies(env, envProp)) {
+                    println("Error: ~(E |= envProp)")
+                    return
+                }
+                if (random) {
+                    if (!silent) {
+                        println("Running randomized algorithm with $randInters iterations")
+                    }
+                    deltaNaiveRandEnvProp(env, ctrl, prop, envProp, randInters)
+                } else {
+                    DeltaDFSEnvProp(env, ctrl, prop, envProp).compute()
+                }
+            }
+
+        if (!silent) {
+            println("#delta: ${delta.size}")
+            if (printDOT) {
+                printDOT(delta, env, ctrl, numPrint)
+            }
+            else if (printFSP) {
+                printFSP(delta, env, numPrint)
+            }
+            else {
+                printDelta(delta, numPrint)
+            }
+        }
+    }
+}
+
+fun main(args : Array<String>) = ToleranceApp().main(args)

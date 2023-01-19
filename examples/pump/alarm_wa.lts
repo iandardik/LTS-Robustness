@@ -1,2 +1,0 @@
-S1 = (turn_on -> S2),
-S2 = (turn_off -> STOP) + {turn_on, turn_off, power_failure}.

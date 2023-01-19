@@ -62,6 +62,11 @@ class DeltaDFSEnvProp(private val env : CompactLTS<String>,
                 dWinningSet
             }
             .toSet()
+        println("ep #W: ${winningSet.size}")
+        envPropWinningSets
+            .forEach {
+                w -> println("#epw: ${w.size}")
+            }
         println("Done calc'ing envProp transitions")
     }
 

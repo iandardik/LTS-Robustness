@@ -35,6 +35,7 @@ class DeltaDFS(private val env : CompactLTS<String>,
             .filter { metaCtrl.isAccepting(it) }
             .toSet()
         winningSet = gfp(allMetaCtrlStates, metaCtrlNotFull) intersect reachableStates(metaCtrl)
+        println("#W: ${winningSet.size}")
         transClosureTable = metaCtrlNotFull.states
             .associateWith { reachableStates(metaCtrlNotFull, setOf(it)) }
     }
