@@ -76,4 +76,17 @@ class SubsetGenTests {
     }
   }
 
+  @Test
+  fun testTherac() {
+    val sys = LTSACall.compile(ClassLoader.getSystemResource("specs/therac25/sys.lts").readText())
+      .compose().asDetLTS()
+    val env = LTSACall.compile(ClassLoader.getSystemResource("specs/therac25/env_perfect.lts").readText())
+      .compose().asDetLTS()
+    val safety = LTSACall.compile(ClassLoader.getSystemResource("specs/therac25/p.lts").readText())
+      .compose().asDetLTS()
+
+    val w = SubsetConstructionGenerator(sys, env, safety).generate()
+    write(System.out, w, w.alphabet())
+  }
+
 }

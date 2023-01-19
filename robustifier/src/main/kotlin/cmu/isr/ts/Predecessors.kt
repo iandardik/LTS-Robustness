@@ -6,11 +6,11 @@ import net.automatalib.util.ts.traversal.TSTraversal
 import net.automatalib.util.ts.traversal.TSTraversalAction
 import net.automatalib.util.ts.traversal.TSTraversalVisitor
 
-data class Predecessor<S, T>(val transition: T, val source: S)
+data class Predecessor<S, T, I>(val transition: T, val source: S, val input: I)
 
 class Predecessors<S, I>(nfa: NFA<S, I>) {
 
-  private val map: MutableMap<Pair<S, I>, MutableList<Predecessor<S, S>>> = mutableMapOf()
+  private val map: MutableMap<Pair<S, I>, MutableList<Predecessor<S, S, I>>> = mutableMapOf()
 
   private inner class PredecessorsVisitor : TSTraversalVisitor<S, I, S, Void?> {
     private val visited = mutableSetOf<S>()
@@ -37,9 +37,9 @@ class Predecessors<S, I>(nfa: NFA<S, I>) {
       outData: Holder<Void?>
     ): TSTraversalAction {
       if (Pair(succ, input) in map) {
-        map[Pair(succ, input)]!!.add(Predecessor(transition, source))
+        map[Pair(succ, input)]!!.add(Predecessor(transition, source, input))
       } else {
-        map[Pair(succ, input)] = mutableListOf(Predecessor(transition, source))
+        map[Pair(succ, input)] = mutableListOf(Predecessor(transition, source, input))
       }
       return TSTraversalAction.EXPLORE
     }
@@ -50,7 +50,7 @@ class Predecessors<S, I>(nfa: NFA<S, I>) {
     TSTraversal.breadthFirst(nfa, nfa.alphabet(), PredecessorsVisitor())
   }
 
-  fun getPredecessors(state: S, input: I): Collection<Predecessor<S, S>> {
+  fun getPredecessors(state: S, input: I): Collection<Predecessor<S, S, I>> {
     return map[Pair(state, input)]?: emptyList()
   }
 }

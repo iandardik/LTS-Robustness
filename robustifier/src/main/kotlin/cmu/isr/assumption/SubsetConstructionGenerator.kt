@@ -8,13 +8,17 @@ class SubsetConstructionGenerator<I>(
   private val sys: LTS<*, I>,
   private val env: LTS<*, I>,
   private val safety: DetLTS<*, I>
-) {
+) : WeakestAssumptionGenerator<I> {
   private val assumptionInputs: Collection<I>
 
   init {
     val common = sys.alphabet() intersect env.alphabet()
     val internal = sys.alphabet() - common
     assumptionInputs = common union (safety.alphabet() - internal.toSet())
+  }
+
+  override fun generate(): DetLTS<Int, I> {
+    return generate(false)
   }
 
   fun generate(sink: Boolean = false): DetLTS<Int, I> {
