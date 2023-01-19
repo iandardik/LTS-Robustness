@@ -5,16 +5,17 @@ import cmu.isr.robustness.RobustnessCalculator
 import cmu.isr.robustness.explanation.BaseExplanationGenerator
 import cmu.isr.robustness.explanation.ExplanationGenerator
 import cmu.isr.ts.DetLTS
-import cmu.isr.ts.LTS
 import cmu.isr.ts.alphabet
 import cmu.isr.ts.lts.ltsa.LTSACall
-import cmu.isr.ts.lts.ltsa.LTSACall.asLTS
+import cmu.isr.ts.lts.ltsa.LTSACall.asDetLTS
 import cmu.isr.ts.lts.ltsa.LTSACall.compose
 import cmu.isr.ts.parallel
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.ajalt.clikt.core.CliktCommand
-import com.github.ajalt.clikt.parameters.options.*
+import com.github.ajalt.clikt.parameters.options.flag
+import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.split
 import org.slf4j.LoggerFactory
 import java.io.File
 
@@ -41,9 +42,26 @@ class Robustness : CliktCommand(help = "Compute the robustness of a system desig
     if (compare) {
       if (cals.size < 2)
         error("Must provide two configs for robustness comparison.")
+
       val a = cals[0].first
       val b = cals[1].first
-      a.robustnessComparedTo(b)
+
+      logger.info("Comparing the robustness of a to b...")
+      for ((k, v) in a.compare(b)) {
+        logger.info("Equivalence class '$k':")
+        for (t in v) {
+          logger.info("\t${v}")
+        }
+      }
+
+      logger.info("Comparing the robustness of b to a...")
+      b.compare(a)
+      for ((k, v) in b.compare(a)) {
+        logger.info("Equivalence class '$k':")
+        for (t in v) {
+          logger.info("\t${v}")
+        }
+      }
     } else {
       for ((cal, explain)  in cals) {
         val traces = cal.computeRobustness()
@@ -60,15 +78,15 @@ class Robustness : CliktCommand(help = "Compute the robustness of a system desig
     }
   }
 
-  private fun parseFile(path: String): LTS<*, String> {
+  private fun parseFile(path: String): DetLTS<*, String> {
     val f = File(path)
     return when (f.extension) {
-      "fsp" -> LTSACall.compile(f.readText()).compose().asLTS()
+      "lts" -> LTSACall.compile(f.readText()).compose().asDetLTS()
       else -> error("Unsupported file type '.${f.extension}'")
     }
   }
 
-  private fun parseFiles(paths: List<String>): LTS<*, String> {
+  private fun parseFiles(paths: List<String>): DetLTS<*, String> {
     if (paths.isEmpty())
       error("Should provide at least one model file")
     if (paths.size == 1)
@@ -80,7 +98,7 @@ class Robustness : CliktCommand(help = "Compute the robustness of a system desig
     val obj = jacksonObjectMapper().readValue(File(json), RobustnessConfigJSON::class.java)
     val sys = parseFiles(obj.sys)
     return Pair(
-      BaseCalculator(sys, parseFiles(obj.env), parseFiles(obj.prop) as DetLTS<*, String>),
+      BaseCalculator(sys, parseFiles(obj.env), parseFiles(obj.prop)),
       obj.dev?.let { BaseExplanationGenerator(sys, parseFiles(it)) }
     )
   }
@@ -88,7 +106,7 @@ class Robustness : CliktCommand(help = "Compute the robustness of a system desig
   private fun buildCalculator(): Pair<RobustnessCalculator<*, String>, ExplanationGenerator<String>?> {
     val sys = parseFile(sys!!)
     return Pair(
-      BaseCalculator(sys, parseFile(env!!), parseFile(prop!!) as DetLTS<*, String>),
+      BaseCalculator(sys, parseFile(env!!), parseFile(prop!!)),
       dev?.let { BaseExplanationGenerator(sys, parseFile(dev!!)) }
     )
   }

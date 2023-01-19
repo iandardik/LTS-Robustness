@@ -26,5 +26,5 @@ interface RobustnessCalculator<S, I> {
   /**
    * The entrance function to compare the robustness of this model to another model, i.e., X = \Delta_This - \Delta_2.
    */
-  fun robustnessComparedTo(cal: RobustnessCalculator<*, I>): List<Word<I>>
+  fun compare(cal: RobustnessCalculator<*, I>): Map<EquivClass<I>, Collection<Word<I>>>
 }

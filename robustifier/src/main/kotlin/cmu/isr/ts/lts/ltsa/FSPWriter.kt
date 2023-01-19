@@ -1,5 +1,6 @@
 package cmu.isr.ts.lts.ltsa
 
+import cmu.isr.ts.LTS
 import net.automatalib.automata.fsa.DFA
 import net.automatalib.commons.util.Holder
 import net.automatalib.util.ts.traversal.TSTraversal
@@ -61,7 +62,10 @@ private class FSPWriterVisitor<S, I>(
         break
       }
     }
-    return if (isDeadlock) {
+    return if (dfa is LTS<*, *> && !dfa.isAccepting(succ)) {
+      builder.append("$input -> ERROR | ")
+      TSTraversalAction.IGNORE
+    } else if (isDeadlock) {
       builder.append("$input -> STOP | ")
       TSTraversalAction.IGNORE
     } else {

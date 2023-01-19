@@ -38,19 +38,26 @@ class BaseCalculator<I>(
 
   override fun computeRobustness(): Map<RobustnessCalculator.EquivClass<I>, Collection<Word<I>>> {
     logger.info("Generating the representation traces by equivalence classes...")
-    val traces = shortestDeltaTraces()
+    val projectedEnv = hide(env, env.alphabet() - weakestAssumption.alphabet().toSet())
+    val delta = parallel(weakestAssumption, makeErrorState(projectedEnv))
+    val traces = shortestDeltaTraces(delta)
     if (traces.isEmpty())
       logger.info("No representation traces found. The weakest assumption has equal or less behavior than the environment")
     return traces
   }
 
-  override fun robustnessComparedTo(cal: RobustnessCalculator<*, I>): List<Word<I>> {
-    TODO("Not yet implemented")
+  override fun compare(cal: RobustnessCalculator<*, I>): Map<RobustnessCalculator.EquivClass<I>, Collection<Word<I>>> {
+    if (weakestAssumption.alphabet().toSet() != cal.weakestAssumption.alphabet().toSet())
+      error("The two weakest assumption should have the same alphabets")
+    logger.info("Generating the representation traces by equivalence classes...")
+    val delta = parallel(weakestAssumption, makeErrorState(cal.weakestAssumption))
+    val traces = shortestDeltaTraces(delta)
+    if (traces.isEmpty())
+      logger.info("No representation traces found. The weakest assumption of this model has equal or less behavior than the other model.")
+    return traces
   }
 
-  private fun shortestDeltaTraces(): Map<RobustnessCalculator.EquivClass<I>, Collection<Word<I>>> {
-    val projectedEnv = hide(env, env.alphabet() - weakestAssumption.alphabet().toSet())
-    val delta = parallel(weakestAssumption, makeErrorState(projectedEnv as MutableDetLTS<*, I>))
+  private fun shortestDeltaTraces(delta: DetLTS<Int, I>): Map<RobustnessCalculator.EquivClass<I>, Collection<Word<I>>> {
     val predecessors = Predecessors(delta)
     val transToError = delta.alphabet().flatMap { predecessors.getPredecessors(delta.errorState, it) }
     val statesToError = transToError.map { it.source }.toSet()
@@ -72,6 +79,8 @@ private class PathFromInitVisitor<S, I>(
 
   override fun processInitial(state: S, outData: Holder<Word<I>>): TSTraversalAction {
     outData.value = Word.epsilon()
+    if (state in targets)
+      result[state] = outData.value
     return TSTraversalAction.EXPLORE
   }
 

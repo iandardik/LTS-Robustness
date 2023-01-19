@@ -2,11 +2,13 @@ package cmu.isr.ts.lts
 
 import cmu.isr.ts.DetLTS
 import cmu.isr.ts.LTS
-import cmu.isr.ts.MutableDetLTS
 import cmu.isr.ts.alphabet
+import net.automatalib.automata.fsa.impl.compact.CompactDFA
 import net.automatalib.commons.util.Holder
+import net.automatalib.util.ts.copy.TSCopy
 import net.automatalib.util.ts.traversal.TSTraversal
 import net.automatalib.util.ts.traversal.TSTraversalAction
+import net.automatalib.util.ts.traversal.TSTraversalMethod
 import net.automatalib.util.ts.traversal.TSTraversalVisitor
 import net.automatalib.words.Word
 
@@ -77,15 +79,18 @@ fun <I> checkSafety(lts: LTS<*, I>, prop: DetLTS<*, I>): SafetyResult<I> {
 /**
  * Given a safety property LTS, make it into a complete LTS where all unsafe transitions lead to the error state.
  */
-fun <S, I> makeErrorState(prop: MutableDetLTS<S, I>): DetLTS<S, I> {
-  for (s in prop.states) {
-    if (prop.isErrorState(s))
+fun <S, I> makeErrorState(prop: DetLTS<S, I>): DetLTS<Int, I> {
+  val out = CompactDFA(prop.alphabet()).asLTS()
+  TSCopy.copy(TSTraversalMethod.DEPTH_FIRST, prop, TSTraversal.NO_LIMIT, prop.alphabet(), out)
+
+  for (s in out.states) {
+    if (out.isErrorState(s))
       continue
-    for (a in prop.alphabet()) {
-      if (prop.getTransition(s, a) == null) {
-        prop.addTransition(s, a, prop.errorState, null)
+    for (a in out.alphabet()) {
+      if (out.getTransition(s, a) == null) {
+        out.addTransition(s, a, out.errorState, null)
       }
     }
   }
-  return prop
+  return out
 }

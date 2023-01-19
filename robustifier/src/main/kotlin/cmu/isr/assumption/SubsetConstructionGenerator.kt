@@ -23,7 +23,7 @@ class SubsetConstructionGenerator<I>(
 
   fun generate(sink: Boolean = false): DetLTS<Int, I> {
     // 1. compose sys || safety_err
-    val comp = parallel(sys, makeErrorState(safety as MutableDetLTS) as LTS<*, I>) as MutableLTS
+    val comp = parallel(sys, makeErrorState(safety)) as MutableLTS
     // 2. prune the error state by backtracking from the initial error state
     val predecessors = Predecessors(comp)
     val queue = ArrayDeque<Int>()
