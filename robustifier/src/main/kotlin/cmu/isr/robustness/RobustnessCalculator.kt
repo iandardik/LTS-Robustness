@@ -15,7 +15,7 @@ interface RobustnessCalculator<S, I> {
   /**
    * Compute the set of traces allowed by the system but would violate the safety property.
    */
-  fun computeUnsafeBeh(): List<Word<I>>
+  fun computeUnsafeBeh(): Map<EquivClass<I>, Collection<Word<I>>>
 
   /**
    * The entrance function to compute the robustness. It first generates the weakest assumption, and then build the

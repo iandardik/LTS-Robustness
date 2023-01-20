@@ -9,4 +9,6 @@ interface WeakestAssumptionGenerator<I> {
    * deciding the interface alphabets.
    */
   fun generate(): DetLTS<Int, I>
+
+  fun generateUnsafe(): DetLTS<Int, I>
 }

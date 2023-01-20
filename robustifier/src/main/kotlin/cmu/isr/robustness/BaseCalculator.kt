@@ -32,12 +32,17 @@ class BaseCalculator<I>(
       return wa!!
     }
 
-  override fun computeUnsafeBeh(): List<Word<I>> {
-    TODO("Not yet implemented")
+  override fun computeUnsafeBeh(): Map<RobustnessCalculator.EquivClass<I>, Collection<Word<I>>> {
+    logger.info("Generating unsafe behavior representation traces by equivalence classes...")
+    val m = waGenerator.generateUnsafe()
+    val traces = shortestDeltaTraces(m)
+    if (traces.isEmpty())
+      logger.info("No representation traces found. The system is safe under any environment.")
+    return traces
   }
 
   override fun computeRobustness(): Map<RobustnessCalculator.EquivClass<I>, Collection<Word<I>>> {
-    logger.info("Generating the representation traces by equivalence classes...")
+    logger.info("Generating robust behavior representation traces by equivalence classes...")
     val projectedEnv = hide(env, env.alphabet() - weakestAssumption.alphabet().toSet())
     val delta = parallel(weakestAssumption, makeErrorState(projectedEnv))
     val traces = shortestDeltaTraces(delta)
@@ -49,7 +54,7 @@ class BaseCalculator<I>(
   override fun compare(cal: RobustnessCalculator<*, I>): Map<RobustnessCalculator.EquivClass<I>, Collection<Word<I>>> {
     if (weakestAssumption.alphabet().toSet() != cal.weakestAssumption.alphabet().toSet())
       error("The two weakest assumption should have the same alphabets")
-    logger.info("Generating the representation traces by equivalence classes...")
+    logger.info("Generating robust behavior representation traces by equivalence classes...")
     val delta = parallel(weakestAssumption, makeErrorState(cal.weakestAssumption))
     val traces = shortestDeltaTraces(delta)
     if (traces.isEmpty())

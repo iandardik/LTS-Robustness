@@ -25,6 +25,34 @@ class SubsetConstructionGenerator<I>(
     // 1. compose sys || safety_err
     val comp = parallel(sys, makeErrorState(safety)) as MutableLTS
     // 2. prune the error state by backtracking from the initial error state
+    val hidden = comp.alphabet().toSet() - assumptionInputs.toSet()
+    pruneError(comp)
+    // 3. hide and determinise
+    val wa = hide(comp, hidden) as MutableDetLTS
+    // 4. make sink
+    if (sink) {
+      val theta = wa.addState(true)
+      for (state in wa) {
+        if (wa.isErrorState(state))
+          continue
+        for (input in wa.alphabet()) {
+          if (wa.getSuccessor(state, input) == null)
+            wa.addTransition(state, input, theta, null)
+        }
+      }
+    }
+    // 5. remove error state
+    val waPredecessors = Predecessors(wa)
+    for (input in wa.alphabet()) {
+      for ((transition, source) in waPredecessors.getPredecessors(wa.errorState, input)) {
+        wa.removeTransition(source, input, transition)
+      }
+    }
+
+    return wa
+  }
+
+  private fun pruneError(comp: MutableLTS<Int, I>): LTS<Int, I> {
     val predecessors = Predecessors(comp)
     val queue = ArrayDeque<Int>()
     val hidden = comp.alphabet().toSet() - assumptionInputs.toSet()
@@ -51,28 +79,14 @@ class SubsetConstructionGenerator<I>(
         }
       }
     }
-    // 3. hide and determinise
-    val wa = hide(comp, hidden) as MutableDetLTS
-    // 4. make sink
-    if (sink) {
-      val theta = wa.addState(true)
-      for (state in wa) {
-        if (wa.isErrorState(state))
-          continue
-        for (input in wa.alphabet()) {
-          if (wa.getSuccessor(state, input) == null)
-            wa.addTransition(state, input, theta, null)
-        }
-      }
-    }
-    // 5. remove error state
-    val waPredecessors = Predecessors(wa)
-    for (input in wa.alphabet()) {
-      for ((transition, source) in waPredecessors.getPredecessors(wa.errorState, input)) {
-        wa.removeTransition(source, input, transition)
-      }
-    }
+    return comp
+  }
 
-    return wa
+  override fun generateUnsafe(): DetLTS<Int, I> {
+    // 1. compose sys || safety_err
+    val comp = parallel(sys, makeErrorState(safety)) as MutableLTS
+    val hidden = comp.alphabet().toSet() - assumptionInputs.toSet()
+    pruneError(comp)
+    return hide(comp, hidden)
   }
 }
