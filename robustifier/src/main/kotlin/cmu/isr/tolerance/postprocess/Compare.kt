@@ -18,17 +18,7 @@ fun atLeastAsRobust(delta1 : Set<Set<Triple<Int, String, Int>>>, delta2: Set<Set
 }
 
 fun compare(delta1 : Set<Set<Triple<Int, String, Int>>>, delta2: Set<Set<Triple<Int, String, Int>>>) : ComparisonResult {
-    // sanity check 1
-    //if (atLeastAsRobust(delta1, delta2) && atLeastAsRobust(delta2, delta1)) {
-        //if (delta1 != delta2) {
-            //println("ERROR! at least as robust as each other, but not equal!")
-        //}
-    //}
     if (delta1 == delta2) {
-        // sanity check 2
-        //if (!(atLeastAsRobust(delta1, delta2) && atLeastAsRobust(delta2, delta1))) {
-            //println("ERROR! deltas equal, but not at least as robust as each other!")
-        //}
         return ComparisonResult.equal
     }
     if (atLeastAsRobust(delta1, delta2)) {
