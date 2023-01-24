@@ -10,7 +10,8 @@ import product
 
 class DeltaDFS(private val env : CompactLTS<String>,
                private val ctrl : CompactLTS<String>,
-               private val prop : CompactDetLTS<String>) {
+               private val prop : CompactDetLTS<String>,
+               private val verbose : Boolean = false) {
 
     private val metaCtrl : NFAParallelComposition<Int, Pair<Int,Int>, String>
     private val metaCtrlTransitions : Set<Triple<Pair<Int, Pair<Int, Int>>, String, Pair<Int, Pair<Int, Int>>>>
@@ -35,9 +36,11 @@ class DeltaDFS(private val env : CompactLTS<String>,
             .filter { metaCtrl.isAccepting(it) }
             .toSet()
         winningSet = gfp(allMetaCtrlStates, metaCtrlNotFull) intersect reachableStates(metaCtrl)
-        println("#W: ${winningSet.size}")
         transClosureTable = metaCtrlNotFull.states
             .associateWith { reachableStates(metaCtrlNotFull, setOf(it)) }
+        if (verbose) {
+            println("#W: ${winningSet.size}")
+        }
     }
 
     fun compute() : Set<Set<Triple<Int, String, Int>>> {
@@ -71,7 +74,7 @@ class DeltaDFS(private val env : CompactLTS<String>,
 
         val toExplore = (outgoingStates(set, metaCtrl) - set) intersect winningSet
         if (toExplore.isNotEmpty()) {
-            if (toExplore.size > 15) {
+            if (verbose && toExplore.size > 15) {
                 println("Exploring set size: ${toExplore.size}")
             }
             powersetCompute(set, toExplore.toList(), level, delta, visited)

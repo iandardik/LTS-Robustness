@@ -121,9 +121,9 @@ fun oldMain(args : Array<String>) {
         when (alg) {
             "0" -> emptySet()
             "1" -> deltaNaiveBruteForce(env, ctrl, prop)
-            "2" -> DeltaDFS(env, ctrl, prop).compute()
+            "2" -> DeltaDFS(env, ctrl, prop, true).compute()
             "3" -> DeltaDFSRand(env, ctrl, prop).compute()
-            "4" -> DeltaDFSEnvProp(env, ctrl, prop, envProp).compute()
+            "4" -> DeltaDFSEnvProp(env, ctrl, prop, envProp, true).compute()
             "5" -> deltaNaiveRand(env, ctrl, prop)
             "6" -> deltaNaiveRandEnvProp(env, ctrl, prop, envProp)
             else -> {
@@ -197,7 +197,7 @@ class ToleranceApp : CliktCommand() {
     val randInters by option("--rand-iters", help="Number of iterations to run in randomized mode.")
         .int()
         .default(1000)
-    val silent by option("--silent", help="Will not print the contents of delta to stdout.")
+    val silent by option("--silent", help="Will not print the contents of delta to stdout. Mutually exclusive with verbose mode.")
         .flag(default = false)
     val printDOT by option("--print-dot", help="Print the contents of delta in DOT format. Default is set format.")
         .flag(default = false)
@@ -206,15 +206,27 @@ class ToleranceApp : CliktCommand() {
     val numPrint by option("--num-print", help="Number of items in delta to print. Default is 3.")
         .int()
         .default(3)
+    val verbose by option("--verbose", help="Prints extra information about the run, including |W|. Mutually exclusive with silent mode.")
+        .flag(default = false)
 
     override fun run() {
         val env = stripTauTransitions(fspToNFA(envFile))
         val ctrl = stripTauTransitions(fspToNFA(ctrlFile))
         val prop = fspToDFA(propFile)
 
+        if (silent && verbose) {
+            println("Cannot run in silent and verbose mode.")
+            return
+        }
         if (!satisfies(parallel(env,ctrl), prop)) {
             println("Error: ~(E||C |= P)")
             return
+        }
+
+        if (verbose) {
+            println("# states in E: ${env.states.size}")
+            println("# states in C: ${ctrl.states.size}")
+            println("# states in P: ${prop.states.size}")
         }
 
         val delta =
@@ -225,7 +237,7 @@ class ToleranceApp : CliktCommand() {
                     }
                     deltaNaiveRand(env, ctrl, prop, randInters)
                 } else {
-                    DeltaDFS(env, ctrl, prop).compute()
+                    DeltaDFS(env, ctrl, prop, verbose).compute()
                 }
             }
             else {
@@ -248,7 +260,7 @@ class ToleranceApp : CliktCommand() {
                     }
                     deltaNaiveRandEnvProp(env, ctrl, prop, envProp, randInters)
                 } else {
-                    DeltaDFSEnvProp(env, ctrl, prop, envProp).compute()
+                    DeltaDFSEnvProp(env, ctrl, prop, envProp, verbose).compute()
                 }
             }
 

@@ -17,7 +17,8 @@ typealias MetaState = Pair<Int, Pair<Int,Int>>
 class DeltaDFSEnvProp(private val env : CompactLTS<String>,
                       private val ctrl : CompactLTS<String>,
                       private val prop : CompactDetLTS<String>,
-                      envProp : DetLTS<Int, String>) {
+                      envProp : DetLTS<Int, String>,
+                      private val verbose : Boolean = false) {
 
     private val metaCtrl : NFAParallelComposition<Int, Pair<Int,Int>, String>
     private val metaCtrlTransitions : Set<Triple<MetaState, String, MetaState>>
@@ -47,13 +48,15 @@ class DeltaDFSEnvProp(private val env : CompactLTS<String>,
         transClosureTable = metaCtrlNotFull.states
             .associateWith { reachableStates(metaCtrlNotFull, setOf(it)) }
 
-        println("Calc'ing envProp transitions...")
+        if (verbose) {
+            println("Calc'ing envProp transitions...")
+        }
         val emptyCtrl = AutomatonBuilders.newNFA(Alphabets.fromArray<String>())
             .withInitial(0)
             .withAccepting(0)
             .create()
         val emptyCtrlLts = CompactLTS<String>(emptyCtrl)
-        envPropDelta = DeltaDFS(env, emptyCtrlLts, envProp as CompactDetLTS<String>).compute()
+        envPropDelta = DeltaDFS(env, emptyCtrlLts, envProp as CompactDetLTS<String>, verbose).compute()
         envPropWinningSets = envPropDelta
             .map { d ->
                 val dEnvFull = addPerturbations(env, d)
@@ -62,12 +65,14 @@ class DeltaDFSEnvProp(private val env : CompactLTS<String>,
                 dWinningSet
             }
             .toSet()
-        println("ep #W: ${winningSet.size}")
-        envPropWinningSets
-            .forEach {
-                w -> println("#epw: ${w.size}")
-            }
-        println("Done calc'ing envProp transitions")
+        if (verbose) {
+            println("ep #W: ${winningSet.size}")
+            envPropWinningSets
+                .forEach { w ->
+                    println("#epw: ${w.size}")
+                }
+            println("Done calc'ing envProp transitions")
+        }
     }
 
     fun compute() : Set<Set<Triple<Int, String, Int>>> {
@@ -101,14 +106,14 @@ class DeltaDFSEnvProp(private val env : CompactLTS<String>,
             .forEach { delta.add(it) }
 
         // compute next set of states to explore
-        val succ = (outgoingStates(set, metaCtrl) - set) intersect winningSet
-        val toExploreListDups = envPropWinningSets
+        val succ = outgoingStates(set, metaCtrl) - set
+        val succEnvPropSafe = envPropWinningSets
             .map { reach -> reach intersect succ }
             .toSet()
-        val toExploreList = removeSubsetDuplicates(toExploreListDups)
+        val toExploreList = removeSubsetDuplicates(succEnvPropSafe)
 
         for (toExplore in toExploreList) {
-            if (toExplore.size > 15) {
+            if (verbose && toExplore.size > 15) {
                 println("Exploring set size: ${toExplore.size}")
             }
             powersetCompute(set, toExplore.toList(), delta, visited)
