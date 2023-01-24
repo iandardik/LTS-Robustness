@@ -9,6 +9,7 @@ import cmu.isr.tolerance.utils.*
 import cmu.isr.ts.MutableDetLTS
 import cmu.isr.ts.alphabet
 import cmu.isr.ts.lts.CompactDetLTS
+import cmu.isr.ts.lts.CompactLTS
 import cmu.isr.ts.lts.ltsa.write
 import cmu.isr.ts.lts.makeErrorState
 import cmu.isr.ts.nfa.determinise
@@ -19,20 +20,6 @@ import com.github.ajalt.clikt.parameters.types.int
 import net.automatalib.automata.fsa.impl.compact.CompactDFA
 import satisfies
 import java.io.File
-
-fun <I> makeErrorStateCopy(rawProp : CompactDetLTS<I>) : CompactDetLTS<I> {
-    val prop = copyLTS(rawProp)
-    for (s in prop.states) {
-        if (prop.isErrorState(s))
-            continue
-        for (a in prop.inputAlphabet) {
-            if (prop.getTransition(s, a) == null) {
-                prop.addTransition(s, a, prop.errorState, null)
-            }
-        }
-    }
-    return prop
-}
 
 fun oldMain(args : Array<String>) {
     // just for convenience
@@ -188,8 +175,8 @@ fun oldMain(args : Array<String>) {
 
 class ToleranceApp : CliktCommand() {
     val envFile by option("--env", help="FSP file for the environment.").required()
-    val ctrlFile by option("--ctrl", help="FSP file for the controller.").required()
-    val propFile by option("--prop", help="FSP file for the property.").required()
+    val ctrlFile by option("--ctrl", help="FSP file for the controller.").multiple()
+    val propFile by option("--prop", help="FSP file for the property.").multiple()
     val envPropFile by option("--env-prop", help="FSP file for an environment property. This arg is allowed multiple times.")
         .multiple()
     val random by option("--rand", help="Will run randomized version of the algorithm.")
@@ -197,7 +184,7 @@ class ToleranceApp : CliktCommand() {
     val randInters by option("--rand-iters", help="Number of iterations to run in randomized mode.")
         .int()
         .default(1000)
-    val silent by option("--silent", help="Will not print the contents of delta to stdout. Mutually exclusive with verbose mode.")
+    val silent by option("--silent", help="Will not print results to stdout. Mutually exclusive with verbose mode.")
         .flag(default = false)
     val printDOT by option("--print-dot", help="Print the contents of delta in DOT format. Default is set format.")
         .flag(default = false)
@@ -208,19 +195,18 @@ class ToleranceApp : CliktCommand() {
         .default(3)
     val verbose by option("--verbose", help="Prints extra information about the run, including |W|. Mutually exclusive with silent mode.")
         .flag(default = false)
+    val compareCtrl by option("--compare-ctrl", help="Compares the robustness of two controllers. Mutually exclusive with property comparison.")
+        .flag(default = false)
+    val compareProp by option("--compare-prop", help="Compares the robustness w/respect to two properties. Mutually exclusive with controller comparison.")
+        .flag(default = false)
 
-    override fun run() {
-        val env = stripTauTransitions(fspToNFA(envFile))
-        val ctrl = stripTauTransitions(fspToNFA(ctrlFile))
-        val prop = fspToDFA(propFile)
-
-        if (silent && verbose) {
-            println("Cannot run in silent and verbose mode.")
-            return
-        }
+    fun calcDelta(env : CompactLTS<String>,
+                  ctrl : CompactLTS<String>,
+                  prop : CompactDetLTS<String>)
+                  : Set<Set<Triple<Int, String, Int>>>? {
         if (!satisfies(parallel(env,ctrl), prop)) {
             println("Error: ~(E||C |= P)")
-            return
+            return null
         }
 
         if (verbose) {
@@ -252,7 +238,7 @@ class ToleranceApp : CliktCommand() {
                     }
                 if (!satisfies(env, envProp)) {
                     println("Error: ~(E |= envProp)")
-                    return
+                    return null
                 }
                 if (random) {
                     if (!silent) {
@@ -263,17 +249,119 @@ class ToleranceApp : CliktCommand() {
                     DeltaDFSEnvProp(env, ctrl, prop, envProp, verbose).compute()
                 }
             }
+        return delta
+    }
 
-        if (!silent) {
-            println("#delta: ${delta.size}")
-            if (printDOT) {
-                printDOT(delta, env, ctrl, numPrint)
+    override fun run() {
+        if (silent && verbose) {
+            println("Cannot run in silent and verbose mode.")
+            return
+        }
+
+        if (compareCtrl && compareProp) {
+            println("Cannot compare controllers and properties.")
+            return
+        }
+
+        /* compare robustness of two different controllers */
+        if (compareCtrl) {
+            if (ctrlFile.size != 2) {
+                println("Exactly two controller files are required.")
+                return
             }
-            else if (printFSP) {
-                printFSP(delta, env, numPrint)
+            if (propFile.size != 1) {
+                println("Exactly one property file is required for comparison.")
+                return
             }
-            else {
-                printDelta(delta, numPrint)
+            val env = stripTauTransitions(fspToNFA(envFile))
+            val ctrl1 = stripTauTransitions(fspToNFA(ctrlFile[0]))
+            val ctrl2 = stripTauTransitions(fspToNFA(ctrlFile[1]))
+            val prop = fspToDFA(propFile[0])
+
+            val delta1 = calcDelta(env, ctrl1, prop)
+            val delta2 = calcDelta(env, ctrl2, prop)
+            if (delta1 == null || delta2 == null) {
+                // not the cleanest, but it'll do for now
+                return
+            }
+
+            val result =
+                when (compare(delta1, delta2)) {
+                    ComparisonResult.equal -> "equal"
+                    ComparisonResult.strictlyMoreRobust -> "delta1 strictly MORE robust than delta2"
+                    ComparisonResult.strictlyLessRobust -> "delta1 strictly LESS robust than delta2"
+                    ComparisonResult.incomparable -> "delta1 is incomparable to delta2"
+                }
+            if (!silent) {
+                println("Comparison result: $result")
+            }
+        }
+
+        /* compare robustness for a controller to an env w/respect to two different props */
+        else if (compareProp) {
+            if (ctrlFile.size != 1) {
+                println("Exactly one controller file is required.")
+                return
+            }
+            if (propFile.size != 2) {
+                println("Exactly two property files are required for comparison.")
+                return
+            }
+            val env = stripTauTransitions(fspToNFA(envFile))
+            val ctrl = stripTauTransitions(fspToNFA(ctrlFile[0]))
+            val prop1 = fspToDFA(propFile[0])
+            val prop2 = fspToDFA(propFile[1])
+
+            val delta1 = calcDelta(env, ctrl, prop1)
+            val delta2 = calcDelta(env, ctrl, prop2)
+            if (delta1 == null || delta2 == null) {
+                // not the cleanest, but it'll do for now
+                return
+            }
+
+            val result =
+                when (compare(delta1, delta2)) {
+                    ComparisonResult.equal -> "equal"
+                    ComparisonResult.strictlyMoreRobust -> "delta1 strictly MORE robust than delta2"
+                    ComparisonResult.strictlyLessRobust -> "delta1 strictly LESS robust than delta2"
+                    ComparisonResult.incomparable -> "delta1 is incomparable to delta2"
+                }
+            if (!silent) {
+                println("Comparison result: $result")
+            }
+        }
+
+        /* calculate robustness for a single env, ctrl, prop */
+        else {
+            if (ctrlFile.size != 1) {
+                println("Exactly one controller file is required.")
+                return
+            }
+            if (propFile.size != 1) {
+                println("Exactly one property file is required.")
+                return
+            }
+            val env = stripTauTransitions(fspToNFA(envFile))
+            val ctrl = stripTauTransitions(fspToNFA(ctrlFile[0]))
+            val prop = fspToDFA(propFile[0])
+
+            val delta = calcDelta(env, ctrl, prop)
+            if (delta == null) {
+                // not the cleanest, but it'll do for now
+                return
+            }
+
+            if (!silent) {
+                println("#delta: ${delta.size}")
+                if (printDOT) {
+                    printDOT(delta, env, ctrl, numPrint)
+                }
+                else if (printFSP) {
+                    printFSP(delta, env, numPrint)
+                }
+                else {
+                    printDelta(delta, numPrint)
+                }
             }
         }
     }
