@@ -1,0 +1,48 @@
+range B = 0..1
+
+FC0 = (
+      p[b:B] -> FC0
+    | p[b:B] -> FC[b]
+),
+FC[b:B] = (
+      p_p[b] -> FC0
+    | p[w:B] -> FC[b]
+    | p_p[w:B] -> FC[b]
+).
+
+BC0 = (
+      a[b:B] -> BC0
+    | a[b:B] -> BC[b]
+),
+BC[b:B] = (
+      a_p[b] -> BC0
+    | a[w:B] -> BC[b]
+    | a_p[w:B] -> BC[b]
+).
+
+SC = (done -> SC | send -> done -> SC).
+
+RC = (deliver -> RC).
+
+TO = (timeout[b:B] -> TO).
+
+S0 = (a_p[b:B] -> S0 | timeout -> S0 | send -> S1),
+S1 = (p[0] -> S2),
+S2 = (send -> S2 | a_p[1] -> S2 | timeout -> S1 | a_p[0] -> S3),
+S3 = (done -> S4),
+S4 = (a_p[b:B] -> S4 | timeout -> S4 | send -> S5),
+S5 = (p[1] -> S6),
+S6 = (send -> S6 | a_p[0] -> S6 | timeout -> S5 | a_p[1] -> S7),
+S7 = (done -> S0).
+
+R0 = (p_p[0] -> R1 | p_p[1] -> R5),
+R1 = (deliver -> R2),
+R2 = (a[0] -> R3),
+R3 = (p_p[1] -> R4 | p_p[0] -> R2),
+R4 = (deliver -> R5),
+R5 = (a[1] -> R0).
+
+
+// system violates the property
+property Q = (send -> deliver -> Q).
+||SYS = (SC || S0 || FC0 || BC0 || R0 || RC || TO || Q).

@@ -1,0 +1,6 @@
+V0 = (v.enter -> V1),
+V1 = (pass -> V2),
+V2 = (select -> V3),
+V3 = (vote -> V4 | back -> V2),
+V4 = (cfm -> V5 | back -> V3),
+V5 = (v.exit -> V0).

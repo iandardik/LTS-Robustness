@@ -1,0 +1,7 @@
+range B = 0..1
+
+S = (input -> send[b:B] -> getack[c:B] -> S).
+
+R = (rec[b:B] -> output -> ack[c:B] -> R).
+
+||NAIVE = (S || R).

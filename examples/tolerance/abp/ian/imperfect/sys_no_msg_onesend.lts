@@ -7,7 +7,7 @@ FC0 = (
 FC[b:B] = (
       p_p[b] -> FC0
     | p[w:B] -> FC[b]
-    | p_p[w:B] -> FC[b]
+    //| p_p[w:B] -> FC[b]
 ).
 
 BC0 = (
@@ -17,22 +17,22 @@ BC0 = (
 BC[b:B] = (
       a_p[b] -> BC0
     | a[w:B] -> BC[b]
-    | a_p[w:B] -> BC[b]
+    //| a_p[w:B] -> BC[b]
 ).
 
-SC = (done[b:B] -> SC | send[b:B] -> done[b] -> SC).
+SC = (done -> SC | send -> done -> SC).
 
-RC = (deliver[b:B] -> RC).
+RC = (deliver -> RC).
 
 TO = (timeout[b:B] -> TO).
 
 S0 = (a_p[b:B] -> S0 | timeout -> S0 | send -> S1),
 S1 = (p[0] -> S2),
-S2 = (send -> S2 | a_p[1] -> S2 | timeout -> S1 | a_p[0] -> S3),
+S2 = (a_p[1] -> S2 | timeout -> S1 | a_p[0] -> S3),
 S3 = (done -> S4),
 S4 = (a_p[b:B] -> S4 | timeout -> S4 | send -> S5),
 S5 = (p[1] -> S6),
-S6 = (send -> S6 | a_p[0] -> S6 | timeout -> S5 | a_p[1] -> S7),
+S6 = (a_p[0] -> S6 | timeout -> S5 | a_p[1] -> S7),
 S7 = (done -> S0).
 
 R0 = (p_p[0] -> R1 | p_p[1] -> R5),
@@ -43,13 +43,6 @@ R4 = (deliver -> R5),
 R5 = (a[1] -> R0).
 
 
-P0 = (p[0] -> P1),
-P1 = (p_p[0] -> P2 | p_p[1] -> ERROR),
-P2 = (a[0] -> P3),
-P3 = (a_p[0] -> P4 | a_p[1] -> ERROR),
-P4 = (p[1] -> P5),
-P5 = (p_p[1] -> P6 | p_p[0] -> ERROR),
-P6 = (a[1] -> P7),
-P7 = (a_p[1] -> P0 | a_p[0] -> ERROR).
-
-||SYS = (SC || S0 || FC0 || BC0 || R0 || RC || TO || P0).
+// system satisfies the property
+property P = (send -> deliver -> P).
+||SYS = (SC || S0 || FC0 || BC0 || R0 || RC || TO || P).

@@ -1,0 +1,4 @@
+// strong safety property -- the user MUST confirm
+P0 = (v.enter -> P1),
+P1 = (v.cfm -> P2 | v.exit -> ERROR),
+P2 = (v.exit -> P0).

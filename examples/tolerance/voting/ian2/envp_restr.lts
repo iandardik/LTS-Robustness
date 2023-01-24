@@ -1,0 +1,6 @@
+EP0 = (v.enter -> EP1),
+EP1 = (pass -> EP2),
+EP2 = (select -> EP3),
+EP3 = (vote -> EP4 | back -> EP2 | v.exit -> EP0),
+EP4 = (cfm -> EP5 | back -> EP3 | v.exit -> EP0),
+EP5 = (v.exit -> EP0).

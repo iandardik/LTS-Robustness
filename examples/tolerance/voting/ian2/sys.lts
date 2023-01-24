@@ -1,0 +1,27 @@
+// the voting machine
+S0 = (pass -> S1),
+S1 = (select -> S2),
+S2 = (vote -> S3 | back -> S1),
+S3 = (cfm -> S0 | back -> S2).
+
+// mutex rule (the EO must be sneaky and not enter the booth when the voter is present)
+X0 = (v.enter -> X1 | eo.enter -> X2),
+// voter in the booth
+X1 = (
+	  v.exit -> X0
+	| pass -> X1
+    | select -> X1
+    | vote -> X1
+    | cfm -> X1
+    | back -> X1
+),
+// election official in the booth
+X2 = (
+	  eo.exit -> X0
+    | select -> X1
+    | vote -> X1
+    | cfm -> X1
+    | back -> X1
+).
+
+||SYS = (S0 || X0).

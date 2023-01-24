@@ -1,0 +1,2 @@
+P0 = (v.enter -> P1 | v.exit -> P0),
+P1 = (cfm -> P0 | v.exit -> ERROR).

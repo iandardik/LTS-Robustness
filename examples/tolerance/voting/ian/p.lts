@@ -1,0 +1,1 @@
+P = (eo.select -> eo.vote -> eo.cfm -> ERROR).

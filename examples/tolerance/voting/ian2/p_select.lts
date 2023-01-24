@@ -1,0 +1,2 @@
+P0 = (eo.enter -> P1 | select -> P0),
+P1 = (eo.exit -> P0 | select -> ERROR).

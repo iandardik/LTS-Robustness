@@ -1,0 +1,10 @@
+range B = 0..1
+
+FC0 = (
+      p[b:B] -> FC0
+    | p[b:B] -> FC[b]
+),
+FC[b:B] = (
+      p_p[b] -> FC0
+    | p_p[b] -> FC[b]
+).
