@@ -24,7 +24,6 @@ fun deltaBruteForce(env : CompactLTS<String>,
     val envFullTransitions = product(env.states, env.alphabet().toSet(), env.states)
         .filter { env.isAccepting(it.first) && env.isAccepting(it.third) }
         .toSet()
-    val envFullTransitionsArray = envFullTransitions.toTypedArray()
 
     val metaCtrlNotFull = NFAParallelComposition(env, NFAParallelComposition(ctrl, propErr))
     val allMetaCtrlStates = metaCtrlNotFull.states
@@ -39,11 +38,14 @@ fun deltaBruteForce(env : CompactLTS<String>,
     val delta = DeltaBuilder(env, ctrl, prop)
     val visited = mutableSetOf<Set<Pair<Int, Pair<Int,Int>>>>()
     for (setRaw in powerset(winningSet)) {
-        val set = setRaw
+        val transClosureSet = setRaw
             .mapNotNull { transClosureTable[it] }
             .fold(setRaw) { acc, e -> acc union e }
+        val setInit = metaCtrl.initialStates intersect transClosureSet
+        val setReach = reachableStates(metaCtrl, setInit)
+        val set = transClosureSet intersect setReach
 
-        if (visited.contains(set)) {
+        if (set.isEmpty() || visited.contains(set)) {
             continue
         }
         visited.add(set)

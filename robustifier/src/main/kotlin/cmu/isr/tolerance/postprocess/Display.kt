@@ -37,6 +37,16 @@ fun printDelta(delta : Set<Set<Triple<Int, String, Int>>>, maxNum : Int = -1) {
     }
 }
 
+fun printLargestDeltaSz(delta : Set<Set<Triple<Int, String, Int>>>) {
+    if (delta.isEmpty()) {
+        println("Delta is empty and has no largest element.")
+        return
+    }
+    val largestElem = delta.fold(delta.first()) { acc, d -> if (acc.size >= d.size) acc else d }
+    val sz = largestElem.size
+    println("Size of largest delta element: $sz")
+}
+
 fun printFSP(delta : Set<Set<Triple<Int, String, Int>>>,
              env : CompactLTS<String>,
              maxNum : Int = -1) {

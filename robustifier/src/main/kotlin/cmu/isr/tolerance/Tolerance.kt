@@ -1,9 +1,7 @@
 package cmu.isr.tolerance
 
 import addPerturbations
-import cmu.isr.tolerance.delta.DeltaDFS
-import cmu.isr.tolerance.delta.DeltaDFSEnvProp
-import cmu.isr.tolerance.delta.DeltaDFSRand
+import cmu.isr.tolerance.delta.*
 import cmu.isr.tolerance.postprocess.*
 import cmu.isr.tolerance.utils.*
 import cmu.isr.ts.MutableDetLTS
@@ -179,6 +177,10 @@ class ToleranceApp : CliktCommand() {
     val propFile by option("--prop", help="FSP file for the property.").multiple()
     val envPropFile by option("--env-prop", help="FSP file for an environment property. This arg is allowed multiple times.")
         .multiple()
+    val bruteForce by option("--bf", help="Will run brute-force version of the algorithm.")
+        .flag(default = false)
+    val naiveBruteForce by option("--naive-bf", help="Will run naive brute-force version of the algorithm.")
+        .flag(default = false)
     val random by option("--rand", help="Will run randomized version of the algorithm.")
         .flag(default = false)
     val randInters by option("--rand-iters", help="Number of iterations to run in randomized mode.")
@@ -189,6 +191,8 @@ class ToleranceApp : CliktCommand() {
     val printDOT by option("--print-dot", help="Print the contents of delta in DOT format. Default is set format.")
         .flag(default = false)
     val printFSP by option("--print-fsp", help="Print the contents of delta in FSP format. Default is set format.")
+        .flag(default = false)
+    val printLargestDeltaSize by option("--largest-delta-size", help="Print the size of the largest element of delta.")
         .flag(default = false)
     val numPrint by option("--num-print", help="Number of items in delta to print. Default is 3.")
         .int()
@@ -222,6 +226,10 @@ class ToleranceApp : CliktCommand() {
                         println("Running randomized algorithm with $randInters iterations")
                     }
                     deltaNaiveRand(env, ctrl, prop, randInters)
+                } else if (bruteForce) {
+                    deltaBruteForce(env, ctrl, prop)
+                } else if (naiveBruteForce) {
+                    deltaNaiveBruteForce(env, ctrl, prop)
                 } else {
                     DeltaDFS(env, ctrl, prop, verbose).compute()
                 }
@@ -245,6 +253,10 @@ class ToleranceApp : CliktCommand() {
                         println("Running randomized algorithm with $randInters iterations")
                     }
                     deltaNaiveRandEnvProp(env, ctrl, prop, envProp, randInters)
+                } else if (bruteForce) {
+                    deltaBruteForceEnvProp(env, ctrl, prop, envProp)
+                } else if (naiveBruteForce) {
+                    deltaNaiveBruteForceEnvProp(env, ctrl, prop, envProp)
                 } else {
                     DeltaDFSEnvProp(env, ctrl, prop, envProp, verbose).compute()
                 }
@@ -257,9 +269,12 @@ class ToleranceApp : CliktCommand() {
             println("Cannot run in silent and verbose mode.")
             return
         }
-
         if (compareCtrl && compareProp) {
             println("Cannot compare controllers and properties.")
+            return
+        }
+        if (random && bruteForce || random && naiveBruteForce || bruteForce && naiveBruteForce) {
+            println("Cannot mix random / brute-force / naive brute-force modes.")
             return
         }
 
@@ -358,6 +373,9 @@ class ToleranceApp : CliktCommand() {
                 }
                 else if (printFSP) {
                     printFSP(delta, env, numPrint)
+                }
+                else if (printLargestDeltaSize) {
+                    printLargestDeltaSz(delta)
                 }
                 else {
                     printDelta(delta, numPrint)

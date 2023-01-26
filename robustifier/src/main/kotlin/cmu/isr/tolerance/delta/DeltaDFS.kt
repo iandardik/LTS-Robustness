@@ -16,7 +16,6 @@ class DeltaDFS(private val env : CompactLTS<String>,
     private val metaCtrl : NFAParallelComposition<Int, Pair<Int,Int>, String>
     private val metaCtrlTransitions : Set<Triple<Pair<Int, Pair<Int, Int>>, String, Pair<Int, Pair<Int, Int>>>>
     private val envFullTransitions : Set<Triple<Int,String,Int>>
-    private val envFullTransitionsArray : Array<Triple<Int,String,Int>>
     private val winningSet : Set<Pair<Int, Pair<Int,Int>>>
     private val transClosureTable : Map<Pair<Int, Pair<Int,Int>>, Set<Pair<Int, Pair<Int,Int>>>>
 
@@ -29,7 +28,6 @@ class DeltaDFS(private val env : CompactLTS<String>,
         envFullTransitions = product(env.states, env.alphabet().toSet(), env.states)
             .filter { env.isAccepting(it.first) && env.isAccepting(it.third) }
             .toSet()
-        envFullTransitionsArray = envFullTransitions.toTypedArray()
 
         val metaCtrlNotFull = NFAParallelComposition(env, NFAParallelComposition(ctrl, propErr))
         val allMetaCtrlStates = metaCtrlNotFull.states
