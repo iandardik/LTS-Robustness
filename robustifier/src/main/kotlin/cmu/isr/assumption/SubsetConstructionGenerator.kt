@@ -92,7 +92,7 @@ class SubsetConstructionGenerator<I>(
     // 1. compose sys || safety_err
     val comp = composeSysAndProp()
     val hidden = comp.alphabet().toSet() - assumptionInputs.toSet()
-    pruneError(comp)
+//    pruneError(comp)
     return hide(comp, hidden)
   }
 

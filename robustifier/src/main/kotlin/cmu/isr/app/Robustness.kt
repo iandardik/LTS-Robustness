@@ -1,6 +1,8 @@
 package cmu.isr.app
 
 import cmu.isr.robustness.BaseCalculator
+import cmu.isr.robustness.EquivClass
+import cmu.isr.robustness.RepTrace
 import cmu.isr.robustness.RobustnessCalculator
 import cmu.isr.robustness.explanation.BaseExplanationGenerator
 import cmu.isr.robustness.explanation.ExplanationGenerator
@@ -19,7 +21,6 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.split
-import net.automatalib.words.Word
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.time.Duration
@@ -75,13 +76,13 @@ class Robustness : CliktCommand(help = "Compute the robustness of a system desig
   private fun printResult(
     cal: RobustnessCalculator<*, String>,
     explain: ExplanationGenerator<String>?,
-    traces: Map<RobustnessCalculator.EquivClass<String>, Collection<Word<String>>>
+    traces: Map<EquivClass<String>, Collection<RepTrace<String>>>
   ) {
     for ((k, v) in traces) {
       logger.info("Equivalence class '$k':")
       for (t in v) {
         if (explain != null)
-          logger.info("\t${t} => ${explain.generate(t, cal.weakestAssumption.alphabet())}")
+          logger.info("\t${t} => ${explain.generate(t.word, cal.weakestAssumption.alphabet())}")
         else
           logger.info("\t${t}")
       }
