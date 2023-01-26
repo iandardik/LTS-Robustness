@@ -1,5 +1,5 @@
 {
-    "sys": ["lines.ts", "power.lts", "alarm.lts"],
+    "sys": ["lines.lts", "power.lts", "alarm.lts"],
     "env": ["env0.lts"],
-    "p": ["p.lts"]
+    "prop": ["p.lts"]
 }
