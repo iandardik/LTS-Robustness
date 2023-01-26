@@ -28,9 +28,10 @@ class SubsetConstructionGenerator<I>(
     val comp = composeSysAndProp()
     // 2. prune the error state by backtracking from the initial error state
     val hidden = comp.alphabet().toSet() - assumptionInputs.toSet()
-    pruneError(comp)
+//    pruneError(comp)
     // 3. hide and determinise
-    logger.info("Determinise the pruned model...")
+    logger.info("S||P: #states = ${comp.size()}, #transitions: ${comp.numOfTransitions()}")
+    logger.info("Pruning and determinising the model...")
     val wa = hide(comp, hidden) as MutableDetLTS
     // 4. make sink
     if (sink) {
