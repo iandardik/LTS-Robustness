@@ -1,0 +1,5 @@
+{
+    "sys": ["lines.ts", "power.lts", "alarm.lts"],
+    "env": ["env0.lts"],
+    "p": ["p.lts"]
+}

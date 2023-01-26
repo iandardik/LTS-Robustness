@@ -173,4 +173,34 @@ class RobustnessCalculatorTests {
       cal2.compare(cal1).values.flatten().toSet()
     )
   }
+
+  private fun buildVoting(): Pair<RobustnessCalculator<Int, String>, ExplanationGenerator<String>> {
+    val sys = LTSACall
+      .compile(ClassLoader.getSystemResource("specs/voting/sys.lts").readText())
+      .compose()
+      .asLTS()
+    val env = LTSACall
+      .compile(ClassLoader.getSystemResource("specs/voting/env0.lts").readText())
+      .compose()
+      .asLTS()
+    val safety = LTSACall
+      .compile(ClassLoader.getSystemResource("specs/voting/p.lts").readText())
+      .compose()
+      .asDetLTS()
+    val dev = LTSACall
+      .compile(ClassLoader.getSystemResource("specs/voting/env1.lts").readText())
+      .compose()
+      .asLTS()
+
+    return Pair(BaseCalculator(sys, env, safety), BaseExplanationGenerator(sys, dev))
+  }
+
+  @Test
+  fun testVoting() {
+    val (cal, explain) = buildVoting()
+    val actual = cal.computeRobustness().values.flatten().toSet()
+    for (t in actual) {
+      println("$t => ${explain.generate(t, cal.weakestAssumption.alphabet())}")
+    }
+  }
 }

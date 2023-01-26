@@ -12,6 +12,7 @@ import cmu.isr.ts.lts.ltsa.LTSACall.asDetLTS
 import cmu.isr.ts.lts.ltsa.LTSACall.asLTS
 import cmu.isr.ts.lts.ltsa.LTSACall.compose
 import cmu.isr.ts.parallel
+import cmu.isr.utils.pretty
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.ajalt.clikt.core.CliktCommand
@@ -21,6 +22,8 @@ import com.github.ajalt.clikt.parameters.options.split
 import net.automatalib.words.Word
 import org.slf4j.LoggerFactory
 import java.io.File
+import java.time.Duration
+import kotlin.system.exitProcess
 
 class Robustness : CliktCommand(help = "Compute the robustness of a system design.") {
 
@@ -40,8 +43,10 @@ class Robustness : CliktCommand(help = "Compute the robustness of a system desig
     } else if (sys != null && env != null && prop != null) {
       listOf(buildCalculator())
     } else {
-      error("Must provide a JSON config file or specify the '-s, -e, -p' options.")
+      println(getFormattedHelp())
+      exitProcess(0)
     }
+    val start = System.currentTimeMillis()
     if (compare) {
       if (cals.size < 2)
         error("Must provide two configs for robustness comparison.")
@@ -64,6 +69,7 @@ class Robustness : CliktCommand(help = "Compute the robustness of a system desig
         }
       }
     }
+    logger.info("Total time: ${Duration.ofMillis(System.currentTimeMillis() - start).pretty()}")
   }
 
   private fun printResult(

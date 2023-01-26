@@ -94,15 +94,15 @@ timeout 10m java -jar ../../bin/robustifier.jar robustify config-oasis.json
 echo -e "\nrun with simple search..."
 timeout 10m java -jar ../../bin/robustifier.jar robustify config-simple.json
 
-echo -e "\n\nrun oyster..."
-cd ../oyster
-echo -e "\nrun with pareto search..."
-timeout 10m java -jar ../../bin/robustifier.jar robustify config-pareto.json
-echo -e "\nrun with pareto-non-opt search..."
-timeout 10m java -jar ../../bin/robustifier.jar robustify config-pareto-non-opt.json
-echo -e "\nrun with fast search..."
-timeout 10m java -jar ../../bin/robustifier.jar robustify config-fast.json
-echo -e "\nrun with oasis search..."
-timeout 10m java -jar ../../bin/robustifier.jar robustify config-oasis.json
-echo -e "\nrun with simple search..."
-timeout 10m java -jar ../../bin/robustifier.jar robustify config-simple.json
+# echo -e "\n\nrun oyster..."
+# cd ../oyster
+# echo -e "\nrun with pareto search..."
+# timeout 10m java -jar ../../bin/robustifier.jar robustify config-pareto.json
+# echo -e "\nrun with pareto-non-opt search..."
+# timeout 10m java -jar ../../bin/robustifier.jar robustify config-pareto-non-opt.json
+# echo -e "\nrun with fast search..."
+# timeout 10m java -jar ../../bin/robustifier.jar robustify config-fast.json
+# echo -e "\nrun with oasis search..."
+# timeout 10m java -jar ../../bin/robustifier.jar robustify config-oasis.json
+# echo -e "\nrun with simple search..."
+# timeout 10m java -jar ../../bin/robustifier.jar robustify config-simple.json
