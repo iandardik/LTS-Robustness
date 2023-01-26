@@ -3,6 +3,7 @@ package cmu.isr.assumption
 import cmu.isr.ts.*
 import cmu.isr.ts.lts.hide
 import cmu.isr.ts.lts.makeErrorState
+import org.slf4j.LoggerFactory
 
 class SubsetConstructionGenerator<I>(
   private val sys: LTS<*, I>,
@@ -10,6 +11,7 @@ class SubsetConstructionGenerator<I>(
   private val safety: DetLTS<*, I>
 ) : WeakestAssumptionGenerator<I> {
   private val assumptionInputs: Collection<I>
+  private val logger = LoggerFactory.getLogger(javaClass)
 
   init {
     val common = sys.alphabet() intersect env.alphabet()
@@ -23,11 +25,12 @@ class SubsetConstructionGenerator<I>(
 
   fun generate(sink: Boolean = false): DetLTS<Int, I> {
     // 1. compose sys || safety_err
-    val comp = parallel(sys, makeErrorState(safety)) as MutableLTS
+    val comp = composeSysAndProp()
     // 2. prune the error state by backtracking from the initial error state
     val hidden = comp.alphabet().toSet() - assumptionInputs.toSet()
     pruneError(comp)
     // 3. hide and determinise
+    logger.info("Determinise the pruned model...")
     val wa = hide(comp, hidden) as MutableDetLTS
     // 4. make sink
     if (sink) {
@@ -53,6 +56,8 @@ class SubsetConstructionGenerator<I>(
   }
 
   private fun pruneError(comp: MutableLTS<Int, I>): LTS<Int, I> {
+    logger.info("Prune reachable error of S||P through hidden events by backtracking")
+    logger.info("S||P: #states = ${comp.size()}, #transitions: ${comp.numOfTransitions()}")
     val predecessors = Predecessors(comp)
     val queue = ArrayDeque<Int>()
     val hidden = comp.alphabet().toSet() - assumptionInputs.toSet()
@@ -84,9 +89,15 @@ class SubsetConstructionGenerator<I>(
 
   override fun generateUnsafe(): DetLTS<Int, I> {
     // 1. compose sys || safety_err
-    val comp = parallel(sys, makeErrorState(safety)) as MutableLTS
+    val comp = composeSysAndProp()
     val hidden = comp.alphabet().toSet() - assumptionInputs.toSet()
     pruneError(comp)
     return hide(comp, hidden)
+  }
+
+  private fun composeSysAndProp(): MutableLTS<Int, I> {
+    logger.info("Compose System and Property...")
+    logger.info("System: #states = ${sys.size()}, #transitions: ${sys.numOfTransitions()}")
+    return parallel(sys, makeErrorState(safety)) as MutableLTS
   }
 }

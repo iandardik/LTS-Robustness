@@ -3,6 +3,7 @@ package cmu.isr.robustify.supervisory
 import cmu.isr.supervisory.SupervisoryDFA
 import cmu.isr.supervisory.asSupDFA
 import cmu.isr.ts.alphabet
+import cmu.isr.ts.numOfTransitions
 import cmu.isr.utils.combinations
 import cmu.isr.utils.pretty
 import net.automatalib.automata.fsa.DFA
