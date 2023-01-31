@@ -39,4 +39,4 @@ timeout 10m java -jar ../../bin/robustifier.jar robustness --jsons config-robust
 
 echo -e "\n\nrun infusion pump-4..."
 cd ../pump4
-timeout 10m java -jar ../../bin/robustifier.jar robustness --jsons config-robustness.json
+timeout 10m java -Xmx16g -jar ../../bin/robustifier.jar robustness --jsons config-robustness.json

@@ -1,6 +1,6 @@
 
-range N_VOTER = 1..16
-range N_EO = 1..16
+range N_VOTER = 1..8
+range N_EO = 1..8
 
 ENV = (v[i:N_VOTER].enter -> VOTER[i] | eo[j:N_EO].enter -> EO[j]),
 VOTER[i:N_VOTER] = (password -> VOTER1[i]),

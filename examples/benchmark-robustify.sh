@@ -31,11 +31,11 @@ echo -e "\n\nrun voting-4..."
 cd ../voting2
 python generator.py 4 4
 echo -e "\nrun with pareto search..."
-timeout 10m java -jar ../../bin/robustifier.jar robustify config-pareto.json
+timeout 10m java -Xmx16g -jar ../../bin/robustifier.jar robustify config-pareto.json
 # echo -e "\nrun with pareto-non-opt search..."
 # timeout 10m java -jar ../../bin/robustifier.jar robustify config-pareto-non-opt.json
 echo -e "\nrun with fast search..."
-timeout 10m java -jar ../../bin/robustifier.jar robustify config-fast.json
+timeout 10m java -Xmx16g -jar ../../bin/robustifier.jar robustify config-fast.json
 # echo -e "\nrun with oasis search..."
 # timeout 10m java -jar ../../bin/robustifier.jar robustify config-oasis.json
 # echo -e "\nrun with simple search..."
@@ -45,11 +45,11 @@ echo -e "\n\nrun voting-8..."
 cd ../voting2
 python generator.py 8 8
 echo -e "\nrun with pareto search..."
-timeout 10m java -jar ../../bin/robustifier.jar robustify config-pareto.json
+timeout 10m java -Xmx16g -jar ../../bin/robustifier.jar robustify config-pareto.json
 # echo -e "\nrun with pareto-non-opt search..."
 # timeout 10m java -jar ../../bin/robustifier.jar robustify config-pareto-non-opt.json
 echo -e "\nrun with fast search..."
-timeout 10m java -jar ../../bin/robustifier.jar robustify config-fast.json
+timeout 10m java -Xmx16g -jar ../../bin/robustifier.jar robustify config-fast.json
 # echo -e "\nrun with oasis search..."
 # timeout 10m java -jar ../../bin/robustifier.jar robustify config-oasis.json
 # echo -e "\nrun with simple search..."
@@ -104,9 +104,9 @@ timeout 10m java -jar ../../bin/robustifier.jar robustify config-fast.json
 echo -e "\n\nrun infusion pump-4..."
 cd ../pump4
 echo -e "\nrun with pareto search..."
-timeout 10m java -jar ../../bin/robustifier.jar robustify config-pareto.json
+timeout 10m java -Xmx16g -jar ../../bin/robustifier.jar robustify config-pareto.json
 echo -e "\nrun with fast search..."
-timeout 10m java -jar ../../bin/robustifier.jar robustify config-fast.json
+timeout 10m java -Xmx16g -jar ../../bin/robustifier.jar robustify config-fast.json
 
 # echo -e "\n\nrun oyster..."
 # cd ../oyster
