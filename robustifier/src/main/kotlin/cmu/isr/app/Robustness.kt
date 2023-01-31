@@ -35,6 +35,7 @@ class Robustness : CliktCommand(help = "Compute the robustness of a system desig
   private val unsafe by option("--unsafe", "-u", help = "Generate unsafe behaviors").flag()
   private val jsons by option("--jsons", help = "One or more model config files, separated by ','").split(",")
   private val compare by option("--compare", help = "Compare the robustness of two models").flag()
+  private val expand by option("--expand", help = "Expand the equivalence classes to all acyclic traces").flag()
 
   private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -56,9 +57,9 @@ class Robustness : CliktCommand(help = "Compute the robustness of a system desig
       val (cal2, explain2) = cals[1]
 
       logger.info("Comparing the robustness of a to b...")
-      printResult(cal1, explain1, cal1.compare(cal2))
+      printResult(cal1, explain1, cal1.compare(cal2, expand))
       logger.info("Comparing the robustness of b to a...")
-      printResult(cal2, explain2, cal2.compare(cal1))
+      printResult(cal2, explain2, cal2.compare(cal1, expand))
     } else {
       if (unsafe) {
         for ((cal, explain) in cals) {
@@ -66,7 +67,7 @@ class Robustness : CliktCommand(help = "Compute the robustness of a system desig
         }
       } else {
         for ((cal, explain) in cals) {
-          printResult(cal, explain, cal.computeRobustness())
+          printResult(cal, explain, cal.computeRobustness(expand))
         }
       }
     }
