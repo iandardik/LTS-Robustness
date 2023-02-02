@@ -5,7 +5,7 @@
   "safety": ["p.lts"],
   "method": "supervisory",
   "options": {
-    "progress": ["line.1.flow_complete", "line.2.flow_complete", "line.3.flow_complete", "line.4.flow_complete"],
+    "progress": ["line.1.flow_complete", "line.2.flow_complete", "line.3.flow_complete"],
     "preferredMap": {
       "3": [
         ["turn_on", "line.1.dispense_main_med_flow", "line.1.flow_complete", "turn_off"],
@@ -24,13 +24,7 @@
       
         ["turn_on", "line.3.start_dispense", "line.3.dispense_main_med_flow", 
          "line.3.dispense_main_med_flow", "power_failure", "turn_on", "line.3.start_dispense",
-         "line.3.dispense_main_med_flow", "line.3.flow_complete", "turn_off"],
-        
-        ["turn_on", "line.4.dispense_main_med_flow", "line.4.flow_complete", "turn_off"],
-    
-        ["turn_on", "line.4.start_dispense", "line.4.dispense_main_med_flow", 
-         "line.4.dispense_main_med_flow", "power_failure", "turn_on", "line.4.start_dispense",
-         "line.4.dispense_main_med_flow", "line.4.flow_complete", "turn_off"]
+         "line.3.dispense_main_med_flow", "line.3.flow_complete", "turn_off"]
       ]
     },
     "controllableMap": {
@@ -57,15 +51,7 @@
         "line.3.dispense_main_med_flow",
         "line.3.flow_complete",
         "line.3.set_rate",
-        "line.3.start_dispense",
-
-        "line.4.change_settings",
-        "line.4.clear_rate",
-        "line.4.confirm_settings",
-        "line.4.dispense_main_med_flow",
-        "line.4.flow_complete",
-        "line.4.set_rate",
-        "line.4.start_dispense"
+        "line.3.start_dispense"
       ],
       "2": [
         "line.1.erase_and_unlock_line",
@@ -82,11 +68,6 @@
         "line.3.lock_line",
         "line.3.lock_unit",
         "line.3.unlock_unit",
-
-        "line.4.erase_and_unlock_line",
-        "line.4.lock_line",
-        "line.4.lock_unit",
-        "line.4.unlock_unit",
 
         "turn_off",
         "turn_on"
@@ -133,18 +114,6 @@
         "line.3.set_rate",
         "line.3.start_dispense",
         "line.3.unlock_unit",
-
-        "line.4.change_settings",
-        "line.4.clear_rate",
-        "line.4.confirm_settings",
-        "line.4.dispense_main_med_flow",
-        "line.4.erase_and_unlock_line",
-        "line.4.flow_complete",
-        "line.4.lock_line",
-        "line.4.lock_unit",
-        "line.4.set_rate",
-        "line.4.start_dispense",
-        "line.4.unlock_unit",
         
         "turn_off",
         "turn_on"
@@ -156,6 +125,6 @@
         "unplug"
       ]
     },
-    "algorithm": "Pareto"
+    "algorithm": "Fast"
   }
 }

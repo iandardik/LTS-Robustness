@@ -6,9 +6,11 @@ import cmu.isr.robustness.RepTrace
 import cmu.isr.robustness.RobustnessCalculator
 import cmu.isr.robustness.explanation.BaseExplanationGenerator
 import cmu.isr.robustness.explanation.ExplanationGenerator
+import cmu.isr.supervisory.SupervisoryNFA
 import cmu.isr.ts.DetLTS
 import cmu.isr.ts.LTS
 import cmu.isr.ts.alphabet
+import cmu.isr.ts.lts.asLTS
 import cmu.isr.ts.lts.ltsa.LTSACall
 import cmu.isr.ts.lts.ltsa.LTSACall.asDetLTS
 import cmu.isr.ts.lts.ltsa.LTSACall.asLTS
@@ -21,6 +23,11 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.split
+import net.automatalib.automata.fsa.impl.compact.CompactDFA
+import net.automatalib.automata.fsa.impl.compact.CompactNFA
+import net.automatalib.util.ts.copy.TSCopy
+import net.automatalib.util.ts.traversal.TSTraversal
+import net.automatalib.util.ts.traversal.TSTraversalMethod
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.time.Duration
@@ -94,8 +101,21 @@ class Robustness : CliktCommand(help = "Compute the robustness of a system desig
     val f = File(path)
     return when (f.extension) {
       "lts" -> LTSACall.compile(f.readText()).compose().let { if (deterministic) it.asDetLTS() else it.asLTS() }
+      "fsm" -> cmu.isr.supervisory.desops.parse(f.bufferedReader()).let { if (deterministic) it.asDetLTS() else it.asLTS() }
       else -> error("Unsupported file type '.${f.extension}'")
     }
+  }
+
+  private fun SupervisoryNFA<Int, String>.asDetLTS(): DetLTS<*, String> {
+    val out = CompactDFA(this.inputAlphabet)
+    TSCopy.copy(TSTraversalMethod.DEPTH_FIRST, this, TSTraversal.NO_LIMIT, this.inputAlphabet, out)
+    return out.asLTS()
+  }
+
+  private fun SupervisoryNFA<Int, String>.asLTS(): LTS<*, String> {
+    val out = CompactNFA(this.inputAlphabet)
+    TSCopy.copy(TSTraversalMethod.DEPTH_FIRST, this, TSTraversal.NO_LIMIT, this.inputAlphabet, out)
+    return out.asLTS()
   }
 
   private fun parseFiles(paths: List<String>, deterministic: Boolean = false): LTS<*, String> {

@@ -1,7 +1,7 @@
 package cmu.isr.ts.lts.ltsa
 
 import cmu.isr.ts.LTS
-import net.automatalib.automata.fsa.DFA
+import net.automatalib.automata.fsa.NFA
 import net.automatalib.commons.util.Holder
 import net.automatalib.util.ts.traversal.TSTraversal
 import net.automatalib.util.ts.traversal.TSTraversalAction
@@ -9,10 +9,10 @@ import net.automatalib.util.ts.traversal.TSTraversalVisitor
 import net.automatalib.words.Alphabet
 import java.io.OutputStream
 
-fun <S, I> write(output: OutputStream, dfa: DFA<S, I>, inputs: Alphabet<I>) {
+fun <S, I> write(output: OutputStream, nfa: NFA<S, I>, inputs: Alphabet<I>) {
   val builder = StringBuilder()
   val writer = output.writer()
-  TSTraversal.breadthFirst(dfa, inputs, FSPWriterVisitor(builder, dfa, inputs))
+  TSTraversal.breadthFirst(nfa, inputs, FSPWriterVisitor(builder, nfa, inputs))
   if (builder.endsWith(" | ")) {
     builder.setLength(builder.length - 3)
     builder.appendLine(").")
@@ -23,7 +23,7 @@ fun <S, I> write(output: OutputStream, dfa: DFA<S, I>, inputs: Alphabet<I>) {
 
 private class FSPWriterVisitor<S, I>(
   val builder: StringBuilder,
-  val dfa: DFA<S, I>,
+  val nfa: NFA<S, I>,
   val inputs: Alphabet<I>
 ) : TSTraversalVisitor<S, I, S, Void?> {
   private val visited = mutableSetOf<S>()
@@ -57,19 +57,20 @@ private class FSPWriterVisitor<S, I>(
     // check deadlock state
     var isDeadlock = true
     for (a in inputs) {
-      if (dfa.getTransition(succ, a) != null) {
+      if (nfa.getTransitions(succ, a).isNotEmpty()) {
         isDeadlock = false
         break
       }
     }
-    return if (dfa is LTS<*, *> && !dfa.isAccepting(succ)) {
-      builder.append("$input -> ERROR | ")
+    val action = LTSACall.escapeEvent(input.toString())
+    return if (nfa is LTS<*, *> && !nfa.isAccepting(succ)) {
+      builder.append("$action -> ERROR | ")
       TSTraversalAction.IGNORE
     } else if (isDeadlock) {
-      builder.append("$input -> STOP | ")
+      builder.append("$action -> STOP | ")
       TSTraversalAction.IGNORE
     } else {
-      builder.append("$input -> S$succ | ")
+      builder.append("$action -> S$succ | ")
       TSTraversalAction.EXPLORE
     }
   }

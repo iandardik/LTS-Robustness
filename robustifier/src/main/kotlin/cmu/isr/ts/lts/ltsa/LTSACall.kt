@@ -82,7 +82,7 @@ object LTSACall {
    * if e == "tau" then e' = "_tau_"
    * if e match abc.123 then e' = abc[123]
    */
-  private fun escapeEvent(e: String): String {
+  fun escapeEvent(e: String): String {
 //    if (e == "tau")
 //      return "_tau_"
     var escaped = e
