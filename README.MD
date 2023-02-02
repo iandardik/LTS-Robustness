@@ -1,8 +1,10 @@
-This is an implementation of our behavioral robustification tool FORT.
+This is an implementation of our robustness computation and behavioral robustification tool *Fortis*.
 
-The implementation assumes the user should provide the system specification, the deviated environment w.r.t. some deviation, safety property, progress property, priorities for a set of preferred behavior and controllable/observable events. The tool automatically synthesizes new designs that satisfy the properties and maximize an objective function w.r.t. the common behavior between the original design and the new design and the cost of changes.
+To compute robustness, the tool takes the specifications of a machine, its normative environment, and a property as inputs, and generate a set of traces where each represents an execution scenario where the machine is robust against but not defined in the normative environment.
 
-We assume all the specifications of the models should be specified in FSP, the modeling language used by [the LTSA tool](https://www.doc.ic.ac.uk/ltsa/).
+To robustify a machine, in addition to the above models, the user needs to provide the deviated environment w.r.t. some deviation and priorities for a set of preferred behavior and controllable/observable events. Fortis automatically synthesizes new designs that satisfy the properties and maximize an objective function w.r.t. the common behavior between the original design and the new design and the cost of changes.
+
+We assume all the specifications of the models are specified in FSP, the modeling language used by [the LTSA tool](https://www.doc.ic.ac.uk/ltsa/).
 
 ## System Requirements
 This program requires Java version >= 11 and Python 3.8. The program has been tested under
@@ -17,10 +19,44 @@ Python 3.8.12
 ## Package Structure
 - bin: includes all the executable jars of our tool.
 - examples: includes the case study models and scripts to run the benchmark.
+- robustifier: includes the source code of Fortis.
 
-## Reproduce the results in the paper
+## Robustness Computation Example
+We will use Therac-25 to show an example of our tool.
+```
+cd examples/therac25
+java -jar ../../bin/robustifier.jar robustness -s sys.lts -e env0.lts -p p.lts -d env.lts
+```
+The results would be like:
+```
+2023-02-02 14:49:28.398 [INFO] BaseCalculator - Generating robust behavior representation traces by equivalence 
+classes...
+2023-02-02 14:49:28.400 [INFO] BaseCalculator - Generating the weakest assumption...
+2023-02-02 14:49:28.400 [INFO] SubsetConstructionGenerator - Compose System and Property...        
+2023-02-02 14:49:28.403 [INFO] SubsetConstructionGenerator - System: #states = 22, #transitions: 44
+2023-02-02 14:49:28.414 [INFO] SubsetConstructionGenerator - S||P: #states = 20, #transitions: 40
+2023-02-02 14:49:28.414 [INFO] SubsetConstructionGenerator - Pruning and determinising the model...
+2023-02-02 14:49:28.438 [INFO] Robustness - Equivalence class 'EquivClass(s=1, a=up)':
+2023-02-02 14:49:28.443 [INFO] Robustness -     RepTrace(word=x,up, deadlock=false) => x,up
+2023-02-02 14:49:28.443 [INFO] Robustness - Equivalence class 'EquivClass(s=8, a=up)':
+2023-02-02 14:49:28.445 [INFO] Robustness -     RepTrace(word=e,up, deadlock=false) => e,up
+2023-02-02 14:49:28.445 [INFO] Robustness - Equivalence class 'EquivClass(s=3, a=up)':
+2023-02-02 14:49:28.448 [INFO] Robustness -     RepTrace(word=x,enter,up, deadlock=false) => x,enter,up
+2023-02-02 14:49:28.449 [INFO] Robustness - Equivalence class 'EquivClass(s=9, a=up)':
+2023-02-02 14:49:28.451 [INFO] Robustness -     RepTrace(word=e,enter,up, deadlock=false) => e,enter,up
+2023-02-02 14:49:28.451 [INFO] Robustness - Equivalence class 'EquivClass(s=6, a=up)':
+2023-02-02 14:49:28.453 [INFO] Robustness -     RepTrace(word=x,enter,b,enter,e,up, deadlock=false) => x,enter,b,fire_xray,enter,e,up
+2023-02-02 14:49:28.454 [INFO] Robustness - Equivalence class 'EquivClass(s=12, a=up)':
+2023-02-02 14:49:28.456 [INFO] Robustness -     RepTrace(word=e,enter,b,enter,x,up, deadlock=false) => e,enter,b,fire_ebeam,enter,x,up
+2023-02-02 14:49:28.457 [INFO] Robustness - Equivalence class 'EquivClass(s=7, a=up)':
+2023-02-02 14:49:28.458 [INFO] Robustness -     RepTrace(word=x,enter,b,enter,e,enter,up, deadlock=false) => x,enter,b,fire_xray,enter,e,enter,up
+2023-02-02 14:49:28.459 [INFO] Robustness - Equivalence class 'EquivClass(s=13, a=up)':
+2023-02-02 14:49:28.461 [INFO] Robustness -     RepTrace(word=e,enter,b,enter,x,enter,up, deadlock=false) => e,enter,b,fire_ebeam,enter,x,enter,up
+2023-02-02 14:49:28.462 [INFO] Robustness - Total time: 00:00:00:065
+```
+
+## Robustification Example
 We will use the Voting Machine to show an example of our tool.
-### Voting Machine
 ```
 cd examples/voting
 java -jar ../../bin/robustifier.jar robustify config-pareto.json
@@ -71,10 +107,10 @@ The suffix of the JSON config files indicates the different searching methods. F
 java -jar ../../bin/robustifier.jar robustify config-fast.json
 ```
 
-### Run the benchmark
+## Run the benchmark
 We also provide the script to run the benchmark.
 ```
 cd examples
-sh benchmark.sh
+bash benchmark-robustness.sh
+bash benchmark-robustify.sh
 ```
-This will run all the problems as listed in the paper.
