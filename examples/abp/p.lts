@@ -1,1 +1,1 @@
-property P = (input -> output -> P).
+P = (input -> output -> P).

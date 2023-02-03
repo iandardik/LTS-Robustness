@@ -64,21 +64,21 @@ class Robustness : CliktCommand(help = "Compute the robustness of a system desig
       val (cal2, explain2) = cals[1]
 
       logger.info("Comparing the robustness of a to b...")
-      printResult(cal1, explain1, cal1.compare(cal2, expand))
+      val re1 = cal1.compare(cal2, expand)
       logger.info("Comparing the robustness of b to a...")
-      printResult(cal2, explain2, cal2.compare(cal1, expand))
+      val re2 = cal2.compare(cal1, expand)
+      logger.info("Total time: ${Duration.ofMillis(System.currentTimeMillis() - start).pretty()}")
+
+      logger.info("Results: a is robust than b in that:")
+      printResult(cal1, explain1, re1)
+      logger.info("Results: b is robust than a in that:")
+      printResult(cal2, explain2, re2)
     } else {
-      if (unsafe) {
-        for ((cal, explain) in cals) {
-          printResult(cal, explain, cal.computeUnsafeBeh())
-        }
-      } else {
-        for ((cal, explain) in cals) {
-          printResult(cal, explain, cal.computeRobustness(expand))
-        }
-      }
+      val (cal, explain) = cals[0]
+      val re = if (unsafe) cal.computeUnsafeBeh() else cal.computeRobustness(expand)
+      logger.info("Total time: ${Duration.ofMillis(System.currentTimeMillis() - start).pretty()}")
+      printResult(cal, explain, re)
     }
-    logger.info("Total time: ${Duration.ofMillis(System.currentTimeMillis() - start).pretty()}")
   }
 
   private fun printResult(
