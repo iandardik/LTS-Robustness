@@ -63,6 +63,17 @@ object LTSACall {
     }
   }
 
+  fun CompositeState.minimize(): CompositeState {
+    val ltsOutput = StringLTSOutput()
+    try {
+      this.minimise(ltsOutput)
+      return this
+    } catch (e: LTSException) {
+      logger.debug(e.stackTraceToString())
+      throw Exception("Failed to minimize machine '${this.name}'")
+    }
+  }
+
   /**
    * @return The alphabet list of the composed state machine excluding tau.
    */

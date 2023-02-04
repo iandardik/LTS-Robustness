@@ -137,10 +137,11 @@ private class AcyclicTracesWithPrefixVisitor<S, I>(
   }
 
   override fun startExploration(state: S, data: PrefixTrace<S, I>): Boolean {
-    return if (state in data.visited) {
+    val matched = data.word.length() >= prefix.length()
+    return if (matched && state in data.visited) {
       result.add(RepTrace(data.word, false))
       false
-    } else if (noOutputTransition(state)) {
+    } else if (matched && noOutputTransition(state)) {
       result.add(RepTrace(data.word, true))
       false
     } else {

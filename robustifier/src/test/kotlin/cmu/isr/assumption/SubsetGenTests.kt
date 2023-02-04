@@ -10,6 +10,7 @@ import net.automatalib.util.automata.Automata
 import net.automatalib.util.automata.builders.AutomatonBuilders
 import net.automatalib.words.impl.Alphabets
 import org.junit.jupiter.api.Test
+import java.io.ByteArrayOutputStream
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 
@@ -86,7 +87,25 @@ class SubsetGenTests {
       .compose().asDetLTS()
 
     val w = SubsetConstructionGenerator(sys, env, safety).generate()
-    write(System.out, w, w.alphabet())
+    val out = ByteArrayOutputStream()
+    out.use { write(out, w, w.alphabet()) }
+    assertEquals("S1 = (x -> S2 | e -> S3),\n" +
+        "S2 = (up -> S14 | enter -> S15),\n" +
+        "S3 = (up -> S4 | enter -> S5),\n" +
+        "S14 = (x -> S2 | e -> S11),\n" +
+        "S15 = (up -> S2 | b -> S16),\n" +
+        "S4 = (x -> S7 | e -> S3),\n" +
+        "S5 = (up -> S3 | b -> S6),\n" +
+        "S11 = (up -> S12 | enter -> S13),\n" +
+        "S16 = (enter -> S14),\n" +
+        "S7 = (up -> S8 | enter -> S9),\n" +
+        "S6 = (enter -> S4),\n" +
+        "S12 = (x -> S7 | e -> S11),\n" +
+        "S13 = (up -> S11),\n" +
+        "S8 = (x -> S7 | e -> S11),\n" +
+        "S9 = (up -> S7 | b -> S10),\n" +
+        "S10 = (enter -> S8).\n",
+      out.toString())
   }
 
   @Test
@@ -99,7 +118,22 @@ class SubsetGenTests {
       .compose().asDetLTS()
 
     val w = SubsetConstructionGenerator(sys, env, safety).generate()
-    write(System.out, w, w.alphabet())
+    val out = ByteArrayOutputStream()
+    out.use { write(out, w, w.alphabet()) }
+    assertEquals("S1 = (x -> S2 | e -> S3),\n" +
+        "S2 = (up -> S11 | enter -> S9),\n" +
+        "S3 = (up -> S4 | enter -> S5),\n" +
+        "S11 = (x -> S2 | e -> S12),\n" +
+        "S9 = (up -> S2 | b -> S10),\n" +
+        "S4 = (x -> S7 | e -> S3),\n" +
+        "S5 = (up -> S3 | b -> S6),\n" +
+        "S12 = (up -> S13 | enter -> S5),\n" +
+        "S10 = (enter -> S11),\n" +
+        "S7 = (up -> S8 | enter -> S9),\n" +
+        "S6 = (enter -> S4),\n" +
+        "S13 = (x -> S7 | e -> S12),\n" +
+        "S8 = (x -> S7 | e -> S12).\n",
+      out.toString())
   }
 
 }
