@@ -1,0 +1,4 @@
+S0 = (pass -> S1),
+S1 = (select -> S2),
+S2 = (vote -> S3 | back -> S1),
+S3 = (cfm -> S0 | back -> S2).

@@ -54,7 +54,7 @@ class DeltaDFSEnvProp(private val env : CompactLTS<String>,
             .withAccepting(0)
             .create()
         val emptyCtrlLts = CompactLTS<String>(emptyCtrl)
-        envPropDelta = DeltaDFS(env, emptyCtrlLts, envProp as CompactDetLTS<String>, verbose).compute()
+        envPropDelta = DeltaDFS(env, emptyCtrlLts, envProp as CompactDetLTS<String>, false).compute()
         envPropWinningSets = envPropDelta
             .map { d ->
                 val dEnvFull = addPerturbations(env, d)
@@ -64,7 +64,8 @@ class DeltaDFSEnvProp(private val env : CompactLTS<String>,
             }
             .toSet()
         if (verbose) {
-            println("ep #W: ${winningSet.size}")
+            println("#alpha: ${metaCtrl.alphabet().size}")
+            println("#W: ${winningSet.size}")
             envPropWinningSets
                 .forEach { w ->
                     println("#epw: ${w.size}")

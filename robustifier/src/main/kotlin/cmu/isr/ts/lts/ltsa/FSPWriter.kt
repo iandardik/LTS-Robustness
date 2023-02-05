@@ -21,18 +21,25 @@ fun <S, I> write(output: OutputStream, dfa: DFA<S, I>, inputs: Alphabet<I>) {
   writer.flush()
 }
 
+// thanks https://www.baeldung.com/kotlin/check-if-string-is-numeric
+fun isNumeric(toCheck: String): Boolean {
+  return toCheck.all { char -> char.isDigit() }
+}
+
 fun transformIndices(actionWithDot : String) : String {
   var actionBuilder = StringBuilder()
   val indices = actionWithDot.split('.')
   for (i in indices.indices) {
+    val token = indices[i]
     when (i) {
-      0 -> actionBuilder.append(indices[i])
-      1 -> actionBuilder.append("[").append(indices[i])
-      else -> actionBuilder.append("][").append(indices[i])
+      0 -> actionBuilder.append(token)
+      else ->
+        if (isNumeric(token)) {
+          actionBuilder.append("[").append(token).append("]")
+        } else {
+          actionBuilder.append(".").append(token)
+        }
     }
-  }
-  if (indices.size > 1) {
-    actionBuilder.append("]")
   }
   return actionBuilder.toString()
 }

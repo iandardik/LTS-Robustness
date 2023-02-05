@@ -11,3 +11,11 @@ popd
 pushd voting/ian2/
 ./run.sh
 popd
+
+pushd oyster/complex/
+./run.sh
+popd
+
+pushd pump/
+./run.sh
+popd

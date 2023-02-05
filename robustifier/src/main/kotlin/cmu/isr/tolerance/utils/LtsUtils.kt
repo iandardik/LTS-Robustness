@@ -8,9 +8,12 @@ import cmu.isr.ts.lts.checkSafety
 import cmu.isr.ts.lts.makeErrorState
 import cmu.isr.ts.nfa.NFAParallelComposition
 import cmu.isr.ts.nfa.determinise
+import com.fasterxml.jackson.databind.RuntimeJsonMappingException
 import net.automatalib.automata.fsa.NFA
 import net.automatalib.automata.fsa.impl.compact.CompactDFA
 import net.automatalib.util.automata.builders.AutomatonBuilders
+import net.automatalib.words.Word
+import java.lang.RuntimeException
 import java.util.*
 
 /**
@@ -22,6 +25,14 @@ fun satisfies(lts : LTS<Int, String>, prop : DetLTS<Int,String>) : Boolean {
     val propErr = makeErrorState(propCopy)
     val result = checkSafety(lts, propErr)
     return !result.violation
+}
+
+fun errorTrace(lts : LTS<Int, String>, prop : DetLTS<Int,String>) : Word<String> {
+    val propCopy = copyLTS(prop as CompactDetLTS<String>)
+    val propErr = makeErrorState(propCopy)
+    val result = checkSafety(lts, propErr)
+    assert(result.violation)
+    return checkNotNull(result.trace)
 }
 
 fun <I> addPerturbations(lts : CompactLTS<I>, d : Set<Triple<Int,I,Int>>) : CompactLTS<I> {

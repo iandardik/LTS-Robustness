@@ -6,6 +6,8 @@ import cmu.isr.ts.lts.CompactLTS
 import cmu.isr.ts.lts.asLTS
 import net.automatalib.automata.fsa.NFA
 import net.automatalib.util.automata.builders.AutomatonBuilders
+import net.automatalib.words.Alphabet
+import net.automatalib.words.impl.Alphabets
 
 /**
  * It's ridiculous how tough they make it to copy.
@@ -26,6 +28,32 @@ fun <I> copyLTS(lts : CompactDetLTS<I>) : CompactDetLTS<I> {
     }
     for (t in ltsTransitions(lts)) {
         newDFA.addTransition(t.first, t.second, t.third)
+    }
+    return newDFA.asLTS()
+}
+
+fun copyLTSProjAlph(lts : CompactDetLTS<String>, alph : Alphabet<String>) : CompactDetLTS<String> {
+    val alphList = alph.toMutableList()
+    alphList.add("tau")
+    val tauAlph = Alphabets.fromList(alphList)
+    val newDFA = AutomatonBuilders.newDFA(tauAlph)
+        .withInitial(lts.initialState)
+        .create()
+    for (s in lts.states) {
+        if (lts.initialState == s) {
+            newDFA.setAccepting(s, lts.isAccepting(s))
+        }
+        else {
+            newDFA.addState(lts.isAccepting(s))
+        }
+    }
+    for (t in ltsTransitions(lts)) {
+        if (t.second in alph) {
+            newDFA.addTransition(t.first, t.second, t.third)
+        }
+        else {
+            //newDFA.addTransition(t.first, "tau", t.third)
+        }
     }
     return newDFA.asLTS()
 }

@@ -37,6 +37,7 @@ class DeltaDFS(private val env : CompactLTS<String>,
         transClosureTable = metaCtrlNotFull.states
             .associateWith { reachableStates(metaCtrlNotFull, setOf(it)) }
         if (verbose) {
+            println("#alpha: ${metaCtrl.alphabet().size}")
             println("#W: ${winningSet.size}")
         }
     }

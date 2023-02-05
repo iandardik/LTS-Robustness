@@ -15,7 +15,9 @@ import cmu.isr.ts.parallel
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.*
 import com.github.ajalt.clikt.parameters.types.int
+import errorTrace
 import net.automatalib.automata.fsa.impl.compact.CompactDFA
+import net.automatalib.automata.fsa.impl.compact.CompactNFA
 import satisfies
 import java.io.File
 
@@ -203,13 +205,21 @@ class ToleranceApp : CliktCommand() {
         .flag(default = false)
     val compareProp by option("--compare-prop", help="Compares the robustness w/respect to two properties. Mutually exclusive with controller comparison.")
         .flag(default = false)
+    // experimental feature, doesn't work right now in most situations
+    val noDeadlocks by option("--no-deadlocks", hidden=true, help="Creates an env prop equal to C restricted to E's alphabet; the result is that delta will only include deadlocks that are already part of E.")
+        .flag(default = false)
 
     fun calcDelta(env : CompactLTS<String>,
                   ctrl : CompactLTS<String>,
-                  prop : CompactDetLTS<String>)
+                  prop : CompactDetLTS<String>,
+                  ctrlEnvProp : CompactDetLTS<String>?)
                   : Set<Set<Triple<Int, String, Int>>>? {
         if (!satisfies(parallel(env,ctrl), prop)) {
+            val trace = errorTrace(parallel(env,ctrl), prop)
             println("Error: ~(E||C |= P)")
+            println("Trace: $trace")
+            val aut = parallel(env,ctrl)
+            write(System.out, aut, aut.alphabet())
             return null
         }
 
@@ -219,8 +229,25 @@ class ToleranceApp : CliktCommand() {
             println("# states in P: ${prop.states.size}")
         }
 
+        val envPropList = envPropFile
+            .map { CompactDetLTS(determinise(stripTauTransitions(fspToNFA(it))) as CompactDFA) }
+            .toMutableList()
+        if (ctrlEnvProp != null) {
+            envPropList.add(ctrlEnvProp)
+        }
+        val envProp =
+            if (envPropList.isEmpty()) {
+                null
+            }
+            else if (envPropList.size == 1) {
+                envPropList.first()
+            }
+            else {
+                parallel(*envPropList.toTypedArray()) as CompactDetLTS<String>
+            }
+
         val delta =
-            if (envPropFile.isEmpty()) {
+            if (envProp == null) {
                 if (random) {
                     if (!silent) {
                         println("Running randomized algorithm with $randInters iterations")
@@ -235,17 +262,14 @@ class ToleranceApp : CliktCommand() {
                 }
             }
             else {
-                //val envPropList = envPropFile.map { fspToDFA(it) }
-                val envPropList = envPropFile.map { CompactDetLTS(determinise(stripTauTransitions(fspToNFA(it))) as CompactDFA) }
-                val envProp =
-                    if (envPropList.size == 1) {
-                        envPropList.first()
-                    }
-                    else {
-                        parallel(*envPropList.toTypedArray()) as CompactDetLTS<String>
-                    }
+                // a nice upgrade would be to check satisfaction with respect to the intersection of the alphabets
+                // of env and evnProp
                 if (!satisfies(env, envProp)) {
+                    val trace = errorTrace(env, envProp)
                     println("Error: ~(E |= envProp)")
+                    println("Trace: $trace")
+                    //println("envProp:")
+                    //write(System.out, envProp, envProp.alphabet())
                     return null
                 }
                 if (random) {
@@ -293,8 +317,17 @@ class ToleranceApp : CliktCommand() {
             val ctrl2 = stripTauTransitions(fspToNFA(ctrlFile[1]))
             val prop = fspToDFA(propFile[0])
 
-            val delta1 = calcDelta(env, ctrl1, prop)
-            val delta2 = calcDelta(env, ctrl2, prop)
+            val ctrlEnvProp1 = if (noDeadlocks) {
+                val ctrlDet = fspToDFA(ctrlFile[0])
+                copyLTSProjAlph(ctrlDet, env.inputAlphabet)
+            } else null
+            val ctrlEnvProp2 = if (noDeadlocks) {
+                val ctrlDet = fspToDFA(ctrlFile[1])
+                copyLTSProjAlph(ctrlDet, env.inputAlphabet)
+            } else null
+
+            val delta1 = calcDelta(env, ctrl1, prop, ctrlEnvProp1)
+            val delta2 = calcDelta(env, ctrl2, prop, ctrlEnvProp2)
             if (delta1 == null || delta2 == null) {
                 // not the cleanest, but it'll do for now
                 return
@@ -327,8 +360,13 @@ class ToleranceApp : CliktCommand() {
             val prop1 = fspToDFA(propFile[0])
             val prop2 = fspToDFA(propFile[1])
 
-            val delta1 = calcDelta(env, ctrl, prop1)
-            val delta2 = calcDelta(env, ctrl, prop2)
+            val ctrlEnvProp = if (noDeadlocks) {
+                val ctrlDet = fspToDFA(ctrlFile[0])
+                copyLTSProjAlph(ctrlDet, env.inputAlphabet)
+            } else null
+
+            val delta1 = calcDelta(env, ctrl, prop1, ctrlEnvProp)
+            val delta2 = calcDelta(env, ctrl, prop2, ctrlEnvProp)
             if (delta1 == null || delta2 == null) {
                 // not the cleanest, but it'll do for now
                 return
@@ -360,7 +398,12 @@ class ToleranceApp : CliktCommand() {
             val ctrl = stripTauTransitions(fspToNFA(ctrlFile[0]))
             val prop = fspToDFA(propFile[0])
 
-            val delta = calcDelta(env, ctrl, prop)
+            val ctrlEnvProp = if (noDeadlocks) {
+                val ctrlDet = fspToDFA(ctrlFile[0])
+                copyLTSProjAlph(ctrlDet, env.inputAlphabet)
+            } else null
+
+            val delta = calcDelta(env, ctrl, prop, ctrlEnvProp)
             if (delta == null) {
                 // not the cleanest, but it'll do for now
                 return

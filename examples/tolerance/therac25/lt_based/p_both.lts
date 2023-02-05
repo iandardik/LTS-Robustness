@@ -5,9 +5,7 @@ P_FLATTENER = (
     | fireElectron -> ERROR
 ),
 P_TO_SPREADER = (
-      e -> P_TO_SPREADER
-    | x -> P_FLATTENER
-    | rotate -> P_SPREADER
+      rotate -> P_SPREADER
     | fireXray -> ERROR
     | fireElectron -> ERROR
 ),
@@ -18,9 +16,7 @@ P_SPREADER = (
     | fireElectron -> P_SPREADER
 ),
 P_TO_FLATTENER = (
-      e -> P_SPREADER
-    | x -> P_TO_FLATTENER
-    | rotate -> P_FLATTENER
+      rotate -> P_FLATTENER
     | fireXray -> ERROR
     | fireElectron -> ERROR
 ).

@@ -3,11 +3,11 @@
 XRAY_MODE = (
       x -> XRAY_MODE
     | e -> ELECTRON_MODE
-    | fireBeam -> fireXray -> XRAY_MODE
+    | b -> fireXray -> XRAY_MODE
 ),
 ELECTRON_MODE = (
       x -> XRAY_MODE
     | e -> ELECTRON_MODE
-    | fireBeam -> fireElectron -> ELECTRON_MODE
+    | b -> fireElectron -> ELECTRON_MODE
 ).
 
