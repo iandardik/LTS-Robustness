@@ -2,7 +2,7 @@
 S0 = (pass -> S1),
 S1 = (select -> S2),
 S2 = (vote -> S3 | back -> S1),
-S3 = (cfm -> S0 | back -> S2).
+S3 = (cfm -> S0).
 
 // mutex rule (the EO must be sneaky and not enter the booth when the voter is present)
 X0 = (v.enter -> X1 | eo.enter -> X2),

@@ -1,0 +1,4 @@
+V0 = (v.enter -> pass -> V1),
+V1 = (select -> V2),
+V2 = (vote -> V3 | back -> V1),
+V3 = (cfm -> v.exit -> V0 | back -> V2) + {eo.enter,eo.exit}.
