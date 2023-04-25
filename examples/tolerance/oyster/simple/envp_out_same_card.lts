@@ -1,5 +1,0 @@
-const Card1 = 0
-const Card2 = 1
-range AllCards = Card1 .. Card2
-
-EP2 = (gateout.bal[c:AllCards] -> gateout.newBal[c] -> EP2).

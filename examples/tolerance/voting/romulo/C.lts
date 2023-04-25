@@ -1,4 +1,0 @@
-S0 = (pw -> S1),
-S1 = (sel -> S2),
-S2 = (vote -> S3 | back -> S1),
-S3 = (cfm -> S0 | back -> S2).

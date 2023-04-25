@@ -1,7 +1,0 @@
-// strongest safety property -- the user MUST do all steps
-P0 = (v.enter -> P1),
-P1 = (pass -> P2 | v.exit -> ERROR),
-P2 = (v.select -> P3 | v.exit -> ERROR),
-P3 = (v.vote -> P4 | v.exit -> ERROR),
-P4 = (v.cfm -> P5 | v.exit -> ERROR),
-P5 = (v.exit -> P0).

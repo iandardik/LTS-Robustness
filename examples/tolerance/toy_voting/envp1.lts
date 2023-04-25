@@ -1,1 +1,0 @@
-EPEO = (eo.enter -> eo.exit -> EPEO).

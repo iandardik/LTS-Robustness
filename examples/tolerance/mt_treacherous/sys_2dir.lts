@@ -1,5 +1,0 @@
-S0 = (moveEast -> S1),
-S1 = (moveEast -> S2 | westWind -> S1 | eastWind -> S1),
-S2 = (dropPackage -> STOP | westWind -> S1 | eastWind -> S3),
-S3 = (moveWest -> S2 | westWind -> S3 | eastWind -> S3),
-S4 = (moveWest -> S3).

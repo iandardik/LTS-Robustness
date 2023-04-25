@@ -1,4 +1,0 @@
-// the therac-25 turn table. we model two settings, the flattener and the
-// spreader. the user cannot see this.
-TTABLE_FLATTENER = (e -> rotate -> TTABLE_SPREADER | x -> TTABLE_FLATTENER),
-TTABLE_SPREADER = (e -> TTABLE_SPREADER | x -> rotate -> TTABLE_FLATTENER).

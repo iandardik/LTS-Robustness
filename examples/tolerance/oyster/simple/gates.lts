@@ -1,9 +1,0 @@
-const Card1 = 0
-const Card2 = 1
-range AllCards = Card1 .. Card2
-
-GI = (gatein.req.oyster[c:AllCards] -> GI).
-
-GO = (gateout.bal[c:AllCards] -> gateout.newBal[c] -> GO).
-
-||G = (GI || GO).

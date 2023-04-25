@@ -1,7 +1,0 @@
-P0 = (eo.enter -> P1 | cfm -> P0),
-P1 = (eo.exit -> P0 | cfm -> ERROR).
-
-Q0 = (eo.enter -> Q1 | select -> Q0),
-Q1 = (eo.exit -> Q0 | select -> ERROR).
-
-||P = (P0 || Q0).

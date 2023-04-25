@@ -1,6 +1,0 @@
-const Card1 = 0
-const Card2 = 1
-range AllCards = Card1 .. Card2
-
-H = (gatein.snd.oyster[c:AllCards] -> gatein.rec.gin[c] ->
-        gateout.snd.gin[c] -> gateout.snd.bal[c] -> gateout.rec.newBal[c] -> H).

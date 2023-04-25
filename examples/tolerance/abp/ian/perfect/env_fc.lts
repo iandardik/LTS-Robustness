@@ -1,3 +1,0 @@
-range B = 0..1
-
-FC = (p[b:B] -> p_p[b] -> FC).

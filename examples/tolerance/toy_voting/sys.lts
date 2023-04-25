@@ -1,3 +1,0 @@
-S0 = (eo.enter -> S1 | v.enter -> S2),
-S1 = (eo.exit -> S0 | v.enter -> S2),
-S2 = (v.vote -> v.exit -> S0).

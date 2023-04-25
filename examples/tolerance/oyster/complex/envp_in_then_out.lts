@@ -1,5 +1,0 @@
-const Card1 = 0
-const Card2 = 1
-range AllCards = Card1 .. Card2
-
-EP1 = (enter[c1:AllCards] -> leave[c2:AllCards] -> EP1).

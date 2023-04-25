@@ -1,4 +1,0 @@
-E0 = (pass -> E1),
-E1 = (select -> E2),
-E2 = (vote -> E3 | select -> E2),
-E3 = (cfm -> E0 | vote -> E3 | select -> E2).

@@ -1,0 +1,8 @@
+range LINES = 1..1
+
+ENV = (plug_in -> turn_on -> CHOOSE),
+CHOOSE = (line[i:LINES].set_rate -> RUN[i] | turn_off -> unplug -> ENV),
+RUN[i:LINES] = (
+    line[i].lock_line -> line[i].confirm_settings -> line[i].lock_unit -> line[i].start_dispense ->
+    line[i].unlock_unit -> line[i].erase_and_unlock_line -> CHOOSE
+)+{line[LINES].clear_rate, line[LINES].change_settings}.

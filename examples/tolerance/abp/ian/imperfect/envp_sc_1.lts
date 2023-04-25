@@ -1,5 +1,0 @@
-range B = 0..1 // bit
-range M = 100..101 // message
-
-// sending client
-SC = (send[m:M] -> done[n:M] -> SC).

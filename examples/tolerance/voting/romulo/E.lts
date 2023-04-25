@@ -1,4 +1,0 @@
-S0 = (eo.enter -> S3 | v.enter -> S1),
-S1 = (v.exit -> S0 | pw -> S2 | sel -> S1 | cfm -> S1 | vote -> S1),
-S2 = (cfm -> S1 | pw -> S2 | sel -> S2 | vote -> S2),
-S3 = (eo.exit -> S0 | sel -> S3 | cfm -> S3 | vote -> S3).

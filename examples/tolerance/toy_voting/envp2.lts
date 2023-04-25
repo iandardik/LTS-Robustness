@@ -1,2 +1,0 @@
-EPV0 = (v.enter -> EPV1),
-EPV1 = (v.vote -> EPV1 | v.exit -> EPV0).

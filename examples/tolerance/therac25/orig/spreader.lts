@@ -1,2 +1,0 @@
-SPREADER = (e -> setMode -> OUTPLACE | x -> SPREADER),
-OUTPLACE = (x -> setMode -> SPREADER | e -> OUTPLACE).

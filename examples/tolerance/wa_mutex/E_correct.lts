@@ -1,3 +1,0 @@
-S0 = (e.acquire -> S1),
-S1 = (e.enterCS -> S2 | e.release -> S0),
-S2 = (e.exitCS -> S1) + {e.acquire, e.release, e.enterCS, e.exitCS}.

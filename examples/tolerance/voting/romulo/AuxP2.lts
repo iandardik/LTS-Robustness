@@ -1,2 +1,0 @@
-S0 = (v.enter -> S1 | v.exit -> ERROR),
-S1 = (v.exit -> S0 | v.enter -> ERROR).

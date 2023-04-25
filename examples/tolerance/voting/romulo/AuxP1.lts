@@ -1,2 +1,0 @@
-S0 = (eo.enter -> S1 | eo.exit -> ERROR),
-S1 = (eo.exit -> S0 | eo.enter -> ERROR).

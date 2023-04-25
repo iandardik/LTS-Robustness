@@ -1,4 +1,0 @@
-S0 = (w.acquire -> S1 | e.acquire -> S3),
-S1 = (w.release -> S0 | w.enterCS -> S2),
-S2 = (w.exitCS -> S1),
-S3 = (e.release -> S0).

@@ -1,2 +1,0 @@
-P0 = (eo.enter -> P1 | cfm -> P0),
-P1 = (eo.exit -> P0 | cfm -> ERROR).

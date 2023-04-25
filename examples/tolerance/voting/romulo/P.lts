@@ -1,2 +1,0 @@
-S0 = (eo.enter -> S1 | v.enter -> S0 | v.exit -> S0 | cfm -> S0),
-S1 = (eo.exit -> S0 | v.enter -> S1 | v.exit -> S1).

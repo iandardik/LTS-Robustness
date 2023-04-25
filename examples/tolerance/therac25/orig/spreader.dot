@@ -1,8 +1,0 @@
-digraph G {
-  "0" -> "1" [label="e"]
-  "0" -> "0" [label="x"]
-  "1" -> "2" [label="setMode"]
-  "2" -> "2" [label="e"]
-  "2" -> "3" [label="x"]
-  "3" -> "0" [label="setMode"]
-}

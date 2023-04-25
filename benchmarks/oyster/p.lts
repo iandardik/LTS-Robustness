@@ -1,0 +1,5 @@
+const Card1 = 0
+const Card2 = 1
+range AllCards = Card1 .. Card2
+
+P = (clashCharge[c:AllCards] -> ERROR).

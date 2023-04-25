@@ -1,1 +1,0 @@
-S0 = (a -> a -> a -> ERROR | b -> b -> b -> ERROR).
