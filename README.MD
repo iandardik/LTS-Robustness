@@ -25,8 +25,9 @@ Clone this repository to your local machine.
 No more set up is required; we have already built the tool and packaged it into bin/LTS-Robustness.jar.
 
 
-## Requirements
+## System Requirements
 
+### Java Version
 Our tool requires Java version >= 11. We have tested the tool under two different Java environments:
 ```
 openjdk 11.0.18 2023-01-17
@@ -39,6 +40,9 @@ java 18.0.2.1 2022-08-18
 Java(TM) SE Runtime Environment (build 18.0.2.1+1-1)
 Java HotSpot(TM) 64-Bit Server VM (build 18.0.2.1+1-1, mixed mode, sharing)
 ```
+
+### Resource Requirements
+Coming soon
 
 
 ## Replicating Results from the Paper
