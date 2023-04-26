@@ -43,6 +43,7 @@ Java HotSpot(TM) 64-Bit Server VM (build 18.0.2.1+1-1, mixed mode, sharing)
 
 ## Replicating Results from the Paper
 
+### Instructions
 We have provided two shell scripts for replicating the results from Table 1 in the paper.
 Both scripts are located in the benchmarks/ folder:
 ```
@@ -55,4 +56,128 @@ To run Algorithm 1 with our heuristic ("Wall Heur" in Table 1):
 To run Algorithm 1 without the heuristic ("Wall Plain" in Table 1):
 ```
 ./run_plain.sh
+```
+
+### Sample
+Here is a sample for the expected result from running Algorithm 1 with our heuristic:
+```
+$ ./run_heur.sh
+~/Documents/CMU/tolerance-permissiveness/LTS-Robustness/benchmarks/running_example ~/Documents/CMU/tolerance-permissiveness/LTS-Robustness/benchmarks
+
+Running Example
+---------------
+time java -jar ../../bin/LTS-Robustness.jar --verbose --env env.lts --ctrl ctrl.lts --prop p.lts --largest-delta-size
+WARNING: sun.reflect.Reflection.getCallerClass is not supported. This will impact performance.
+# states in E: 4
+# states in C: 2
+# states in P: 4
+#alpha: 2
+#W: 6
+#delta: 3
+Size of largest delta element: 13
+
+real	0m0.396s
+user	0m0.560s
+sys	0m0.058s
+
+~/Documents/CMU/tolerance-permissiveness/LTS-Robustness/benchmarks
+~/Documents/CMU/tolerance-permissiveness/LTS-Robustness/benchmarks/therac25 ~/Documents/CMU/tolerance-permissiveness/LTS-Robustness/benchmarks
+.
+.
+.
+```
+
+The output above is a "sample" because there will be more output (from running the rest of the benchmarks).
+From top to bottom, here is how to interpret the output:
+- The script is changing directories to running_example.
+- The script is now calculating robustness for the benchmark "Running Example".
+- The script is executing the tool using the command: "time java -jar ../../bin/LTS-Robustness.jar --verbose --env env.lts --ctrl ctrl.lts --prop p.lts --largest-delta-size".
+- The tool detects 4 states in the environment, 2 states in the controller, and 4 states in the safety property.
+- The tool detects 2 actions between all FSP inputs.
+- The size of the winning set is 6.
+- After calculating robustness, the size of delta is 3, and the largest maximal robust deviation has size 13.
+- The wall time for the tool is 0.396 seconds ("real" indicates wall time).
+- The script is changing to the therac25 directory to continue running.
+
+
+## Using the Tool
+
+### Help Menu
+We provide a help menu for the tool.
+Here is the result of printing the help menu from the root directory of this project:
+```
+$ java -jar bin/LTS-Robustness.jar --help
+Usage: tolerance-app [OPTIONS]
+
+Options:
+  --env TEXT            FSP file for the environment.
+  --ctrl TEXT           FSP file for the controller.
+  --prop TEXT           FSP file for the property.
+  --env-prop TEXT       FSP file for an environment property. This arg is
+                        allowed multiple times.
+  --bf                  Will run brute-force version of the algorithm.
+  --naive-bf            Will run naive brute-force version of the algorithm.
+  --rand                Will run randomized version of the algorithm.
+  --rand-iters INT      Number of iterations to run in randomized mode.
+  --silent              Will not print results to stdout. Mutually exclusive
+                        with verbose mode.
+  --print-dot           Print the contents of delta in DOT format. Default is
+                        set format.
+  --print-fsp           Print the contents of delta in FSP format. Default is
+                        set format.
+  --largest-delta-size  Print the size of the largest element of delta.
+  --num-print INT       Number of items in delta to print. Default is 3.
+  --verbose             Prints extra information about the run, including |W|.
+                        Mutually exclusive with silent mode.
+  --compare-ctrl        Compares the robustness of two controllers. Mutually
+                        exclusive with property comparison.
+  --compare-prop        Compares the robustness w/respect to two properties.
+                        Mutually exclusive with controller comparison.
+  -h, --help            Show this message and exit
+```
+By default, the tool uses Algorithm 1 with our heuristic to compute robustness.
+The "--bf" option will use the "plain" version of Algorithm 1 to calculate robustness.
+
+### Basic Usage
+In this section we will show to to calculate robustness for a controller ctrl.lts, environment env.lts, and safety property p.lts.
+The .lts extension indicates that the file contains a valid [FSP](https://www.doc.ic.ac.uk/~jnm/LTSdocumention/FSP-notation.html) program.
+FSP is the language used to specify automaton in [LTSA](https://www.doc.ic.ac.uk/ltsa/).
+
+To calculate robustness for a ctrl.lts, env.lts, and p.lts, use the following command:
+```
+$ java -jar bin/LTS-Robustness.jar --ctrl ctrl.lts --env env.lts --prop p.lts
+```
+
+It is also possible to add one or more environment properties (denoted as P_env in the paper).
+For example, if we want to include (the conjunction of) two environment properties envp1.lts and envp2.lts, then we use the following command:
+```
+$ java -jar bin/LTS-Robustness.jar --ctrl ctrl.lts --env env.lts --prop p.lts --env-prop envp1.lts --env-prop envp2.lts
+```
+
+By default, the tool displays robustness in a set format.
+The tool can also display robustness using DOT and FSP format, using the --print-dot and --print-fsp flags respectively.
+The tool can also print the size of the largest maximal robust deviation using the flag --largest-delta-size.
+
+The tool can also be used to compare robustness between controllers and properties.
+For example, if we want to compare the robustness of ctrl.lts to the robustness of a different controller ctrl2.lts, then we could use the following command:
+```
+$ java -jar bin/LTS-Robustness.jar --ctrl ctrl.lts --env env.lts --prop p.lts --ctrl ctrl2.lts --compare-ctrl
+```
+
+### Therac-25 Example
+In this section we will provide an example of how to manually run the Therac-25 case study, including comparing its robustness to the Therac-20.
+To compute the robustness of the Therac-25, begin by changing to the Therac-25 benchmark directory.
+From the root directory:
+```
+cd benchmarks/therac25
+```
+
+The following command will calculate robustness for the Therac-25:
+```
+java -jar ../../bin/LTS-Robustness.jar --env env_safe.lts --ctrl sys.lts --prop p.lts --env-prop envp_term.lts
+```
+
+The following command will compare the robustness for the Therac-25 against the Therac-20:
+```
+java -jar ../../bin/LTS-Robustness.jar --env env_safe.lts --ctrl sys.lts --prop p.lts --env-prop envp_term.lts --ctrl sys_interlock.lts --compare-ctrl
 ```
