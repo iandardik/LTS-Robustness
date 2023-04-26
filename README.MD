@@ -7,14 +7,22 @@ This tool is the artifact for the paper "Safe Environmental Envelopes of Discret
 ## Structure and Content
 
 This project contains the following folders:
-- bin: contains the executable jar for our tool: LTS-Robustness.jar.
+- bin: contains the executable jar for our tool, LTS-Robustness.jar.
 - benchmarks: contains the case studies from our paper, as well as scripts to run them.
 - robustifier: contains the source files we used to build this project.
 
 
 ## Set Up
 
-No set up is required; we have already built the tool and packaged it into bin/LTS-Robustness.jar.
+### Set up from OVA file
+Install VirtualBox.
+You can then open SafeEnvEnvelopes.ova and start a VM.
+Once the VM is started, the desktop will show a terminal whose present working directory is a local copy of this repository.
+No more set up is required; we have already built the tool and packaged it into bin/LTS-Robustness.jar.
+
+### Local set up from git
+Clone this repository to your local machine.
+No more set up is required; we have already built the tool and packaged it into bin/LTS-Robustness.jar.
 
 
 ## Requirements
@@ -40,11 +48,11 @@ Both scripts are located in the benchmarks/ folder:
 ```
 cd benchmarks
 ```
-To run the heuristic-based algorithm ("Wall Heur" in Table 1):
+To run Algorithm 1 with our heuristic ("Wall Heur" in Table 1):
 ```
 ./run_heur.sh
 ```
-To run the plain algorithm ("Wall Plain" in Table 1):
+To run Algorithm 1 without the heuristic ("Wall Plain" in Table 1):
 ```
 ./run_plain.sh
 ```
