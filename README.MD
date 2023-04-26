@@ -185,3 +185,14 @@ The following command will compare the robustness for the Therac-25 against the 
 ```
 java -jar ../../bin/LTS-Robustness.jar --env env_safe.lts --ctrl sys.lts --prop p.lts --env-prop envp_term.lts --ctrl sys_interlock.lts --compare-ctrl
 ```
+
+
+## Code Dependencies
+
+This project depends on the Automatalib project.
+We use version 0.10.0 of Automatalib which can be verified with the following command:
+```
+$ grep -A 2 'automatalib' robustifier/pom.xml
+```
+
+This is the latest version of Automatalib as of 4/26/2023, which can be verified [here](https://github.com/LearnLib/automatalib/releases).
