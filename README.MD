@@ -196,3 +196,28 @@ $ grep -A 2 'automatalib' robustifier/pom.xml
 ```
 
 This is the latest version of Automatalib as of 4/26/2023, which can be verified [here](https://github.com/LearnLib/automatalib/releases).
+
+
+## Source Code Highlights
+
+### Algorithm 1 -- Plain
+The implementation can be found at robustifier/src/main/kotlin/cmu/isr/tolerance/delta/DeltaDFS.kt.
+The following table summarizes the correspondence between the source for the implementation and Algorithm 1 in the paper:
+
+| Description | Line number in source code | Line number in Algorithm 1 |
+| ----- | ---- | ---- |
+| create meta-system F | 25 | 2 |
+| create winning set | 36 | 4 |
+| for each subset of W | 50,79 | 5 |
+| create del | 68 | 7 |
+
+### Algorithm 1 -- Heuristic
+The implementation can be found at robustifier/src/main/kotlin/cmu/isr/tolerance/delta/DeltaDFSEnvProp.kt.
+The following table summarizes the correspondence between the source for the implementation and Algorithm 1 in the paper:
+
+| Description | Line number in source code | Line number in Algorithm 1 |
+| ----- | ---- | ---- |
+| create meta-system F | 34 | 2 |
+| create winning set | 45 | 4 |
+| DFS over W | 81,108,118 | NA |
+| create del | 98 | 7 |
