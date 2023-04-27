@@ -42,7 +42,7 @@ Java HotSpot(TM) 64-Bit Server VM (build 18.0.2.1+1-1, mixed mode, sharing)
 ```
 
 ### Resource Requirements
-Coming soon
+4 (virtual) cores, 6GB RAM, and 25 GB hard drive.
 
 
 ## Replicating Results from the Paper
@@ -207,7 +207,7 @@ The following table summarizes the correspondence between the source for the imp
 | Description | Line number in source code | Line number in Algorithm 1 |
 | ----- | ---- | ---- |
 | create meta-system F | 25 | 2 |
-| create winning set | 36 | 4 |
+| create winning set W | 36 | 4 |
 | for each subset of W | 50,79 | 5 |
 | create del | 68 | 7 |
 
@@ -218,6 +218,6 @@ The following table summarizes the correspondence between the source for the imp
 | Description | Line number in source code | Line number in Algorithm 1 |
 | ----- | ---- | ---- |
 | create meta-system F | 34 | 2 |
-| create winning set | 45 | 4 |
+| create winning set W | 45 | 4 |
 | DFS over W | 81,108,118 | NA |
 | create del | 98 | 7 |
