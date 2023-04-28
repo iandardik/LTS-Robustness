@@ -176,15 +176,25 @@ From the root directory:
 cd benchmarks/therac25
 ```
 
-The following command will calculate robustness for the Therac-25:
+The following example calculates robustness for the Therac-25:
 ```
-java -jar ../../bin/LTS-Robustness.jar --env env_safe.lts --ctrl sys.lts --prop p.lts --env-prop envp_term.lts
+$ java -jar ../../bin/LTS-Robustness.jar --env env_safe.lts --ctrl sys.lts --prop p.lts --env-prop envp_term.lts
+WARNING: sun.reflect.Reflection.getCallerClass is not supported. This will impact performance.
+#delta: 4
+  {(2, b, 3), (0, e, 1), (0, e, 3), (0, enter, 0), (0, enter, 3), (1, enter, 1), (1, enter, 2), (1, enter, 3), (2, enter, 1), (2, enter, 2), (2, enter, 3), (0, up, 0), (0, up, 3), (1, up, 1), (1, up, 3), (2, up, 1), (2, up, 3), (0, x, 1), (0, x, 3)}
+  {(2, b, 3), (0, e, 1), (0, e, 3), (1, e, 1), (1, e, 3), (0, enter, 0), (0, enter, 3), (1, enter, 2), (1, enter, 3), (2, enter, 2), (2, enter, 3), (0, up, 0), (0, up, 3), (1, up, 1), (1, up, 3), (2, up, 1), (2, up, 3), (0, x, 1), (0, x, 3), (1, x, 3)}
+  {(2, b, 3), (0, e, 1), (0, e, 3), (0, enter, 3), (1, enter, 1), (1, enter, 2), (1, enter, 3), (2, enter, 1), (2, enter, 2), (2, enter, 3), (0, up, 0), (0, up, 3), (1, up, 1), (1, up, 3), (2, up, 1), (2, up, 3), (0, x, 0), (0, x, 1), (0, x, 3)}
 ```
+The output indicates that there are are four maximal robust deviations in delta; the tool displays three of them in set format.
+The tool can display all four maximal robust deviations (use --num-print flag) and can display each deviation in a different format (use --print-dot or --print-fsp).
 
-The following command will compare the robustness for the Therac-25 against the Therac-20:
+The following example compares robustness between the Therac-25 against the Therac-20:
 ```
-java -jar ../../bin/LTS-Robustness.jar --env env_safe.lts --ctrl sys.lts --prop p.lts --env-prop envp_term.lts --ctrl sys_interlock.lts --compare-ctrl
+$ java -jar ../../bin/LTS-Robustness.jar --env env_safe.lts --ctrl sys.lts --prop p.lts --env-prop envp_term.lts --ctrl sys_interlock.lts --compare-ctrl
+WARNING: sun.reflect.Reflection.getCallerClass is not supported. This will impact performance.
+Comparison result: delta1 strictly LESS robust than delta2
 ```
+This output matches the results from section 6.2 in our paper.
 
 
 ## Code Dependencies
