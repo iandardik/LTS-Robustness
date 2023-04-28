@@ -186,7 +186,7 @@ WARNING: sun.reflect.Reflection.getCallerClass is not supported. This will impac
   {(2, b, 3), (0, e, 1), (0, e, 3), (0, enter, 3), (1, enter, 1), (1, enter, 2), (1, enter, 3), (2, enter, 1), (2, enter, 2), (2, enter, 3), (0, up, 0), (0, up, 3), (1, up, 1), (1, up, 3), (2, up, 1), (2, up, 3), (0, x, 0), (0, x, 1), (0, x, 3)}
 ```
 The output indicates that there are are four maximal robust deviations in delta; the tool displays three of them in set format.
-The tool can display all four maximal robust deviations (use --num-print flag) and can display each deviation in a different format (use --print-dot or --print-fsp).
+The tool can display all four maximal robust deviations (use --num-print) and can display each deviation in a different format (use --print-dot or --print-fsp).
 
 The following example compares robustness between the Therac-25 against the Therac-20:
 ```
