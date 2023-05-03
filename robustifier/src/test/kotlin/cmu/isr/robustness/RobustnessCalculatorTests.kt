@@ -183,6 +183,27 @@ class RobustnessCalculatorTests {
     return Pair(BaseCalculator(sys, env, safety), BaseExplanationGenerator(sys, dev))
   }
 
+  private fun buildTheracP2(): Pair<RobustnessCalculator<Int, String>, ExplanationGenerator<String>> {
+    val sys = LTSACall
+      .compile(ClassLoader.getSystemResource("specs/therac25/sys.lts").readText())
+      .compose()
+      .asLTS()
+    val env = LTSACall
+      .compile(ClassLoader.getSystemResource("specs/therac25/env_perfect.lts").readText())
+      .compose()
+      .asLTS()
+    val safety = LTSACall
+      .compile(ClassLoader.getSystemResource("specs/therac25/p2.lts").readText())
+      .compose()
+      .asDetLTS()
+    val dev = LTSACall
+      .compile(ClassLoader.getSystemResource("specs/therac25/env.lts").readText())
+      .compose()
+      .asLTS()
+
+    return Pair(BaseCalculator(sys, env, safety), BaseExplanationGenerator(sys, dev))
+  }
+
   @Test
   fun testTherac() {
     val (cal, _) = buildTherac()
@@ -239,6 +260,17 @@ class RobustnessCalculatorTests {
 
     val actual = cal2.compare(cal1, expand = true).values.flatten().map { it.word }.toSet()
     assertTrue(hasPrefix(Word.fromSymbols("x", "up", "e", "enter", "b"), actual))
+  }
+
+  @Test
+  fun testCompareTheracP() {
+    val (cal1, _) = buildTherac()
+    val (cal2, _) = buildTheracP2()
+    assert(cal2.compare(cal1).isEmpty())
+    assertEquals(
+      setOf(Word.fromSymbols("e", "up", "x", "enter", "b")),
+      cal1.compare(cal2).values.flatten().map { it.word }.toSet()
+    )
   }
 
   private fun buildVoting(): Pair<RobustnessCalculator<Int, String>, ExplanationGenerator<String>> {
