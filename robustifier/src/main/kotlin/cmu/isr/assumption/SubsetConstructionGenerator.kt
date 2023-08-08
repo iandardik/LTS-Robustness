@@ -6,13 +6,12 @@ import cmu.isr.ts.lts.makeErrorState
 
 class SubsetConstructionGenerator<I>(
   private val sys: LTS<*, I>,
-  private val env: LTS<*, I>,
   private val safety: DetLTS<*, I>
 ) {
   private val assumptionInputs: Collection<I>
 
   init {
-    val common = sys.alphabet() intersect env.alphabet()
+    val common = sys.alphabet()
     val internal = sys.alphabet() - common
     assumptionInputs = common union (safety.alphabet() - internal.toSet())
   }

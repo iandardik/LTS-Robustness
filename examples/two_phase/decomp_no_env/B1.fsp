@@ -1,0 +1,9 @@
+S0 = (prepare_rm1 -> S1 | abort_rm2 -> S2 | prepare_rm2 -> S3 | abort_rm1 -> S2),
+S3 = (prepare_rm1 -> S4 | prepare_rm2 -> S3 | abort_rm2 -> S7 | abort_rm1 -> S7),
+S4 = (commit_rm1 -> S6 | commit_rm2 -> S6 | prepare_rm2 -> S4 | abort_rm1 -> S8 | prepare_rm1 -> S4 | abort_rm2 -> S8),
+S5 = (abort_rm1 -> S5 | abort_rm2 -> S5),
+S6 = STOP,
+S7 = (abort_rm2 -> S7 | abort_rm1 -> S7),
+S8 = (abort_rm1 -> S8 | abort_rm2 -> S8),
+S1 = (prepare_rm1 -> S1 | prepare_rm2 -> S4 | abort_rm1 -> S5 | abort_rm2 -> S5),
+S2 = (abort_rm2 -> S2 | abort_rm1 -> S2).

@@ -94,6 +94,7 @@ fun compareBehToWA(delta : Set<Set<Triple<Int, String, Int>>>,
                    maxNum : Int = -1) {
     // print the DOT for each Ed || C
     val deltaTrimmed = if (maxNum < 0) { delta } else { delta.take(maxNum) }
+    /*
     val waGen = SubsetConstructionGenerator(ctrl, env, prop)
     val wa = waGen.generate()
     for (d in deltaTrimmed) {
@@ -107,6 +108,7 @@ fun compareBehToWA(delta : Set<Set<Triple<Int, String, Int>>>,
             println("NOT equiv to WA")
         }
     }
+     */
 }
 
 fun compareBehPairs(delta : Set<Set<Triple<Int, String, Int>>>,
@@ -197,6 +199,7 @@ fun missingBehaviors(delta : Set<Set<Triple<Int, String, Int>>>,
                      env : CompactLTS<String>,
                      ctrl : CompactLTS<String>,
                      prop : CompactDetLTS<String>) {
+    /*
     val waGen = SubsetConstructionGenerator(ctrl, env, prop)
     val wa = waGen.generate()
     //println()
@@ -228,6 +231,7 @@ fun missingBehaviors(delta : Set<Set<Triple<Int, String, Int>>>,
         .fold(A) { acc,d -> acc intersect d }
         .toSet() - Re
     println("#Equiv intersect: ${equivIntersect.size}")
+     */
 }
 
 fun topBottomEdges(delta : Set<Set<Triple<Int, String, Int>>>, env : CompactLTS<String>, tNum : Int = 5) {

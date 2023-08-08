@@ -1,0 +1,9 @@
+S0 = (rcvprepare_rm2 -> S3 | sndabort_rm1 -> S2 | sndabort_rm2 -> S2 | rcvprepare_rm1 -> S1),
+S3 = (rcvprepare_rm1 -> S4 | sndabort_rm1 -> S7 | rcvprepare_rm2 -> S3 | sndabort_rm2 -> S7),
+S4 = (rcvprepare_rm1 -> S4 | sndcommit_rm2 -> S6 | rcvprepare_rm2 -> S4 | sndcommit_rm1 -> S6 | sndabort_rm2 -> S8 | sndabort_rm1 -> S8),
+S5 = (sndabort_rm1 -> S5 | sndabort_rm2 -> S5),
+S6 = STOP,
+S7 = (sndabort_rm1 -> S7 | sndabort_rm2 -> S7),
+S8 = (sndabort_rm2 -> S8 | sndabort_rm1 -> S8),
+S1 = (sndabort_rm1 -> S5 | sndabort_rm2 -> S5 | rcvprepare_rm2 -> S4 | rcvprepare_rm1 -> S1),
+S2 = (sndabort_rm1 -> S2 | sndabort_rm2 -> S2).
