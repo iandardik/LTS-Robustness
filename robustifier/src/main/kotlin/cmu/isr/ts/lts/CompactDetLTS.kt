@@ -1,8 +1,11 @@
 package cmu.isr.ts.lts
 
+import cmu.isr.tolerance.utils.copyLTS
 import cmu.isr.ts.MutableDetLTS
+import cmu.isr.ts.alphabet
 import net.automatalib.automata.concepts.InputAlphabetHolder
 import net.automatalib.automata.fsa.impl.compact.CompactDFA
+import net.automatalib.util.ts.traversal.TSTraversal
 import net.automatalib.words.Alphabet
 
 class CompactDetLTS<I>(private val dfa: CompactDFA<I>) : MutableDetLTS<Int, I>, InputAlphabetHolder<I> {
@@ -69,6 +72,29 @@ class CompactDetLTS<I>(private val dfa: CompactDFA<I>) : MutableDetLTS<Int, I>, 
 
   override fun getInputAlphabet(): Alphabet<I> {
     return dfa.inputAlphabet
+  }
+
+  override fun propertyIsTrue(): Boolean {
+    // the property is true iff it is input enabled at every state
+    return this.states
+      .filter { s -> this.isAccepting(s) }
+      .all {
+        s -> this.alphabet()
+          .all { a -> this.getTransition(s, a) != null }
+      }
+    /*
+    val copy = copyLTS(this as CompactDetLTS<String>)
+    val copyErr = makeErrorState(copy)
+
+    val result = SafetyResult<String>()
+    val vis = SafetyVisitor(copyErr, result)
+    TSTraversal.breadthFirst(copyErr, copyErr.alphabet(), vis)
+    return !result.violation
+    */
+  }
+
+  override fun propertyIsFalse(): Boolean {
+    return this.initialStates.any { s -> !this.isAccepting(s) }
   }
 
 }

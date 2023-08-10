@@ -21,7 +21,7 @@ class SafetyResult<I> {
 }
 
 
-private class SafetyVisitor<S, I>(
+class SafetyVisitor<S, I>(
   private val lts: LTS<S, I>,
   private val result: SafetyResult<I>
 ) : TSTraversalVisitor<S, I, S, Word<I>> {

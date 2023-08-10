@@ -1,6 +1,7 @@
 package cmu.isr.ts.lts
 
 import cmu.isr.ts.MutableLTS
+import cmu.isr.ts.alphabet
 import net.automatalib.automata.concepts.InputAlphabetHolder
 import net.automatalib.automata.fsa.impl.compact.CompactNFA
 import net.automatalib.words.Alphabet
@@ -70,6 +71,14 @@ class CompactLTS<I>(private val nfa: CompactNFA<I>) : MutableLTS<Int, I>, InputA
 
   override fun getInputAlphabet(): Alphabet<I> {
     return nfa.inputAlphabet
+  }
+
+  override fun propertyIsTrue(): Boolean {
+      error("NFA's are not properties.")
+  }
+
+  override fun propertyIsFalse(): Boolean {
+    error("NFA's are not properties.")
   }
 
 }

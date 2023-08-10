@@ -8,6 +8,8 @@ import net.automatalib.automata.fsa.NFA
 interface LTS<S, I> : NFA<S, I> {
   val errorState: S
   fun isErrorState(state: S): Boolean
+  fun propertyIsTrue() : Boolean
+  fun propertyIsFalse() : Boolean
 }
 
 interface MutableLTS<S, I> : LTS<S, I>, MutableNFA<S, I>
