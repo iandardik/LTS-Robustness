@@ -119,12 +119,51 @@ object LTSACall {
     return builder.create().asLTS()
   }
 
+  fun toDetLTS(lts : CompositeState, escape: Boolean = false): DetLTS<Int, String> {
+    // check there's no tau transition
+    if (lts.composition.hasTau() || lts.composition.isNonDeterministic)
+      error("The given LTS is non-deterministic")
+
+    val alphabet = lts.alphabet(escape)
+    val builder = AutomatonBuilders.newDFA(Alphabets.fromCollection(alphabet - "tau")).withInitial(0)
+    for (s in lts.composition.states.indices) {
+      val state = lts.composition.states[s]
+      for (a in lts.composition.alphabet.indices) {
+        val input = alphabet[a]
+        val succ = EventState.nextState(state, a)
+        if (succ != null) {
+          builder.from(s).on(input).to(succ[0])
+        }
+      }
+      builder.withAccepting(s)
+    }
+    return builder.create().asLTS()
+  }
+
   fun CompositeState.asLTS(escape: Boolean = false): LTS<Int, String> {
     val alphabet = alphabet(escape)
     val builder = AutomatonBuilders.newNFA(Alphabets.fromCollection(alphabet)).withInitial(0)
     for (s in this.composition.states.indices) {
       val state = this.composition.states[s]
       for (a in this.composition.alphabet.indices) {
+        val input = alphabet[a]
+        val succs = EventState.nextState(state, a)
+        if (succs != null) {
+          for (succ in succs)
+            builder.from(s).on(input).to(succ)
+        }
+      }
+      builder.withAccepting(s)
+    }
+    return builder.create().asLTS()
+  }
+
+  fun toLTS(lts : CompositeState, escape: Boolean = false): LTS<Int, String> {
+    val alphabet = lts.alphabet(escape)
+    val builder = AutomatonBuilders.newNFA(Alphabets.fromCollection(alphabet)).withInitial(0)
+    for (s in lts.composition.states.indices) {
+      val state = lts.composition.states[s]
+      for (a in lts.composition.alphabet.indices) {
         val input = alphabet[a]
         val succs = EventState.nextState(state, a)
         if (succs != null) {

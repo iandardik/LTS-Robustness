@@ -9,10 +9,10 @@ import cmu.isr.supervisory.SupervisoryDFA
 import cmu.isr.supervisory.desops.DESopsRunner
 import cmu.isr.supervisory.supremica.SupremicaRunner
 import cmu.isr.ts.alphabet
+import cmu.isr.ts.lts.ltsa.FSPWriter.write
 import cmu.isr.ts.lts.ltsa.LTSACall
 import cmu.isr.ts.lts.ltsa.LTSACall.asDetLTS
 import cmu.isr.ts.lts.ltsa.LTSACall.compose
-import cmu.isr.ts.lts.ltsa.write
 import cmu.isr.ts.parallel
 import cmu.isr.utils.pretty
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper

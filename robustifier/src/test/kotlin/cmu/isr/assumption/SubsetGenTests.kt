@@ -5,7 +5,7 @@ import cmu.isr.ts.lts.asLTS
 import cmu.isr.ts.lts.ltsa.LTSACall
 import cmu.isr.ts.lts.ltsa.LTSACall.asDetLTS
 import cmu.isr.ts.lts.ltsa.LTSACall.compose
-import cmu.isr.ts.lts.ltsa.write
+import cmu.isr.ts.lts.ltsa.FSPWriter.write
 import net.automatalib.util.automata.Automata
 import net.automatalib.util.automata.builders.AutomatonBuilders
 import net.automatalib.words.impl.Alphabets

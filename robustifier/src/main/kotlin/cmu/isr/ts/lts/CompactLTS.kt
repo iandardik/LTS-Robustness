@@ -13,7 +13,7 @@ class CompactLTS<I>(private val nfa: CompactNFA<I>) : MutableLTS<Int, I>, InputA
     // Check that there should be at most one error state, that is marked as unacceptable.
     val unacceptable = states.filter { !isAccepting(it) }
     if (unacceptable.size > 1) {
-      //error("There should be one error state in LTS which might be unreachable.")
+      error("There should be one error state in LTS which might be unreachable.")
     }
     _errorState = if (unacceptable.isEmpty())
       addState(false)

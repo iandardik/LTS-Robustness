@@ -68,7 +68,10 @@ open class NFAParallelComposition<S1, S2, I>(
     val states = mutableSetOf<Pair<S1,S2>>()
     for (s1 in nfa1.states) {
       for (s2 in nfa2.states) {
-        states.add(Pair(s1, s2))
+        // do not add mismatched pairs of accepting/non-accepting states
+        if (nfa1.isAccepting(s1) == nfa2.isAccepting(s2)) {
+          states.add(Pair(s1, s2))
+        }
       }
     }
     return states
