@@ -94,7 +94,9 @@ class CompactDetLTS<I>(private val dfa: CompactDFA<I>) : MutableDetLTS<Int, I>, 
   }
 
   override fun propertyIsFalse(): Boolean {
-    return this.initialStates.any { s -> !this.isAccepting(s) }
+    return this.alphabet()
+      .all { a -> this.getTransition(this.initialState, a) == null }
+    //return this.initialStates.any { s -> !this.isAccepting(s) }
   }
 
 }
