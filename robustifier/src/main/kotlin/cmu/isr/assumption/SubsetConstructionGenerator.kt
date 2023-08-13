@@ -71,3 +71,63 @@ class SubsetConstructionGenerator<I>(
     return wa
   }
 }
+
+object WAHelper {
+  fun makeWA(inpLts : MutableDetLTS<Int, String>): DetLTS<Int, String> {
+    val comp = makeErrorState(inpLts) as MutableDetLTS
+
+    // 2. prune the error state by backtracking from the initial error state
+    val predecessors = Predecessors(comp)
+    val queue = ArrayDeque<Int>()
+    val hidden = emptySet<String>()
+
+    // 3. hide and determinise
+    val wa = hide(comp, hidden) as MutableDetLTS
+    // 4. make sink
+    val theta = wa.addState(true)
+    for (state in wa) {
+      if (wa.isErrorState(state))
+        continue
+      for (input in wa.alphabet()) {
+        if (wa.getSuccessor(state, input) == null)
+          wa.addTransition(state, input, theta, null)
+      }
+    }
+    // 5. remove error state
+    val waPredecessors = Predecessors(wa)
+    for (input in wa.alphabet()) {
+      for ((transition, source) in waPredecessors.getPredecessors(wa.errorState, input)) {
+        wa.removeTransition(source, input, transition)
+      }
+    }
+
+    return wa
+  }
+
+  /**
+   * This method assumes that lts is a "property" LTS, i.e. it has an error state
+   * with all expected transitions going to the error state.
+   */
+  fun addTheta(lts : MutableDetLTS<Int, String>): DetLTS<Int, String> {
+    // add theta
+    val theta = lts.addState(true)
+    for (state in lts) {
+      if (lts.isErrorState(state))
+        continue
+      for (input in lts.alphabet()) {
+        if (lts.getSuccessor(state, input) == null)
+          lts.addTransition(state, input, theta, null)
+      }
+    }
+
+    // remove error state
+    val waPredecessors = Predecessors(lts)
+    for (input in lts.alphabet()) {
+      for ((transition, source) in waPredecessors.getPredecessors(lts.errorState, input)) {
+        lts.removeTransition(source, input, transition)
+      }
+    }
+
+    return lts
+  }
+}

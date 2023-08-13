@@ -25,8 +25,14 @@ object LtsUtils {
      */
     fun satisfies(lts: LTS<Int, String>, prop: DetLTS<Int, String>): Boolean {
         val propCopy = copyLTS(prop as CompactDetLTS<String>)
-        //val propCopy = prop as CompactDetLTS<String>
         val propErr = makeErrorState(propCopy)
+        val result = checkSafety(lts, propErr)
+        return !result.violation
+    }
+
+    fun satisfiesNoCopy(lts: LTS<Int, String>, prop: DetLTS<Int, String>): Boolean {
+        val propLTS = prop as CompactDetLTS<String>
+        val propErr = makeErrorState(propLTS)
         val result = checkSafety(lts, propErr)
         return !result.violation
     }
