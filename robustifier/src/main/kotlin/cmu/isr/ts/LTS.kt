@@ -1,11 +1,12 @@
 package cmu.isr.ts
 
+import net.automatalib.automata.concepts.InputAlphabetHolder
 import net.automatalib.automata.fsa.DFA
 import net.automatalib.automata.fsa.MutableDFA
 import net.automatalib.automata.fsa.MutableNFA
 import net.automatalib.automata.fsa.NFA
 
-interface LTS<S, I> : NFA<S, I> {
+interface LTS<S, I> : NFA<S, I>, InputAlphabetHolder<I> {
   val errorState: S
   fun isErrorState(state: S): Boolean
   fun propertyIsTrue() : Boolean

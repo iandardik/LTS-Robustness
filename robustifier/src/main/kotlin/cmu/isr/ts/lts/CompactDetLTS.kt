@@ -8,7 +8,7 @@ import net.automatalib.automata.fsa.impl.compact.CompactDFA
 import net.automatalib.util.ts.traversal.TSTraversal
 import net.automatalib.words.Alphabet
 
-class CompactDetLTS<I>(private val dfa: CompactDFA<I>) : MutableDetLTS<Int, I>, InputAlphabetHolder<I> {
+class CompactDetLTS<I>(private val dfa: CompactDFA<I>) : MutableDetLTS<Int, I> {
 
   private val _errorState: Int
 
