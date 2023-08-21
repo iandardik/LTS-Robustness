@@ -1,12 +1,12 @@
 package cmu.isr.assumption
 
 import cmu.isr.ts.*
+import cmu.isr.ts.lts.SafetyUtils.makeErrorState
 import cmu.isr.ts.lts.hide
-import cmu.isr.ts.lts.makeErrorState
 
 class SubsetConstructionGenerator<I>(
   private val sys: LTS<*, I>,
-  private val safety: DetLTS<*, I>
+  private val safety: LTS<*, I>
 ) {
   private val assumptionInputs: Collection<I>
 
@@ -16,9 +16,10 @@ class SubsetConstructionGenerator<I>(
     assumptionInputs = common union (safety.alphabet() - internal.toSet())
   }
 
-  fun generate(sink: Boolean = false): DetLTS<Int, I> {
+  fun generate(sink: Boolean = false): LTS<Int, I> {
     // 1. compose sys || safety_err
-    val comp = parallel(sys, makeErrorState(safety as MutableDetLTS) as LTS<*, I>) as MutableLTS
+    //val comp = parallel(sys, makeErrorState(safety as MutableDetLTS) as LTS<*, I>) as MutableLTS
+    val comp = parallel(sys, safety) as MutableLTS
     // 2. prune the error state by backtracking from the initial error state
     val predecessors = Predecessors(comp)
     val queue = ArrayDeque<Int>()
@@ -47,7 +48,8 @@ class SubsetConstructionGenerator<I>(
       }
     }
     // 3. hide and determinise
-    val wa = hide(comp, hidden) as MutableDetLTS
+    //val wa = hide(comp, hidden) as MutableDetLTS
+    val wa = comp
     // 4. make sink
     if (sink) {
       val theta = wa.addState(true)
@@ -55,11 +57,12 @@ class SubsetConstructionGenerator<I>(
         if (wa.isErrorState(state))
           continue
         for (input in wa.alphabet()) {
-          if (wa.getSuccessor(state, input) == null)
+          if (wa.getSuccessors(state, input).size == 0)
             wa.addTransition(state, input, theta, null)
         }
       }
     }
+    /*
     // 5. remove error state
     val waPredecessors = Predecessors(wa)
     for (input in wa.alphabet()) {
@@ -67,6 +70,7 @@ class SubsetConstructionGenerator<I>(
         wa.removeTransition(source, input, transition)
       }
     }
+     */
 
     return wa
   }
@@ -128,6 +132,20 @@ object WAHelper {
       }
     }
 
+    return lts
+  }
+
+  fun addThetaNonDeterministic(lts : MutableLTS<Int, String>): LTS<Int, String> {
+    // add theta
+    val theta = lts.addState(true)
+    for (state in lts) {
+      if (lts.isErrorState(state))
+        continue
+      for (input in lts.alphabet()) {
+        if (lts.getSuccessors(state, input).size == 0)
+          lts.addTransition(state, input, theta, null)
+      }
+    }
     return lts
   }
 }

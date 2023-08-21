@@ -6,8 +6,8 @@ import cmu.isr.ts.*
 import cmu.isr.ts.lts.CompactDetLTS
 import cmu.isr.ts.lts.asLTS
 import cmu.isr.ts.lts.CompactLTS
-import cmu.isr.ts.lts.checkSafety
-import cmu.isr.ts.lts.makeErrorState
+import cmu.isr.ts.lts.SafetyUtils.checkSafety
+import cmu.isr.ts.lts.SafetyUtils.makeErrorState
 import cmu.isr.ts.nfa.NFAParallelComposition
 import cmu.isr.ts.nfa.determinise
 import com.fasterxml.jackson.databind.RuntimeJsonMappingException
