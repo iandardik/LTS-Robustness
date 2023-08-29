@@ -1,6 +1,7 @@
 package cmu.isr.assumption
 
 import cmu.isr.ts.*
+import cmu.isr.ts.ParallelComposition.parallel
 import cmu.isr.ts.lts.SafetyUtils.makeErrorState
 import cmu.isr.ts.lts.hide
 

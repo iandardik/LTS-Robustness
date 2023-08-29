@@ -99,7 +99,7 @@ object LtsUtils {
     fun parallelRestrict(ref: NFA<Int, String>, restr: NFA<Int, String>): NFA<Int, String> {
         val transitionsToKeep = mutableSetOf<Pair<Int, String>>()
         val comp = NFAParallelComposition(ref, restr)
-        val nfaComp = parallel(ref, restr)
+        val nfaComp = ParallelComposition.parallel(ref, restr)
         for (state in comp.getStates(nfaComp.alphabet())) {
             val refState = state.first
             val restrState = state.second

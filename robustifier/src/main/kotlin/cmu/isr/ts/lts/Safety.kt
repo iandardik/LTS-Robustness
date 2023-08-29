@@ -73,6 +73,13 @@ object SafetyUtils {
     return !result.violation
   }
 
+  fun <I> hasErrInitState(lts: LTS<Int, I>): Boolean {
+    val numErrInitStates = lts.initialStates
+      .filter { s -> lts.isErrorState(s) }
+      .size
+    return numErrInitStates > 0
+  }
+
   /**
    * Returns whether lts |= prop, but assumes that prop already contains an
    * error state.

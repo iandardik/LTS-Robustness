@@ -7,7 +7,7 @@ import cmu.isr.supervisory.SupervisorySynthesizer
 import cmu.isr.supervisory.asSupDFA
 import cmu.isr.ts.alphabet
 import cmu.isr.ts.nfa.hide
-import cmu.isr.ts.parallel
+import cmu.isr.ts.ParallelComposition.parallel
 import cmu.isr.utils.combinations
 import cmu.isr.utils.pretty
 import net.automatalib.automata.fsa.DFA

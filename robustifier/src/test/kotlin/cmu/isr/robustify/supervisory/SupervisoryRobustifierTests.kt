@@ -6,7 +6,7 @@ import cmu.isr.supervisory.supremica.SupremicaRunner
 import cmu.isr.ts.lts.ltsa.LTSACall
 import cmu.isr.ts.lts.ltsa.LTSACall.asDetLTS
 import cmu.isr.ts.lts.ltsa.LTSACall.compose
-import cmu.isr.ts.parallel
+import cmu.isr.ts.ParallelComposition.parallel
 import net.automatalib.words.Word
 import org.junit.jupiter.api.Test
 import kotlin.test.assertContentEquals
