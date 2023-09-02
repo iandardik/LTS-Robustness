@@ -7,7 +7,7 @@ import cmu.isr.ts.lts.hide
 
 class SubsetConstructionGenerator<I>(
   private val sys: LTS<*, I>,
-  private val safety: LTS<*, I>
+  private val safety: DetLTS<*, I>
 ) {
   private val assumptionInputs: Collection<I>
 

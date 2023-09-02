@@ -21,7 +21,7 @@ fun main(args : Array<String>) {
         // otherwise, generate the WA and recurse
         else {
             val waGen = SubsetConstructionGenerator(comp, prop)
-            //prop = waGen.generate(true)
+            prop = waGen.generate(true)
         }
     }
     println("Property may be violated")

@@ -25,7 +25,7 @@ class SafetyVisitor<S, I>(
   private val lts: LTS<S, I>,
   private val result: SafetyResult<I>
 ) : TSTraversalVisitor<S, I, S, Word<I>> {
-  public val visited = mutableSetOf<S>()
+  private val visited = mutableSetOf<S>()
 
   override fun processInitial(state: S, outData: Holder<Word<I>>?): TSTraversalAction {
     outData!!.value = Word.epsilon()
@@ -49,10 +49,10 @@ class SafetyVisitor<S, I>(
     succ: S,
     outData: Holder<Word<I>>?
   ): TSTraversalAction {
-    //outData!!.value = srcData!!.append(input)
+    outData!!.value = srcData!!.append(input)
     if (lts.isErrorState(succ)) {
       result.violation = true
-      //result.trace = outData.value
+      result.trace = outData.value
       return TSTraversalAction.ABORT_TRAVERSAL
     }
     return TSTraversalAction.EXPLORE
@@ -90,7 +90,6 @@ object SafetyUtils {
     val vis = SafetyVisitor(c, result)
     TSTraversal.breadthFirst(c, c.alphabet(), vis)
     //TSTraversal.depthFirst(c, c.alphabet(), vis)
-    println("MC # states checked: " + vis.visited.size)
     return !result.violation
   }
 
