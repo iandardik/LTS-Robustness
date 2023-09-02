@@ -17,10 +17,9 @@ class SubsetConstructionGenerator<I>(
     assumptionInputs = common union (safety.alphabet() - internal.toSet())
   }
 
-  fun generate(sink: Boolean = false): LTS<Int, I> {
+  fun generate(sink: Boolean = false): DetLTS<Int, I> {
     // 1. compose sys || safety_err
-    //val comp = parallel(sys, makeErrorState(safety as MutableDetLTS) as LTS<*, I>) as MutableLTS
-    val comp = parallel(sys, safety) as MutableLTS
+    val comp = parallel(sys, makeErrorState(safety as MutableDetLTS) as LTS<*, I>) as MutableLTS
     // 2. prune the error state by backtracking from the initial error state
     val predecessors = Predecessors(comp)
     val queue = ArrayDeque<Int>()
@@ -49,8 +48,7 @@ class SubsetConstructionGenerator<I>(
       }
     }
     // 3. hide and determinise
-    //val wa = hide(comp, hidden) as MutableDetLTS
-    val wa = comp
+    val wa = hide(comp, hidden) as MutableDetLTS
     // 4. make sink
     if (sink) {
       val theta = wa.addState(true)
@@ -58,12 +56,11 @@ class SubsetConstructionGenerator<I>(
         if (wa.isErrorState(state))
           continue
         for (input in wa.alphabet()) {
-          if (wa.getSuccessors(state, input).size == 0)
+          if (wa.getSuccessor(state, input) == null)
             wa.addTransition(state, input, theta, null)
         }
       }
     }
-    /*
     // 5. remove error state
     val waPredecessors = Predecessors(wa)
     for (input in wa.alphabet()) {
@@ -71,7 +68,6 @@ class SubsetConstructionGenerator<I>(
         wa.removeTransition(source, input, transition)
       }
     }
-     */
 
     return wa
   }
