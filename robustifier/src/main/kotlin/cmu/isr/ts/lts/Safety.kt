@@ -60,32 +60,65 @@ class SafetyVisitor<S, I>(
 
 }
 
+object SafetyUtils {
+  /**
+   * Returns whether or not the given LTS is safe, i.e. whether or not an
+   * error state is reachable is the LTS. This method assumes that the given
+   * LTS already has error states made.
+   */
+  fun <I> ltsIsSafe(lts: LTS<Int, I>): Boolean {
+    val result = SafetyResult<I>()
+    val vis = SafetyVisitor(lts, result)
+    TSTraversal.breadthFirst(lts, lts.alphabet(), vis)
+    return !result.violation
+  }
 
-/**
- * Check the safety property of an LTS. The safety property is modeled as a complete LTS where unsafe transitions
- * lead to the error state.
- */
-fun <I> checkSafety(lts: LTS<*, I>, prop: DetLTS<*, I>): SafetyResult<I> {
-  val c = parallelComposition(lts, prop)
-  val result = SafetyResult<I>()
-  val vis = SafetyVisitor(c, result)
-  TSTraversal.breadthFirst(c, c.alphabet(), vis)
-  return result
-}
+  fun <I> hasErrInitState(lts: LTS<Int, I>): Boolean {
+    val numErrInitStates = lts.initialStates
+      .filter { s -> lts.isErrorState(s) }
+      .size
+    return numErrInitStates > 0
+  }
+
+  /**
+   * Returns whether lts |= prop, but assumes that prop already contains an
+   * error state.
+   */
+  fun <I> satisfiesNotProp(lts: LTS<Int, I>, prop: LTS<Int, I>): Boolean {
+    val c = parallelComposition(lts, prop)
+    val result = SafetyResult<I>()
+    val vis = SafetyVisitor(c, result)
+    TSTraversal.breadthFirst(c, c.alphabet(), vis)
+    //TSTraversal.depthFirst(c, c.alphabet(), vis)
+    return !result.violation
+  }
+
+  /**
+   * Check the safety property of an LTS. The safety property is modeled as a complete LTS where unsafe transitions
+   * lead to the error state.
+   */
+  fun <I> checkSafety(lts: LTS<*, I>, prop: DetLTS<*, I>): SafetyResult<I> {
+    val c = parallelComposition(lts, prop)
+    val result = SafetyResult<I>()
+    val vis = SafetyVisitor(c, result)
+    TSTraversal.breadthFirst(c, c.alphabet(), vis)
+    return result
+  }
 
 
-/**
- * Given a safety property LTS, make it into a complete LTS where all unsafe transitions lead to the error state.
- */
-fun <S, I> makeErrorState(prop: MutableDetLTS<S, I>): DetLTS<S, I> {
-  for (s in prop.states) {
-    if (prop.isErrorState(s))
-      continue
-    for (a in prop.alphabet()) {
-      if (prop.getTransition(s, a) == null) {
-        prop.addTransition(s, a, prop.errorState, null)
+  /**
+   * Given a safety property LTS, make it into a complete LTS where all unsafe transitions lead to the error state.
+   */
+  fun <S, I> makeErrorState(prop: MutableDetLTS<S, I>): DetLTS<S, I> {
+    for (s in prop.states) {
+      if (prop.isErrorState(s))
+        continue
+      for (a in prop.alphabet()) {
+        if (prop.getTransition(s, a) == null) {
+          prop.addTransition(s, a, prop.errorState, null)
+        }
       }
     }
+    return prop
   }
-  return prop
 }

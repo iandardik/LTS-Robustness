@@ -1,6 +1,8 @@
 package cmu.isr.ts.lts
 
 import cmu.isr.ts.alphabet
+import cmu.isr.ts.lts.SafetyUtils.checkSafety
+import cmu.isr.ts.lts.SafetyUtils.makeErrorState
 import net.automatalib.util.automata.Automata
 import net.automatalib.util.automata.builders.AutomatonBuilders
 import net.automatalib.words.Word

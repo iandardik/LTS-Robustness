@@ -14,8 +14,7 @@ import net.automatalib.words.impl.Alphabets
 open class NFAParallelComposition<S1, S2, I>(
   private val nfa1: NFA<S1, I>,
   private val nfa2: NFA<S2, I>
-) : NFA<Pair<S1, S2>, I> {
-//UniversalTransitionSystem<Pair<S1, S2>, I, Pair<S1, S2>, Boolean, Void?> {
+) : UniversalTransitionSystem<Pair<S1, S2>, I, Pair<S1, S2>, Boolean, Void?> {
 
   override fun getInitialStates(): Set<Pair<S1, S2>> {
     return nfa1.initialStates.flatMap { s1 -> nfa2.initialStates.map { s2 -> Pair(s1, s2) } }.toSet()
@@ -62,33 +61,6 @@ open class NFAParallelComposition<S1, S2, I>(
           t2s.map { t2 -> Pair(s1, t2) }
       }
     }
-  }
-
-  override fun getStates() : MutableCollection<Pair<S1, S2>> {
-    val states = mutableSetOf<Pair<S1,S2>>()
-    for (s1 in nfa1.states) {
-      for (s2 in nfa2.states) {
-        // do not add mismatched pairs of accepting/non-accepting states
-        if (nfa1.isAccepting(s1) == nfa2.isAccepting(s2)) {
-          states.add(Pair(s1, s2))
-        }
-      }
-    }
-    return states
-  }
-
-  override fun getStates(input: MutableIterable<I>?): MutableSet<Pair<S1, S2>> {
-    val states = mutableSetOf<Pair<S1,S2>>()
-    for (s1 in nfa1.states) {
-      for (s2 in nfa2.states) {
-        states.add(Pair(s1, s2))
-      }
-    }
-    return states
-  }
-
-  override fun isAccepting(state : Pair<S1, S2>) : Boolean {
-    return nfa1.isAccepting(state.first) && nfa2.isAccepting(state.second)
   }
 
   fun alphabet() : Alphabet<I> {

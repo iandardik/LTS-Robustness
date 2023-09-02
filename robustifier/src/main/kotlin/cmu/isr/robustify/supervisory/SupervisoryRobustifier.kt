@@ -5,7 +5,7 @@ import cmu.isr.supervisory.SupervisoryDFA
 import cmu.isr.supervisory.SupervisorySynthesizer
 import cmu.isr.supervisory.asSupDFA
 import cmu.isr.ts.alphabet
-import cmu.isr.ts.parallel
+import cmu.isr.ts.ParallelComposition.parallel
 import net.automatalib.automata.fsa.DFA
 import net.automatalib.automata.fsa.impl.compact.CompactDFA
 import net.automatalib.words.Word

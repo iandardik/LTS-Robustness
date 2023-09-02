@@ -1,8 +1,9 @@
 package cmu.isr.assumption
 
 import cmu.isr.ts.*
+import cmu.isr.ts.ParallelComposition.parallel
+import cmu.isr.ts.lts.SafetyUtils.makeErrorState
 import cmu.isr.ts.lts.hide
-import cmu.isr.ts.lts.makeErrorState
 
 class SubsetConstructionGenerator<I>(
   private val sys: LTS<*, I>,
@@ -128,6 +129,20 @@ object WAHelper {
       }
     }
 
+    return lts
+  }
+
+  fun addThetaNonDeterministic(lts : MutableLTS<Int, String>): LTS<Int, String> {
+    // add theta
+    val theta = lts.addState(true)
+    for (state in lts) {
+      if (lts.isErrorState(state))
+        continue
+      for (input in lts.alphabet()) {
+        if (lts.getSuccessors(state, input).size == 0)
+          lts.addTransition(state, input, theta, null)
+      }
+    }
     return lts
   }
 }

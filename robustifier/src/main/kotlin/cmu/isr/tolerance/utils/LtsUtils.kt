@@ -6,8 +6,8 @@ import cmu.isr.ts.*
 import cmu.isr.ts.lts.CompactDetLTS
 import cmu.isr.ts.lts.asLTS
 import cmu.isr.ts.lts.CompactLTS
-import cmu.isr.ts.lts.checkSafety
-import cmu.isr.ts.lts.makeErrorState
+import cmu.isr.ts.lts.SafetyUtils.checkSafety
+import cmu.isr.ts.lts.SafetyUtils.makeErrorState
 import cmu.isr.ts.nfa.NFAParallelComposition
 import cmu.isr.ts.nfa.determinise
 import com.fasterxml.jackson.databind.RuntimeJsonMappingException
@@ -99,7 +99,7 @@ object LtsUtils {
     fun parallelRestrict(ref: NFA<Int, String>, restr: NFA<Int, String>): NFA<Int, String> {
         val transitionsToKeep = mutableSetOf<Pair<Int, String>>()
         val comp = NFAParallelComposition(ref, restr)
-        val nfaComp = parallel(ref, restr)
+        val nfaComp = ParallelComposition.parallel(ref, restr)
         for (state in comp.getStates(nfaComp.alphabet())) {
             val refState = state.first
             val restrState = state.second
