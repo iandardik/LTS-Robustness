@@ -105,6 +105,12 @@ object SafetyUtils {
     return result
   }
 
+  fun <I> findErrorTrace(lts: LTS<Int, I>): Word<I> {
+    val result = SafetyResult<I>()
+    val vis = SafetyVisitor(lts, result)
+    TSTraversal.breadthFirst(lts, lts.alphabet(), vis)
+    return result.trace ?: error("No error found!")
+  }
 
   /**
    * Given a safety property LTS, make it into a complete LTS where all unsafe transitions lead to the error state.
