@@ -1,11 +1,17 @@
 package cmu.isr.ts.nfa
 
+import cmu.isr.tolerance.utils.ltsTransitions
+import cmu.isr.ts.LTS
 import cmu.isr.ts.alphabet
+import cmu.isr.ts.lts.CompactDetLTS
+import cmu.isr.ts.lts.asLTS
 import cmu.isr.utils.forEachSetBit
+import lts.Alphabet
 import net.automatalib.automata.fsa.DFA
 import net.automatalib.automata.fsa.MutableDFA
 import net.automatalib.automata.fsa.NFA
 import net.automatalib.automata.fsa.impl.compact.CompactDFA
+import net.automatalib.util.automata.builders.AutomatonBuilders
 import net.automatalib.words.impl.Alphabets
 import java.util.*
 
@@ -96,4 +102,72 @@ fun <S, I, SO> hide(nfa: NFA<S, I>, hidden: Collection<I>, builder: (Collection<
   }
 
   return out
+}
+
+object HideUtils {
+  fun <S, I> hide(nfa: NFA<S, I>, hidden: Collection<I>): LTS<Int, I> {
+    val rv = hide(nfa, hidden) { CompactDFA(Alphabets.fromCollection(it)) }
+    return CompactDetLTS(rv as CompactDFA<I>)
+  }
+
+  fun hideManually(lts: LTS<Int, String>, hidden: Collection<String>): LTS<Int, String> {
+    val transitions = ltsTransitions(lts)
+      .map { t ->
+        val a = if (hidden.contains(t.second)) "tau" else t.second
+        Triple(t.first, a, t.third)
+      }
+      .toMutableSet()
+
+    var statesToProcess = lts.states
+    while (!statesToProcess.isEmpty()) {
+      val nextStatesToProcess = mutableSetOf<Int>()
+      for (s in statesToProcess) {
+        val outgoingTransitions = transitions.filter { t -> t.first == s }.toSet()
+        val incomingTransitions = transitions.filter { t -> t.third == s }.toSet()
+        val outgoingActions = outgoingTransitions.map { t -> t.second }.toSet()
+        val incomingActions = incomingTransitions.map { t -> t.second }.toSet()
+
+        // Rule 1
+        if (outgoingActions.size == 1 && outgoingActions.contains("tau")) {
+          transitions.removeAll(incomingTransitions)
+          transitions.removeAll(outgoingTransitions)
+          for (incoming in incomingTransitions) {
+            nextStatesToProcess.add(incoming.first)
+            for (outgoing in outgoingTransitions) {
+              // incoming state and action lead to the outgoing state
+              transitions.add(Triple(incoming.first, incoming.second, outgoing.third))
+            }
+          }
+        }
+        // Rule 2
+        else if (incomingActions.size == 1 && incomingActions.contains("tau")) {
+          transitions.removeAll(incomingTransitions)
+          transitions.removeAll(outgoingTransitions)
+          for (incoming in incomingTransitions) {
+            for (outgoing in outgoingTransitions) {
+              nextStatesToProcess.add(outgoing.third)
+              // incoming state and outgoing action lead to the outgoing state
+              transitions.add(Triple(incoming.first, outgoing.second, outgoing.third))
+            }
+          }
+        }
+      }
+      statesToProcess = nextStatesToProcess
+    }
+
+    val alph = Alphabets.fromCollection(lts.inputAlphabet.plus("tau"))
+    val newNFA = AutomatonBuilders.newNFA(alph).create()
+    for (s in lts.states) {
+      if (lts.initialStates.contains(s)) {
+        newNFA.addInitialState(lts.isAccepting(s))
+      }
+      else {
+        newNFA.addState(lts.isAccepting(s))
+      }
+    }
+    for (t in transitions) {
+      newNFA.addTransition(t.first, t.second, t.third)
+    }
+    return newNFA.asLTS()
+  }
 }
