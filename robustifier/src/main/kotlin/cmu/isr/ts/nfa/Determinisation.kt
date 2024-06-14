@@ -8,6 +8,12 @@ import net.automatalib.automata.fsa.NFA
 import net.automatalib.automata.fsa.impl.compact.CompactDFA
 import java.util.*
 
+object Determinization {
+  fun <S, I> determinize(nfa: NFA<S, I>): DFA<Int, I> {
+    return determinise(nfa, CompactDFA(nfa.alphabet()))
+  }
+}
+
 // TODO: unit tests for this function
 fun <S, I> determinise(nfa: NFA<S, I>): DFA<Int, I> {
   return determinise(nfa, CompactDFA(nfa.alphabet()))
