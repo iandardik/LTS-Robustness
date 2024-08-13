@@ -67,6 +67,10 @@ object SafetyUtils {
    * LTS already has error states made.
    */
   fun <I> ltsIsSafe(lts: LTS<Int, I>): Boolean {
+    val hasInitErrorState = lts.initialStates.contains(lts.errorState)
+    if (hasInitErrorState) {
+      return false
+    }
     val result = SafetyResult<I>()
     val vis = SafetyVisitor(lts, result)
     TSTraversal.breadthFirst(lts, lts.alphabet(), vis)
@@ -106,6 +110,10 @@ object SafetyUtils {
   }
 
   fun <I> findErrorTrace(lts: LTS<Int, I>): Word<I> {
+    val hasInitErrorState = lts.initialStates.contains(lts.errorState)
+    if (hasInitErrorState) {
+      return Word.epsilon()
+    }
     val result = SafetyResult<I>()
     val vis = SafetyVisitor(lts, result)
     TSTraversal.breadthFirst(lts, lts.alphabet(), vis)
