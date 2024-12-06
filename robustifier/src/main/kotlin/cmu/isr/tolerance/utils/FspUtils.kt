@@ -33,22 +33,22 @@ object FspUtils {
     fun fspToDFA(path: String): CompactDetLTS<String> {
         val spec = File(path).readText()
         val composite = LTSACall.compile(spec).compose()
-        return composite.asDetLTS() as CompactDetLTS
+        return composite.asDetLTS() as CompactDetLTS<String>
     }
 
     fun fspToNFA(path: String): CompactLTS<String> {
         val spec = File(path).readText()
         val composite = LTSACall.compile(spec).compose()
-        return composite.asLTS() as CompactLTS
+        return composite.asLTS() as CompactLTS<String>
     }
 
     fun fspStringToDFA(spec: String): CompactDetLTS<String> {
         val composite = LTSACall.compile(spec).compose()
-        return composite.asDetLTS() as CompactDetLTS
+        return composite.asDetLTS() as CompactDetLTS<String>
     }
 
     fun fspStringToNFA(spec: String): CompactLTS<String> {
         val composite = LTSACall.compile(spec).compose()
-        return composite.asLTS() as CompactLTS
+        return composite.asLTS() as CompactLTS<String>
     }
 }

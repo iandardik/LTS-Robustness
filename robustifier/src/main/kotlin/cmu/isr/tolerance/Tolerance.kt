@@ -5,6 +5,8 @@ import cmu.isr.tolerance.utils.*
 import cmu.isr.ts.DetLTS
 
 fun main(args : Array<String>) {
+    println("Hello world!")
+    /*
     //var prop : DetLTS<Int, String> = toDeterministic(fspToNFA(args[0]))
     var prop : DetLTS<Int, String> = FspUtils.fspToDFA(args[0])
     for (i in 1 until args.size) {
@@ -25,4 +27,5 @@ fun main(args : Array<String>) {
         }
     }
     println("Property may be violated")
+     */
 }

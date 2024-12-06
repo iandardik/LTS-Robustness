@@ -23,7 +23,10 @@ class RandTraceVisitor<S, I>(
     }
 
     override fun startExploration(state: S, data: Word<I>): Boolean {
-        return if (state !in visited && data.size() < targetSize) {
+        if (data.size() >= targetSize) {
+            return false
+        }
+        return if (state !in visited) {
             visited.add(state)
             true
         } else {
