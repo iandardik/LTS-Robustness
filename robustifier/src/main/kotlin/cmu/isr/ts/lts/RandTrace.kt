@@ -12,7 +12,7 @@ import net.automatalib.words.Word
 
 class RandTraceVisitor<S, I>(
     private val lts: LTS<S, I>,
-    private var targetSize: Int
+    private val targetSize: Int
 ) : TSTraversalVisitor<S, I, S, Word<I>> {
     var result: Word<I> = Word.epsilon()
     private val visited = mutableSetOf<S>()
@@ -23,10 +23,7 @@ class RandTraceVisitor<S, I>(
     }
 
     override fun startExploration(state: S, data: Word<I>): Boolean {
-        if (data.size() >= targetSize) {
-            return false
-        }
-        return if (state !in visited) {
+        return if (state !in visited && data.size() < targetSize) {
             visited.add(state)
             true
         } else {
@@ -43,7 +40,7 @@ class RandTraceVisitor<S, I>(
         outData: Holder<Word<I>>?
     ): TSTraversalAction {
         outData!!.value = srcData.append(input)
-        if (outData.value.size() == targetSize) {
+        if (outData.value.size() >= targetSize) {
             result = outData.value
             return TSTraversalAction.ABORT_TRAVERSAL
         }
